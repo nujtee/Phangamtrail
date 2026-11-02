@@ -128,7 +128,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='book'){
     Object.assign(bf,{name:fd.name.trim(),phone:fd.phone.trim(),email:fd.email.trim(),line:fd.line.trim(),note:fd.note.trim()});
     if(!bf.time)return toast('กรุณาเลือกเวลาออกเดินทาง');if(!bf.name)return toast('กรุณากรอกชื่อ-นามสกุล');
-    const phone=bf.phone.replace(/\D/g,'');if(!/^0\d{8,9}$/.test(phone)&&!/^\d{8,15}$/.test(phone))return toast('กรุณากรอกเบอร์โทรให้ถูกต้อง');
+    const phone=bf.phone.replace(/\D/g,'');if(!/^0\d{8,9}$/.test(phone)&&!/^\d{8,15}$/.test(phone))return toast('กรุณากรอกเบอร์โทรให้ถูกต้อง');if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((bf.email||'').trim()))return toast('กรุณากรอกอีเมลให้ถูกต้อง');
     const r=await post('/api/public/createBooking',{...bf,pax:{...bf.pax},phone});
     if(!r.ok){toast(r.error||'จองไม่สำเร็จ');avKey='';document.getElementById('slots').innerHTML=slotsHTML();return}
     VB={booking:r.booking,phone};payCh=null;Object.assign(bf,{time:null,name:'',phone:'',email:'',line:'',note:''});avKey='';render();scrollTo(0,0);return}

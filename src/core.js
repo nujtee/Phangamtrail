@@ -270,6 +270,8 @@ export const publicActions = {
     const name = String(p.name || '').trim().slice(0, 120), phone = String(p.phone || '').replace(/\D/g, '');
     if (!name) fail('กรุณากรอกชื่อ-นามสกุล');
     if (!/^0\d{8,9}$/.test(phone) && !/^\d{8,15}$/.test(phone)) fail('กรุณากรอกเบอร์โทรให้ถูกต้อง');
+    const email = String(p.email || '').trim().slice(0, 120);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) fail('กรุณากรอกอีเมลให้ถูกต้อง');
     if (!slotList(db).includes(p.time)) fail('กรุณาเลือกเวลาออกเดินทาง');
     const av = availability(db, p.date, people);
     if (av.closed) fail(`วันนี้ปิดรับจอง: ${av.closed.name}`);
@@ -281,7 +283,7 @@ export const publicActions = {
     const entryTotal = entryOf(pax, s.entryRates), created = nowISO();
     const b = {
       id: uid(), code: 'PG' + (++db.seq), qn: null, date: p.date, time: p.time, people, pax, entryRates: { ...s.entryRates },
-      name, phone, email: String(p.email || '').trim().slice(0, 120), line: String(p.line || '').trim().slice(0, 60), note: String(p.note || '').trim().slice(0, 500),
+      name, phone, email, line: String(p.line || '').trim().slice(0, 60), note: String(p.note || '').trim().slice(0, 500),
       groupFee: +s.groupFee, entryTotal, total: +s.groupFee + entryTotal, split: { ...s.split },
       status: 'pending', slip: null, paidConfirmedBy: null, paidConfirmedAt: null, guideId: null, trip: 'unassigned', startedAt: null, endedAt: null,
       payout: { paid: false }, createdAt: created, expiresAt: new Date(Date.parse(created) + (+s.payDeadlineMin || 30) * 60e3).toISOString(),

@@ -327,7 +327,7 @@ function renderBook(){
    <div class="grid2">
     <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(bf.name)}" data-bf="name" autocomplete="name"></div>
     <div class="field"><label>เบอร์โทรศัพท์ *</label><input name="phone" value="${esc(bf.phone)}" data-bf="phone" inputmode="tel" autocomplete="tel"></div>
-    <div class="field"><label>อีเมล</label><input name="email" value="${esc(bf.email)}" data-bf="email" type="email" autocomplete="email"></div>
+    <div class="field"><label>อีเมล *</label><input name="email" value="${esc(bf.email)}" data-bf="email" type="email" autocomplete="email" inputmode="email"></div>
     <div class="field"><label>LINE ID</label><input name="line" value="${esc(bf.line)}" data-bf="line"></div>
    </div>
    <div class="field"><label>หมายเหตุ (เช่น ผู้สูงอายุ เด็ก ข้อจำกัดด้านสุขภาพ)</label><textarea name="note" rows="2" data-bf="note">${esc(bf.note)}</textarea></div>
@@ -906,7 +906,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='book'){
     Object.assign(bf,{name:fd.name.trim(),phone:fd.phone.trim(),email:fd.email.trim(),line:fd.line.trim(),note:fd.note.trim()});
     if(!bf.time)return toast('กรุณาเลือกเวลาออกเดินทาง');if(!bf.name)return toast('กรุณากรอกชื่อ-นามสกุล');
-    const phone=bf.phone.replace(/\D/g,'');if(!/^0\d{8,9}$/.test(phone)&&!/^\d{8,15}$/.test(phone))return toast('กรุณากรอกเบอร์โทรให้ถูกต้อง');
+    const phone=bf.phone.replace(/\D/g,'');if(!/^0\d{8,9}$/.test(phone)&&!/^\d{8,15}$/.test(phone))return toast('กรุณากรอกเบอร์โทรให้ถูกต้อง');if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((bf.email||'').trim()))return toast('กรุณากรอกอีเมลให้ถูกต้อง');
     const r=await post('/api/public/createBooking',{...bf,pax:{...bf.pax},phone});
     if(!r.ok){toast(r.error||'จองไม่สำเร็จ');avKey='';document.getElementById('slots').innerHTML=slotsHTML();return}
     VB={booking:r.booking,phone};payCh=null;Object.assign(bf,{time:null,name:'',phone:'',email:'',line:'',note:''});avKey='';render();scrollTo(0,0);return}
