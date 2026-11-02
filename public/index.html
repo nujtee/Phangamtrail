@@ -377,7 +377,7 @@ function renderPayment(b,fromBooking){
    ${b.status==='pending'?(()=>{const on=chOn();if(!on.length)return '<p class="mut">ยังไม่ได้ตั้งค่าช่องทางรับชำระเงิน กรุณาติดต่อเจ้าหน้าที่</p>';if(!on.some(([k])=>k===payCh))payCh=on[0][0];
      const auto=PUB.settings.channels[payCh]?.mode==='auto';
      return `<p class="sm mut" style="margin:12px 0 6px">เลือกช่องทางชำระเงิน</p><div class="tabs" style="margin:0 auto 6px;flex-wrap:wrap;width:auto;justify-content:center">${on.map(([k,l,ic])=>`<button data-act="paych" data-k="${k}" class="${payCh===k?'on':''}">${ic} ${l}</button>`).join('')}</div>${payChannelHTML(b,payCh)}<p class="sm mut">แนบหลักฐานการชำระด้านล่าง เจ้าหน้าที่จะตรวจและยืนยันการจองให้โดยเร็ว</p>`})()+`
-   <div style="max-width:380px;margin:0 auto;text-align:left"><label>แนบสลิป / หลักฐานการชำระ</label><input type="file" accept="image/jpeg,image/png,image/webp" data-slip="${b.code}">
+   <div style="max-width:380px;margin:0 auto;text-align:left"><label>แนบสลิป / หลักฐานการชำระ</label><div id="slipbox">${slipBoxHTML(b)}</div>
      ${b.slip?`<p class="sm" style="color:#1d6b3a">✓ แนบสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ</p>`:''}</div>`:''}
   </div>
   <div class="card"><h3>รายละเอียดการจอง</h3>
@@ -386,7 +386,7 @@ function renderPayment(b,fromBooking){
    <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd><dt>รวม</dt><dd><b>${baht(b.total)}</b></dd>
    <dt>สถานะ</dt><dd>${stB(b)}</dd></dl>
    <p class="mut sm">เก็บรหัสการจองไว้ใช้ตรวจสอบสถานะที่เมนู “ตรวจสอบการจอง”</p><p class="sm" style="color:#6d4a0c">${POLICY()}</p>
-   ${fromBooking?`<button class="btn ghost" data-act="newbook">จองรอบใหม่</button>`:''}
+   <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${fromBooking?`<button class="btn ghost" data-act="newbook">จองรอบใหม่</button>`:''}</div>
   </div>`;
 }
 let checkResult=null;
@@ -827,7 +827,15 @@ const ACT={
   orgdel:async el=>{const S=DB.site,o=S.org.find(x=>x.id===el.dataset.id),kids=S.org.filter(x=>x.parent===o.id);if(!await confirmBox('ลบบุคคลนี้?',`${esc(o.pos)} · ${esc(o.name)}${kids.length?`<br>ผู้ที่อยู่ภายใต้ ${kids.length} คน จะย้ายขึ้นไปอยู่ภายใต้ผู้บังคับบัญชาของคนนี้แทน`:''}`,'ลบ','red'))return;call('orgDel',{id:o.id})},
   paych:el=>{payCh=el.dataset.k;render()},
   chimgdel:el=>{chImgDraft[el.dataset.k]='';document.getElementById('chprev_'+el.dataset.k).innerHTML='<span class="sm mut">ลบรูปแล้ว (ยังไม่บันทึก)</span>'},
-  newbook:()=>{VB=null;avKey='';render();scrollTo(0,0)},
+  sendslip:async()=>{if(!slipDraft||!VB||busy)return;const f=slipDraft.file;busy=true;toast('กำลังส่งสลิป…');
+    try{const data=await shrinkTo(f,1400,.8);if(!data){toast('อ่านไฟล์รูปไม่ได้');return}
+      const qr=await slipQR(f).catch(()=>'');
+      const blob=await (await fetch(data)).blob(),fd=new FormData();fd.append('file',new File([blob],'slip.jpg',{type:'image/jpeg'}));fd.append('qr',qr||'');fd.append('code',VB.booking.code);fd.append('phone',VB.phone);fd.append('channel',payCh);
+      const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return}
+      VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;toast('แนบหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจสอบ');URL.revokeObjectURL(slipDraft.url);slipDraft=null;render()}finally{busy=false}},
+  slipchange:()=>{if(slipDraft)URL.revokeObjectURL(slipDraft.url);slipDraft=null;setSlipBox();const i=document.querySelector('[data-slip]');if(i)i.click()},
+  savebk:async()=>{const b=VB?.booking||checkResult?.booking;if(!b)return;try{await saveBookingImage(b)}catch(e){toast('บันทึกไม่สำเร็จ')}},
+  newbook:()=>{slipDraft=null;VB=null;avKey='';render();scrollTo(0,0)},
   copy:el=>{navigator.clipboard?.writeText(el.dataset.v).then(()=>toast('คัดลอกแล้ว'),()=>toast('คัดลอกไม่ได้ — กรุณาคัดลอกเอง'))},
   mcancel:()=>{const m=document.getElementById('modal');m._res&&m._res(false);m._res=null;closeModal()},
   mok:()=>{const m=document.getElementById('modal');const r=m._res;const ref=m.querySelector('[name=ref]')?.value||'';m._res=null;closeModal();r&&r(ref||true)},
@@ -884,6 +892,25 @@ document.addEventListener('change',e=>{if(e.target.id==='acceptRules')bf.acceptR
 document.addEventListener('input',e=>{const k=e.target.dataset.bf;if(!k)return;bf[k]=e.target.value;if(k==='date'){bf.time=null;document.getElementById('slots').innerHTML=slotsHTML()}});
 async function refreshVB(){if(!VB)return;const r=await post('/api/public/lookup',{code:VB.booking.code,phone:VB.phone});if(r.ok){VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;render()}}
 let busy=false;
+let slipDraft=null; // {code,file,url}
+function slipBoxHTML(b){const d=slipDraft&&slipDraft.code===b.code?slipDraft:null;
+  if(!d)return `<input type="file" accept="image/jpeg,image/png,image/webp" data-slip="${b.code}">`;
+  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center"><img src="${d.url}" style="max-width:100%;max-height:320px;border-radius:8px">
+   <div class="row" style="gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap"><button class="btn lg" data-act="sendslip">📤 ส่งสลิป</button><button class="btn ghost" data-act="slipchange">เปลี่ยนรูป</button></div></div>`}
+function setSlipBox(){const el=document.getElementById('slipbox');if(el&&VB)el.innerHTML=slipBoxHTML(VB.booking)}
+async function saveBookingImage(b){
+  const F=getComputedStyle(document.body).fontFamily||'sans-serif',W=1080,rows=[['รหัสการจอง',b.code],['วันที่',fmtDate(b.date)],['เวลาออกเดินทาง',b.time+' น.'],['จำนวน',b.people+' คน'],['',paxText(b.pax||{})],['ผู้จอง',b.name],['เบอร์โทร',b.phone],['ค่าบริการกลุ่ม',baht(b.groupFee)],['ค่าเข้าอุทยาน',baht(b.entryTotal)],['ยอดรวม',baht(b.total)],['สถานะ',ST[b.status]?.[0]||b.status]];
+  const H=330+rows.length*76+230,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  x.fillStyle='#f4f5f1';x.fillRect(0,0,W,H);x.fillStyle='#1f5c40';x.fillRect(0,0,W,210);
+  x.fillStyle='#fff';x.font=`bold 64px ${F}`;x.fillText('ผาแง่ม Trail',60,105);x.font=`36px ${F}`;x.fillText('รายละเอียดการจองเดินป่า',60,165);
+  x.fillStyle='#fff';x.beginPath();x.roundRect?x.roundRect(40,250,W-80,rows.length*76+60,24):x.rect(40,250,W-80,rows.length*76+60);x.fill();
+  let y=320;rows.forEach(([k,v])=>{x.fillStyle='#6b7280';x.font=`34px ${F}`;x.fillText(k,90,y);x.fillStyle=k==='ยอดรวม'||k==='รหัสการจอง'?'#1f5c40':'#1f2937';x.font=`${k==='รหัสการจอง'||k==='ยอดรวม'?'bold 44px':(k?'38px':'30px')} ${F}`;
+    let t=String(v||'');while(x.measureText(t).width>W-480&&t.length>4)t=t.slice(0,-2);if(t!==String(v||''))t+='…';x.fillText(t,420,y);y+=76});
+  x.fillStyle='#6d4a0c';x.font=`28px ${F}`;y+=50;x.fillText('ตรวจสอบสถานะ: phangamtrail.com → ตรวจสอบการจอง',60,y);y+=46;x.fillText('ชำระแล้วไม่คืนเงินทุกกรณี · ขอเลื่อนวันได้โดยติดต่อเจ้าหน้าที่',60,y);
+  x.fillStyle='#9ca3af';x.font=`24px ${F}`;x.fillText('บันทึกเมื่อ '+new Date().toLocaleString('th-TH'),60,H-40);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png')),name=`phangam-${b.code}.png`,file=new File([blob],name,{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'การจอง '+b.code});return}catch(e){if(e&&e.name==='AbortError')return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('บันทึกรูปรายละเอียดการจองแล้ว')}
 const slipTag=b=>b.slipQr?' <span class="sm" style="color:#1d6b3a" title="อ่าน QR สลิปได้ และไม่ซ้ำกับการจองอื่น">QR ✓</span>':(b.slipAt?' <span class="sm" style="color:var(--warn)" title="อ่าน QR บนสลิปไม่ได้ — ตรวจด้วยตา">⚠ ไม่มี QR</span>':'');
 const slipNote=b=>b.slipQr?`<p class="sm" style="color:#1d6b3a;margin-top:-4px">✓ อ่าน QR สลิปได้ และไม่ซ้ำกับการจองอื่นในระบบ<br><span class="mut" style="word-break:break-all">${esc(b.slipQr)}</span></p>`:(b.slipAt?`<p class="sm" style="color:var(--warn);margin-top:-4px">⚠ อ่าน QR บนสลิปไม่ได้ (เช่น รูปถ่ายหน้าจอไม่ชัด หรือไม่ใช่สลิปธนาคาร) — ระบบตรวจซ้ำได้เฉพาะไฟล์เดิม กรุณาตรวจยอดเข้าบัญชีจริง</p>`:'');
 /* อ่าน QR บนสลิปโอนเงิน (ใช้ตรวจสลิปซ้ำ) */
@@ -896,12 +923,7 @@ async function slipQR(file){const jsQR=await loadJsQR();const url=URL.createObje
   finally{URL.revokeObjectURL(url)}}
 document.addEventListener('change',async e=>{
   const el=e.target,k=el.dataset.chg;
-  if(el.dataset.slip){const f=el.files[0];if(!f||!VB)return;if(busy)return;busy=true;toast('กำลังอัปโหลด…');
-    try{const data=await shrinkTo(f,1400,.8);if(!data){toast('อ่านไฟล์รูปไม่ได้');return}
-      const qr=await slipQR(f).catch(()=>'');
-      const blob=await (await fetch(data)).blob(),fd=new FormData();fd.append('file',new File([blob],'slip.jpg',{type:'image/jpeg'}));fd.append('qr',qr||'');fd.append('code',VB.booking.code);fd.append('phone',VB.phone);fd.append('channel',payCh);
-      const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return}
-      VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;toast('แนบหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจสอบ');render()}finally{busy=false}return}
+  if(el.dataset.slip){const f=el.files[0];if(!f||!VB)return;if(slipDraft)URL.revokeObjectURL(slipDraft.url);slipDraft={code:VB.booking.code,file:f,url:URL.createObjectURL(f)};setSlipBox();toast('ตรวจรูปสลิป แล้วกด "ส่งสลิป"');return}
   if(el.dataset.up){const files=[...el.files];if(!files.length)return;const kind2=el.dataset.up;if(busy)return;busy=true;
     try{
     if(kind2==='gallery'){const urls=[];toast(`กำลังอัปโหลด ${files.length} รูป…`);for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)urls.push(u)}}
