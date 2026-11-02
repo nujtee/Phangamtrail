@@ -399,7 +399,7 @@ function renderCheck(){
 }
 
 /* ========== ADMIN ========== */
-let calM=today().slice(0,7),calR={preset:'month',from:'',to:''},calSel='',qDate=addDays(today(),1),page='dashboard',dashTab='day',bkF={status:'all',q:'',from:'',to:''},acc={preset:'month',from:'',to:''},payTab='unpaid',ntF='all',auF='all';
+let calM=today().slice(0,7),calR={preset:'month',from:'',to:''},calSel='',qDate=addDays(today(),1),page='dashboard',dashTab='day',bkF={status:'all',q:'',from:'',to:'',sort:'code_desc'},acc={preset:'month',from:'',to:''},payTab='unpaid',ntF='all',auF='all';
 function renderLogin(){
   return `<form class="card login" data-form="login"><h2>เข้าสู่ระบบหลังบ้าน</h2>
   <div class="field"><label>ชื่อผู้ใช้</label><input name="username" autocomplete="username" autocapitalize="off"></div>
@@ -462,14 +462,17 @@ function pBookings(){
   if(bkF.status!=='all')L=L.filter(b=>b.status===bkF.status);
   if(bkF.from)L=L.filter(b=>b.date>=bkF.from);if(bkF.to)L=L.filter(b=>b.date<=bkF.to);
   if(bkF.q){const q=bkF.q.toLowerCase();L=L.filter(b=>(b.code+b.name+b.phone).toLowerCase().includes(q))}
-  L.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const cn=b=>+String(b.code).replace(/\D/g,'')||0,dt=b=>b.date+b.time;
+  const SORTS={code_desc:(a,b)=>cn(b)-cn(a),code_asc:(a,b)=>cn(a)-cn(b),date_desc:(a,b)=>dt(b).localeCompare(dt(a))||cn(b)-cn(a),date_asc:(a,b)=>dt(a).localeCompare(dt(b))||cn(a)-cn(b)};
+  L.sort(SORTS[bkF.sort]||SORTS.code_desc);
   const ag=activeGuides(DB);
   return `<div class="hd"><h2>รายการจอง</h2><span class="mut sm">${L.length} รายการ</span></div>
   <div class="card"><div class="grid4">
    <div><label>สถานะชำระ</label><select data-chg="bkstatus">${[['all','ทั้งหมด'],['pending','รอชำระเงิน'],['paid','ชำระแล้ว'],['cancelled','ยกเลิก']].map(([k,l])=>`<option value="${k}" ${bkF.status===k?'selected':''}>${l}</option>`).join('')}</select></div>
    <div><label>ตั้งแต่วันที่</label><input type="date" value="${bkF.from}" data-chg="bkfrom"></div>
    <div><label>ถึงวันที่</label><input type="date" value="${bkF.to}" data-chg="bkto"></div>
-   <div><label>ค้นหา (รหัส/ชื่อ/โทร)</label><input value="${esc(bkF.q)}" data-chg="bkq" placeholder="พิมพ์แล้วกด Enter"></div></div></div>
+   <div><label>ค้นหา (รหัส/ชื่อ/โทร)</label><input value="${esc(bkF.q)}" data-chg="bkq" placeholder="พิมพ์แล้วกด Enter"></div></div>
+   <div class="grid4" style="margin-top:10px"><div><label>เรียงตาม</label><select data-chg="bksort">${[['code_desc','รหัสจอง ใหม่ → เก่า'],['code_asc','รหัสจอง เก่า → ใหม่'],['date_desc','วันเดินป่า ล่าสุด → เก่า'],['date_asc','วันเดินป่า ใกล้สุด → ไกล']].map(([k,l])=>`<option value="${k}" ${bkF.sort===k?'selected':''}>${l}</option>`).join('')}</select></div></div></div>
   <div class="card"><div class="tbl-wrap"><table><tr><th>รหัส</th><th>วัน/เวลา</th><th>ผู้จอง</th><th class="num">คน</th><th class="num">ยอด</th><th>การชำระเงิน</th><th>ไกด์</th><th>การเดินทาง</th><th></th></tr>
   ${L.map(b=>`<tr><td><b>${b.code}</b></td><td>${fmtDateS(b.date)}<br><span class="mut sm">${b.time} น.</span></td>
    <td>${esc(b.name)}<div class="sm mut">${esc(b.phone)}</div></td><td class="num">${b.people}<div class="sm mut" style="white-space:normal;min-width:90px">${paxText(b.pax||{})}</div></td><td class="num">${baht(b.total)}</td>
@@ -909,7 +912,7 @@ document.addEventListener('change',async e=>{
     }finally{busy=false}}
   if(el.dataset.chimg){const f=el.files[0];if(!f)return;const k2=el.dataset.chimg;const d=await shrinkTo(f,1000,.9);const u=d&&await uploadImg(d);if(!u)return;chImgDraft[k2]=u;document.getElementById('chprev_'+k2).innerHTML=`<img src="${u}" style="max-width:160px;border-radius:8px;border:1px solid var(--line)"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
   if(!k)return;
-  if(k==='bkstatus')bkF.status=el.value;else if(k==='bkfrom')bkF.from=el.value;else if(k==='bkto')bkF.to=el.value;else if(k==='bkq')bkF.q=el.value;
+  if(k==='bkstatus')bkF.status=el.value;else if(k==='bkfrom')bkF.from=el.value;else if(k==='bkto')bkF.to=el.value;else if(k==='bkq')bkF.q=el.value;else if(k==='bksort')bkF.sort=el.value;
   else if(k==='accfrom')acc.from=el.value;else if(k==='accto')acc.to=el.value;else if(k==='auf')auF=el.value;else if(k==='qdate')qDate=el.value||today();else if(k==='calfrom'){calR.from=el.value;if(calR.to<calR.from)calR.to=calR.from}else if(k==='calto')calR.to=el.value;
   else if(k==='reassign'){call('reassign',{id:el.dataset.id,guideId:el.value});return}
   render();
