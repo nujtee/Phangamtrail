@@ -332,8 +332,8 @@ function renderBook(){
    <div class="grid2">
     <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(bf.name)}" data-bf="name" autocomplete="name"></div>
     <div class="field"><label>เบอร์โทรศัพท์ *</label><input name="phone" value="${esc(bf.phone)}" data-bf="phone" inputmode="tel" autocomplete="tel"></div>
-    <div class="field"><label>อีเมล *</label><input name="email" value="${esc(bf.email)}" data-bf="email" data-en="1" type="text" lang="en" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="name@example.com"><div class="sm mut" style="margin-top:4px">พิมพ์ด้วยแป้นภาษาไทยได้ ระบบแปลงเป็นอักษรอังกฤษให้อัตโนมัติ</div></div>
-    <div class="field"><label>LINE ID</label><input name="line" value="${esc(bf.line)}" data-bf="line" data-en="1" lang="en" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field"><label>อีเมล *</label><input name="email" value="${esc(bf.email)}" data-bf="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field"><label>LINE ID</label><input name="line" value="${esc(bf.line)}" data-bf="line"></div>
    </div>
    <div class="field"><label>หมายเหตุ (เช่น ผู้สูงอายุ เด็ก ข้อจำกัดด้านสุขภาพ)</label><textarea name="note" rows="2" data-bf="note">${esc(bf.note)}</textarea></div>
    ${(PUB.settings.rules||'').trim()?`<h3>4. กฎระเบียบการเดินป่า</h3><div class="rules">${esc(PUB.settings.rules)}</div>
@@ -910,13 +910,6 @@ const ACT={
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')ACT.mcancel()});
 document.addEventListener('change',e=>{if(e.target.id==='acceptRules')bf.acceptRules=e.target.checked});
-/* แป้นไทย (เกษมณี) → อักษรอังกฤษตามตำแหน่งปุ่ม สำหรับช่องอีเมล / LINE ID */
-const TH2EN=(()=>{const m={},a=(th,en)=>[...th].forEach((c,i)=>{if(c.charCodeAt(0)>127)m[c]=en[i]});
-  a('ๅ/-ภถุึคตจขช','1234567890-=');a('ๆไำพะัีรนยบลฃ','qwertyuiop[]\\');a('ฟหกดเ้่าสวง',"asdfghjkl;'");a('ผปแอิืทมใฝ','zxcvbnm,./');
-  a('๐"ฎฑธํ๊ณฯญฐ,ฅ','qwertyuiop{}|');a('ฤฆฏโฌ็๋ษศซ.','asdfghjkl:"');a('()ฉฮฺ์?ฒฬฦ','zxcvbnm<>?');a('+ู฿','!^&');
-  a('๑๒๓๔๕๖๗๘๙','123456789');return m})();
-const toEN=v=>[...v].map(c=>TH2EN[c]??c).join('').replace(/[^\x20-\x7E]/g,'').toLowerCase();
-document.addEventListener('input',e=>{const el=e.target;if(el.dataset&&el.dataset.en&&/[^\x00-\x7F]/.test(el.value)){const v=el.dataset.bf==='line'?[...el.value].map(c=>TH2EN[c]??c).join('').replace(/[^\x20-\x7E]/g,''):toEN(el.value);el.value=v;try{el.setSelectionRange(v.length,v.length)}catch(_){}}},true);
 document.addEventListener('input',e=>{const k=e.target.dataset.bf;if(!k)return;bf[k]=e.target.value;if(k==='date'){bf.time=null;document.getElementById('slots').innerHTML=slotsHTML()}});
 async function refreshVB(){if(!VB)return;const r=await post('/api/public/lookup',{code:VB.booking.code,phone:VB.phone});if(r.ok){VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;render()}}
 let busy=false;
