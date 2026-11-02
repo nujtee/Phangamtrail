@@ -58,7 +58,7 @@ export function seedState() {
     settings: {
       groupFee: 1100, entryRates: { ta: 30, tc: 30, fa: 30, fc: 30 }, maxGroup: 6, payDeadlineMin: 30,
       maxPeoplePerDay: 0, maxGroupsPerSlot: 0, maxGroupsPerGuideDay: 1, minLead: { v: 12, u: 'h' }, seasons: [],
-      slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60,
+      slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60, rules: '',
       split: { guide: 700, village: 100, park: 300 },
       channels: {
         bank: { on: false, mode: 'manual', bankName: '', accountName: '', accountNo: '' },
@@ -235,7 +235,7 @@ export function publicState(db) {
   const s = db.settings, ch = {};
   for (const [k, f] of Object.entries(PUBLIC_CH)) { if (s.channels[k]?.on) { ch[k] = {}; f.forEach(x => ch[k][x] = s.channels[k][x]) } else ch[k] = { on: false } }
   return {
-    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
+    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
     site: db.site, guideCount: activeGuides(db).length, today: today(),
   };
 }
@@ -272,6 +272,7 @@ export const publicActions = {
     if (!/^0\d{8,9}$/.test(phone) && !/^\d{8,15}$/.test(phone)) fail('กรุณากรอกเบอร์โทรให้ถูกต้อง');
     const email = String(p.email || '').trim().slice(0, 120);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) fail('กรุณากรอกอีเมลให้ถูกต้อง');
+    if ((s.rules || '').trim() && !p.acceptRules) fail('กรุณาอ่านและยอมรับกฎระเบียบก่อนจอง');
     if (!slotList(db).includes(p.time)) fail('กรุณาเลือกเวลาออกเดินทาง');
     const av = availability(db, p.date, people);
     if (av.closed) fail(`วันนี้ปิดรับจอง: ${av.closed.name}`);
@@ -283,7 +284,7 @@ export const publicActions = {
     const entryTotal = entryOf(pax, s.entryRates), created = nowISO();
     const b = {
       id: uid(), code: 'PG' + (++db.seq), qn: null, date: p.date, time: p.time, people, pax, entryRates: { ...s.entryRates },
-      name, phone, email, line: String(p.line || '').trim().slice(0, 60), note: String(p.note || '').trim().slice(0, 500),
+      name, phone, email, rulesAccepted: !!(s.rules || '').trim(), line: String(p.line || '').trim().slice(0, 60), note: String(p.note || '').trim().slice(0, 500),
       groupFee: +s.groupFee, entryTotal, total: +s.groupFee + entryTotal, split: { ...s.split },
       status: 'pending', slip: null, paidConfirmedBy: null, paidConfirmedAt: null, guideId: null, trip: 'unassigned', startedAt: null, endedAt: null,
       payout: { paid: false }, createdAt: created, expiresAt: new Date(Date.parse(created) + (+s.payDeadlineMin || 30) * 60e3).toISOString(),
@@ -464,7 +465,7 @@ export const adminActions = {
     Object.assign(s, {
       groupFee, split, maxGroup: Math.max(1, n('maxGroup')), slotStep: Math.min(240, Math.max(5, n('slotStep') || 15)), slotV2: true, tripHours: n('tripHours'), bookAheadDays: Math.max(1, n('bookAheadDays')),
       payDeadlineMin: Math.max(5, n('payDeadlineMin')), maxPeoplePerDay: n('maxPeoplePerDay'), maxGroupsPerSlot: n('maxGroupsPerSlot'), maxGroupsPerGuideDay: n('maxGroupsPerGuideDay'),
-      slotStart: p.slotStart, slotEnd: p.slotEnd, minLead: { v: n('minLead_v'), u: ['h', 'd', 'm'].includes(p.minLead_u) ? p.minLead_u : 'h' },
+      rules: String(p.rules ?? s.rules ?? '').replace(/\r/g, '').slice(0, 5000), slotStart: p.slotStart, slotEnd: p.slotEnd, minLead: { v: n('minLead_v'), u: ['h', 'd', 'm'].includes(p.minLead_u) ? p.minLead_u : 'h' },
       entryRates: Object.fromEntries(PAX.map(([k]) => [k, n('er_' + k)])),
     });
     log(db, 'settings', `ปรับตั้งค่า: กลุ่ม ${baht(groupFee)}, ค่าเข้า ${PAX.map(([k]) => s.entryRates[k]).join('/')}, รอบ ${s.slotStart}–${s.slotEnd} ทุก ${s.slotStep} นาที, ไกด์ ${split.guide}/หมู่บ้าน ${split.village}/อุทยาน ${split.park}, สูงสุด ${s.maxGroup} คน, ชำระใน ${s.payDeadlineMin} นาที, จองล่วงหน้า ≥ ${s.minLead.v}${s.minLead.u} ≤ ${s.bookAheadDays} วัน`);

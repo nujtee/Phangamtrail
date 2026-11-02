@@ -85,6 +85,8 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .hero h1{margin:0 0 6px;font-size:26px}
 .hero p{margin:0;opacity:.9}
 .hero svg{position:absolute;right:-10px;bottom:-6px;opacity:.22}
+.rules{white-space:pre-wrap;background:var(--bg,#f4f5f1);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:260px;overflow:auto;line-height:1.6;font-size:.95em}
+.rulesok{display:flex;gap:8px;align-items:flex-start;margin:10px 0 14px;color:var(--ink);font-weight:600}
 .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
 .slot{border:1px solid #cfd8d1;background:#fff;border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;font:inherit}
 .slot b{display:block;font-size:16px}.slot span{font-size:11.5px;color:var(--mut)}
@@ -331,6 +333,8 @@ function renderBook(){
     <div class="field"><label>LINE ID</label><input name="line" value="${esc(bf.line)}" data-bf="line"></div>
    </div>
    <div class="field"><label>หมายเหตุ (เช่น ผู้สูงอายุ เด็ก ข้อจำกัดด้านสุขภาพ)</label><textarea name="note" rows="2" data-bf="note">${esc(bf.note)}</textarea></div>
+   ${(PUB.settings.rules||'').trim()?`<h3>4. กฎระเบียบการเดินป่า</h3><div class="rules">${esc(PUB.settings.rules)}</div>
+   <label class="rulesok"><input type="checkbox" id="acceptRules" style="width:auto" ${bf.acceptRules?'checked':''}> ข้าพเจ้าและผู้ร่วมเดินทางได้อ่านและยอมรับกฎระเบียบข้างต้น *</label>`:''}
    <div class="price" id="price">${priceHTML()}</div>
    <p class="sm" style="background:var(--warnbg);color:#6d4a0c;border-radius:10px;padding:9px 12px;margin:12px 0 0">${POLICY()}</p>
    <div style="margin-top:14px"><button class="btn lg" type="submit">ยืนยันการจอง และไปหน้าชำระเงิน</button></div>
@@ -620,6 +624,8 @@ function pSettings(){const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village
    <p class="mut sm" style="margin:0">เช่น 12 ชั่วโมง = รอบ 06:00 พรุ่งนี้ต้องจองก่อน 18:00 วันนี้ · 0 = จองได้จนถึงเวลาออกเดินทาง · ตอนนี้ลูกค้าจองได้เร็วสุด ${fmtDT(earliestBooking().toISOString())}</p></div>
   <div class="card"><h3>ความจุ (0 = ไม่จำกัด)</h3><div class="grid3">${f('maxPeoplePerDay','จำนวนคนสูงสุดต่อวัน',s.maxPeoplePerDay,'number')}${f('maxGroupsPerSlot','จำนวนกลุ่มสูงสุดต่อรอบ',s.maxGroupsPerSlot,'number')}${f('maxGroupsPerGuideDay','กลุ่มสูงสุดต่อไกด์ต่อวัน',s.maxGroupsPerGuideDay,'number')}</div>
    <p class="mut sm" style="margin:0">แต่ละรอบรับได้ไม่เกินจำนวนไกด์ที่ว่างเสมอ</p></div>
+  <div class="card"><h3>กฎระเบียบการเดินป่า</h3><div class="field"><label>รายละเอียด (แสดงในหน้าจอง — ลูกค้าต้องติ๊กยอมรับก่อนจอง · เว้นว่าง = ไม่แสดง)</label><textarea name="rules" rows="10" placeholder="เช่น&#10;1. ห้ามนำขยะทิ้งบนเส้นทาง&#10;2. ต้องเดินตามไกด์ตลอดเส้นทาง&#10;3. ห้ามเก็บพืชหรือสัตว์ป่า">${esc(s.rules||'')}</textarea></div>
+   <p class="mut sm" style="margin:0">ขึ้นบรรทัดใหม่ได้ตามต้องการ ระบบแสดงตามที่พิมพ์</p></div>
   <p class="mut sm">ข้อมูลบัญชีรับเงินย้ายไปที่เมนู “ช่องทางรับชำระเงิน”</p>
   <div class="row"><button class="btn" type="submit">บันทึกการตั้งค่า</button></div></form>
   <div class="card" style="margin-top:16px"><div class="hd"><h3>ฤดูกาล — ช่วงปิดรับจอง</h3><button class="btn sm" data-act="seasonform">+ เพิ่มช่วงปิด</button></div>
@@ -871,6 +877,7 @@ const ACT={
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')ACT.mcancel()});
+document.addEventListener('change',e=>{if(e.target.id==='acceptRules')bf.acceptRules=e.target.checked});
 document.addEventListener('input',e=>{const k=e.target.dataset.bf;if(!k)return;bf[k]=e.target.value;if(k==='date'){bf.time=null;document.getElementById('slots').innerHTML=slotsHTML()}});
 async function refreshVB(){if(!VB)return;const r=await post('/api/public/lookup',{code:VB.booking.code,phone:VB.phone});if(r.ok){VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;render()}}
 let busy=false;
@@ -907,6 +914,7 @@ document.addEventListener('submit',async e=>{
     Object.assign(bf,{name:fd.name.trim(),phone:fd.phone.trim(),email:fd.email.trim(),line:fd.line.trim(),note:fd.note.trim()});
     if(!bf.time)return toast('กรุณาเลือกเวลาออกเดินทาง');if(!bf.name)return toast('กรุณากรอกชื่อ-นามสกุล');
     const phone=bf.phone.replace(/\D/g,'');if(!/^0\d{8,9}$/.test(phone)&&!/^\d{8,15}$/.test(phone))return toast('กรุณากรอกเบอร์โทรให้ถูกต้อง');if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((bf.email||'').trim()))return toast('กรุณากรอกอีเมลให้ถูกต้อง');
+    if((PUB.settings.rules||'').trim()&&!bf.acceptRules)return toast('กรุณาอ่านและติ๊กยอมรับกฎระเบียบก่อนจอง');
     const r=await post('/api/public/createBooking',{...bf,pax:{...bf.pax},phone});
     if(!r.ok){toast(r.error||'จองไม่สำเร็จ');avKey='';document.getElementById('slots').innerHTML=slotsHTML();return}
     VB={booking:r.booking,phone};payCh=null;Object.assign(bf,{time:null,name:'',phone:'',email:'',line:'',note:''});avKey='';render();scrollTo(0,0);return}
