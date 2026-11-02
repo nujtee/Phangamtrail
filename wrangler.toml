@@ -1,0 +1,39 @@
+name = "phangamtrail"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+routes = [
+  { pattern = "phangamtrail.com", custom_domain = true },
+  { pattern = "www.phangamtrail.com", custom_domain = true },
+]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/img/*", "/line/*", "/internal/*"]
+
+[[durable_objects.bindings]]
+name = "ENGINE"
+class_name = "Engine"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Engine"]
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "phangamtrail-images"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+MAIN_HOST = "phangamtrail.com"
+ADMIN_USERNAME = "admin"
+# MAIL_FROM = "ผาแง่ม <no-reply@phangamtrail.com>"   ← ใส่เมื่อยืนยันโดเมนกับ Resend แล้ว
+
+# ความลับ (ตั้งด้วย: npx wrangler secret put ชื่อ)
+#   ADMIN_PASSWORD        รหัสผ่านผู้ดูแลระบบคนแรก (ใช้ครั้งแรกเท่านั้น)
+#   LINE_CHANNEL_TOKEN    Channel access token ของ LINE OA
+#   LINE_CHANNEL_SECRET   Channel secret ของ LINE OA
+#   RESEND_API_KEY        ถ้าต้องการส่งอีเมลแจ้งไกด์

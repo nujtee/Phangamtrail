@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ผาแง่ม · จองเดินป่า</title>
+<meta name="description" content="จองรอบเดินป่าผาแง่มพร้อมไกด์ชุมชนท้องถิ่น">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E⛰️%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>/* qrcode-generator 1.4.4 (MIT, Kazuhiko Arase) */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+</script>
+<style>
+:root{--g:#1f5f3f;--g2:#2f7d52;--g3:#e7f1ea;--bg:#f4f6f1;--card:#fff;--ink:#1d2a22;--mut:#6b776f;--line:#e1e6df;--warn:#a96a12;--warnbg:#fdf3e1;--red:#b83227;--redbg:#fbe9e7;--blue:#2b5f9e;--bluebg:#e6effa;--okbg:#e3f3e8}
+*{box-sizing:border-box}
+body{margin:0;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55}
+a{color:var(--g2)}
+.topbar{background:var(--g);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+.brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;margin-right:auto}
+.brand small{font-weight:400;opacity:.75;font-size:12px}
+.topnav{display:flex;gap:4px;flex-wrap:wrap}
+.topnav a{color:#dfeee4;text-decoration:none;padding:6px 12px;border-radius:999px;font-size:14px}
+.topnav a.on{background:rgba(255,255,255,.18);color:#fff}
+.topnav a.cta{background:#f0b54d;color:#3b2a06;font-weight:600}.topnav a.cta.on{background:#ffd27a;color:#3b2a06}
+.navsub{display:flex;gap:2px;margin-left:6px;padding-left:6px;border-left:1px solid rgba(255,255,255,.25)}.navsub a{font-size:12.5px!important;opacity:.85}
+@media(max-width:800px){.topnav{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:2px}.topnav a{white-space:nowrap}}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.gal figure{margin:0;position:relative;border-radius:10px;overflow:hidden;background:#e9ece8;aspect-ratio:4/3;cursor:pointer}
+.gal img{width:100%;height:100%;object-fit:cover;display:block}
+.gal figcaption{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:12px;padding:14px 8px 5px}
+.gal .del{position:absolute;top:5px;right:5px}
+.stay{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+.stay .ph{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:3px;background:#e9ece8}.stay .ph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer}.stay .ph img:first-child{grid-column:1/-1;aspect-ratio:16/9}
+.stay .bd{padding:18px}
+@media(max-width:760px){.stay{grid-template-columns:1fr}}
+.org{display:flex;flex-direction:column;align-items:center;min-width:max-content;margin:0 auto}
+.org ul{display:flex;justify-content:center;padding:14px 0 0;margin:0;list-style:none;position:relative;flex-wrap:nowrap}
+.org ul ul::before{content:'';position:absolute;top:0;left:50%;height:14px;border-left:2px solid #b9cbbf}
+.org li{display:flex;flex-direction:column;align-items:center;position:relative;padding:14px 6px 0}
+.org li::before{content:'';position:absolute;top:0;left:50%;height:14px;border-left:2px solid #b9cbbf}
+.org li::after{content:'';position:absolute;top:0;left:0;right:0;border-top:2px solid #b9cbbf}
+.org li:first-child::after{left:50%}.org li:last-child::after{right:50%}.org li:only-child::after{display:none}
+.org>ul{padding-top:0}.org>ul>li{padding-top:0}.org>ul>li::before,.org>ul>li::after{display:none}
+.org .node{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;width:140px}
+.org .node img{width:64px;height:64px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 6px;border:3px solid var(--g3)}
+.org .node b{display:block;font-size:14px}.org .node span{font-size:12.5px;color:var(--g2);font-weight:600}
+.homehero{border-radius:18px;padding:46px 26px;color:#fff;background-size:cover;background-position:center;margin-bottom:16px;position:relative;overflow:hidden}
+.homehero h1{font-size:34px;margin:0 0 6px;text-shadow:0 2px 12px rgba(0,0,0,.3)}.homehero p{margin:0 0 18px;max-width:560px;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.prose{white-space:pre-line;line-height:1.8}
+.lb{position:fixed;inset:0;background:rgba(10,15,12,.88);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px;flex-direction:column;gap:10px}
+.lb img{max-width:100%;max-height:80vh;border-radius:10px}.lb p{color:#fff;margin:0}
+.demo{background:#fff8e6;color:#7a5a12;font-size:12.5px;text-align:center;padding:5px 10px;border-bottom:1px solid #f0e2bd}
+main{max-width:1200px;margin:0 auto;padding:18px 14px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.card h2,.card h3{margin:0 0 12px}
+h2{font-size:19px}h3{font-size:16px}
+.mut{color:var(--mut)}.sm{font-size:13px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:800px){.grid4{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+label{display:block;font-size:13px;color:var(--mut);margin:0 0 4px;font-weight:500}
+input,select,textarea{width:100%;font:inherit;padding:9px 11px;border:1px solid #cfd8d1;border-radius:9px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--g3);border-color:var(--g2)}
+.field{margin-bottom:12px}
+.btn{font:inherit;border:1px solid transparent;background:var(--g2);color:#fff;padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{filter:brightness(1.07)}
+.btn.lg{padding:12px 18px;font-size:16px;width:100%}
+.btn.ghost{background:#fff;color:var(--g);border-color:#cfd8d1}
+.btn.warn{background:var(--warn)}.btn.red{background:var(--red)}.btn.blue{background:var(--blue)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-ok{background:var(--okbg);color:#1d6b3a}.b-warn{background:var(--warnbg);color:var(--warn)}.b-red{background:var(--redbg);color:var(--red)}.b-blue{background:var(--bluebg);color:var(--blue)}.b-gray{background:#eef0ee;color:#5b665e}
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--mut);font-size:12.5px;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid #eef1ec;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tfoot td{font-weight:700;border-top:2px solid var(--line)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* booking */
+.hero{background:linear-gradient(135deg,#1f5f3f,#3f8f5f);color:#fff;border-radius:16px;padding:26px 22px;margin-bottom:16px;position:relative;overflow:hidden}
+.hero h1{margin:0 0 6px;font-size:26px}
+.hero p{margin:0;opacity:.9}
+.hero svg{position:absolute;right:-10px;bottom:-6px;opacity:.22}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.slot{border:1px solid #cfd8d1;background:#fff;border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;font:inherit}
+.slot b{display:block;font-size:16px}.slot span{font-size:11.5px;color:var(--mut)}
+.slot.on{background:var(--g2);border-color:var(--g2);color:#fff}.slot.on span{color:#e0f0e5}
+.slot:disabled{background:#f2f3f1;color:#aab2ac;cursor:not-allowed}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:40px;height:40px;border-radius:10px;border:1px solid #cfd8d1;background:#fff;font-size:20px;cursor:pointer}
+.stepper b{font-size:20px;min-width:30px;text-align:center}
+.price{background:var(--g3);border-radius:12px;padding:14px}
+.price .l{display:flex;justify-content:space-between;padding:3px 0}
+.price .t{border-top:1px dashed #9cbca7;margin-top:6px;padding-top:8px;font-weight:700;font-size:18px}
+.paybox{text-align:center}
+.qrwrap{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0}
+.pp-head{background:#0e3d6b;color:#fff;border-radius:8px 8px 0 0;padding:6px;font-weight:700;letter-spacing:.5px;margin:-14px -14px 12px}
+#qr svg{margin:0 auto}
+.qrwrap{max-width:100%}
+.amount{font-size:28px;font-weight:700;color:var(--g)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14.5px}
+.kv dt{color:var(--mut)}.kv dd{margin:0;font-weight:500}
+/* admin */
+.admin{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
+.side{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;position:sticky;top:64px}
+.side .who{padding:8px 10px 12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.side .who b{display:block}
+.side a{display:block;padding:8px 10px;border-radius:9px;text-decoration:none;color:var(--ink);font-size:14.5px}
+.side a.on{background:var(--g3);color:var(--g);font-weight:600}
+@media(max-width:860px){.admin{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}.side .who{display:none}.side a{white-space:nowrap}}
+.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+.stat .k{font-size:13px;color:var(--mut)}.stat .v{font-size:24px;font-weight:700;margin-top:2px}.stat .s{font-size:12.5px;color:var(--mut)}
+.tabs{display:flex;gap:4px;background:#eef1ec;border-radius:10px;padding:3px;width:fit-content}
+.tabs button{font:inherit;border:none;background:transparent;padding:5px 12px;border-radius:8px;cursor:pointer;font-size:13.5px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.admin>section{min-width:0}
+.cal .dc{min-width:0;overflow:hidden}
+.cal .dh{font-size:12px;color:var(--mut);text-align:center;padding:4px 0;font-weight:600}
+.cal .dc{min-height:78px;border:1px solid var(--line);border-radius:9px;padding:5px 6px;background:#fff;cursor:pointer;font:inherit;text-align:left;display:flex;flex-direction:column;gap:2px}
+.cal .dc.out{background:#f6f7f5;color:#b3bab4;cursor:default}
+.cal .dc.today{border:2px solid var(--g2)}
+.cal .dc.sel{outline:3px solid #f0b54d;outline-offset:-1px}
+.cal .dc .dn{font-weight:600;font-size:13px}
+.cal .dc .g{font-size:12px;font-weight:600;border-radius:6px;padding:1px 5px;width:fit-content}
+.cal .dc .p{font-size:11.5px;color:var(--mut)}
+@media(max-width:600px){.cal{gap:2px}.cal .dc{min-height:54px;padding:3px}.cal .dc .p{display:none}.cal .dc .g{font-size:10.5px;padding:0 3px;white-space:nowrap}}
+.tabs button.on{background:#fff;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.hd h2,.hd h3{margin:0}
+.queue{display:flex;gap:8px;flex-wrap:wrap}
+.qitem{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;background:#fff}
+.qitem.next{border-color:var(--g2);background:var(--g3)}
+.qitem .n{width:24px;height:24px;border-radius:50%;background:var(--g);color:#fff;font-size:12px;display:grid;place-items:center;font-weight:700}
+.msg{white-space:pre-line;font-size:13.5px;background:#f7f9f6;border-radius:8px;padding:8px 10px;margin-top:4px}
+.empty{color:var(--mut);text-align:center;padding:18px}
+/* modal & toast */
+#modal{position:fixed;inset:0;background:rgba(20,30,24,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+#modal.show{display:flex}
+.mbox{background:#fff;border-radius:16px;padding:20px;max-width:560px;width:100%;max-height:90vh;overflow:auto}
+.mbox h3{margin-top:0}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1d2a22;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90vw}
+#toast.show{opacity:1}
+.login{max-width:420px;margin:30px auto}
+.demo-acc button{margin:3px}
+.slipimg{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">⛰️ ผาแง่ม Trail <small>ระบบจองเดินป่า</small></div>
+  <nav class="topnav" id="topnav">
+    <a href="#home" data-nav="home">หน้าหลัก</a>
+    <a href="#gallery" data-nav="gallery">รวมภาพ</a>
+    <a href="#stay" data-nav="stay">บ้านพัก</a>
+    <a href="#book" data-nav="book" class="cta">จองขึ้นผาแง่ม</a>
+    <a href="#about" data-nav="about">เกี่ยวกับเรา</a>
+    <span class="navsub"><a href="#check" data-nav="check">ตรวจสอบการจอง</a><a href="#admin" data-nav="admin">หลังบ้าน</a></span>
+  </nav>
+</header>
+<main id="app"></main>
+<div id="modal"></div>
+<div id="toast"></div>
+
+<script>
+/* ========== utils ========== */
+
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d)};
+const today=()=>ymd(new Date());
+const baht=n=>'฿'+Number(n||0).toLocaleString('th-TH');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const nowISO=()=>new Date().toISOString();
+const fmtDate=s=>new Date(s+'T00:00:00').toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+const fmtDateS=s=>new Date(s+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+const fmtDT=iso=>iso?new Date(iso).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+const toMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
+const fromMin=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+const weekRange=t=>{const d=new Date(t+'T00:00:00');const s=addDays(t,-((d.getDay()+6)%7));return[s,addDays(s,6)]};
+const monthRange=t=>{const[y,m]=t.split('-').map(Number);return[`${y}-${pad(m)}-01`,`${y}-${pad(m)}-${pad(new Date(y,m,0).getDate())}`]};
+const inR=(d,r)=>d>=r[0]&&d<=r[1];
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
+
+/* ========== PromptPay (EMVCo) ========== */
+function crc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021):(c<<1);c&=0xFFFF}return c.toString(16).toUpperCase().padStart(4,'0')}
+function promptpayPayload(id,amount){
+  const t=String(id).replace(/\D/g,'');const f=(k,v)=>k+pad(v.length)+v;
+  let tag,val;
+  if(t.length>=15){tag='03';val=t}else if(t.length>=13){tag='02';val=t}else{tag='01';val=('0000000000000'+t.replace(/^0/,'66')).slice(-13)}
+  const p=f('00','01')+f('01',amount?'12':'11')+f('29',f('00','A000000677010111')+f(tag,val))+f('58','TH')+f('53','764')+(amount?f('54',Number(amount).toFixed(2)):'')+'6304';
+  return p+crc16(p);
+}
+
+/* ========== roles & pages ========== */
+const ROLES={
+  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','notifications','users','settings','audit']},
+  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','notifications','settings','audit']},
+  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','accounting','payouts','payments','audit']},
+  guidemgr:{label:'ผู้จัดการไกด์',pages:['dashboard','calendar','bookings','guides','notifications','audit']},
+  staff:{label:'เจ้าหน้าที่ประสานงาน',pages:['dashboard','calendar','content','bookings','guides','notifications']},
+  guide:{label:'ไกด์',pages:['mytrips']}
+};
+const PAGES={content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
+const PERM={
+  confirmPay:['superadmin','admin','finance'],
+  assign:['superadmin','admin','guidemgr','staff'],
+  markUnavail:['superadmin','admin','guidemgr'],
+  cancel:['superadmin','admin','staff'],
+  tripAdmin:['superadmin','admin','guidemgr'],
+  payout:['superadmin','admin','finance'],
+  payoutUndo:['superadmin'],
+  editGuides:['superadmin','admin','guidemgr','staff'],
+};
+const me=()=>DB?.me||null;
+const can=a=>{const u=me();return !!u&&PERM[a].includes(u.role)};
+
+/* ========== data (มาจากเซิร์ฟเวอร์) ========== */
+let DB=null,PUB=null,AUTH={hasUsers:true},booted=false;
+function ph(label,hue,w=800,h=600){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 800 600"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${hue},55%,78%)"/><stop offset="1" stop-color="hsl(${hue},45%,92%)"/></linearGradient></defs><rect width="800" height="600" fill="url(#a)"/><path d="M0 600 L180 300 L300 430 L470 200 L800 600Z" fill="hsl(${(hue+120)%360},30%,38%)"/><path d="M0 600 L260 420 L420 520 L620 380 L800 600Z" fill="hsl(${(hue+120)%360},35%,28%)"/><text x="400" y="110" font-family="sans-serif" font-size="40" fill="#fff" text-anchor="middle" opacity=".95">${label}</text><text x="400" y="160" font-family="sans-serif" font-size="22" fill="#fff" text-anchor="middle" opacity=".8">รูปตัวอย่าง</text></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)}
+function avatar(t,hue){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="hsl(${hue},40%,82%)"/><circle cx="60" cy="46" r="22" fill="hsl(${hue},30%,55%)"/><path d="M18 118c4-26 22-38 42-38s38 12 42 38z" fill="hsl(${hue},30%,55%)"/></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)}
+async function api(path,opt={}){
+  try{const r=await fetch(path,{credentials:'same-origin',...opt,headers:{...(opt.body&&!(opt.body instanceof FormData)&&typeof opt.body==='string'?{'content-type':'application/json'}:{}),...(opt.headers||{})}});
+    const j=await r.json().catch(()=>({error:'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง'}));return {ok:r.ok,status:r.status,...j}}
+  catch(e){return {ok:false,status:0,error:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต'}}}
+const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body||{})});
+async function loadPub(){const r=await api('/api/public/state');if(r.ok)PUB=r;return r.ok}
+async function loadAdmin(){const r=await api('/api/admin/state');DB=r.ok?r:null;return r.ok}
+/* คำสั่งหลังบ้าน: ส่งไปเซิร์ฟเวอร์ → ได้สถานะใหม่ → แสดงผล */
+async function call(name,p){
+  const r=await post('/api/admin/'+name,p);
+  if(r.status===401){DB=null;render();toast('กรุณาเข้าสู่ระบบใหม่');return null}
+  if(!r.ok){toast(r.error||'ทำรายการไม่สำเร็จ');return null}
+  DB=r.state;if(r.msg)toast(r.msg);await loadPub();render();return r}
+async function uploadImg(dataURL){const blob=await (await fetch(dataURL)).blob();
+  const r=await api('/api/admin/upload',{method:'POST',body:blob,headers:{'content-type':blob.type||'image/jpeg'}});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return null}return r.url}
+const gObj=(db,id)=>db.guides.find(g=>g.id===id);
+const gName=(db,id)=>{const g=gObj(db,id);return g?`${g.firstName} ${g.lastName}`:'-'};
+const PAX=[['ta','คนไทย ผู้ใหญ่'],['tc','คนไทย เด็ก'],['fa','ชาวต่างชาติ ผู้ใหญ่'],['fc','ชาวต่างชาติ เด็ก']];
+const paxCount=p=>PAX.reduce((a,[k])=>a+(+p[k]||0),0);
+const entryOf=(p,r)=>PAX.reduce((a,[k])=>a+(+p[k]||0)*(+r[k]||0),0);
+const paxText=p=>PAX.filter(([k])=>+p[k]).map(([k,l])=>`${l} ${p[k]}`).join(' · ');
+const activeGuides=db=>db.guides.filter(g=>g.active).sort((a,b)=>a.priority-b.priority);
+function guideBusy(db,gid,date,time,exceptId){const dur=db.settings.tripHours*60,st=toMin(time);
+  return db.bookings.some(b=>b.id!==exceptId&&b.guideId===gid&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date&&Math.abs(toMin(b.time)-st)<dur)}
+const unavailOn=(db,gid,date)=>(db.unavail||[]).some(u=>u.guideId===gid&&u.date===date);
+const guideDayCount=(db,gid,date,exceptId)=>db.bookings.filter(b=>b.id!==exceptId&&b.guideId===gid&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date).length;
+function guideBlocked(db,gid,date,time,exceptId,b){const cap=+db.settings.maxGroupsPerGuideDay||0;return (cap>0&&guideDayCount(db,gid,date,exceptId)>=cap)||guideBusy(db,gid,date,time,exceptId)||unavailOn(db,gid,date)||!!(b&&(b.declined||[]).some(d=>d.guideId===gid))}
+const dayBookings=(db,date)=>db.bookings.filter(b=>b.date===date&&b.status!=='cancelled').sort((a,b)=>(a.qn??1e9)-(b.qn??1e9)||a.createdAt.localeCompare(b.createdAt));
+const dayGuides=(db,date)=>activeGuides(db).filter(g=>!unavailOn(db,g.id,date));
+const DONE=['completed','noshow','paidcancel'];const isDone=b=>DONE.includes(b.trip);
+const isLocked=b=>b.trip==='started'||isDone(b)||b.manual;
+function streamNext(db,ptr,b){const G=activeGuides(db);if(!G.length)return null;const i=G.findIndex(g=>g.id===ptr),st=i>=0?i+1:0;
+  for(let k=0;k<G.length;k++){const g=G[(st+k)%G.length];if(!b||!guideBlocked(db,g.id,b.date,b.time,b.id,b))return g}return null}
+const nextQueueGuide=db=>streamNext(db,db.lastGuideId,null);
+function slotList(){const s=(DB||PUB).settings,o=[];for(let m=toMin(s.slotStart);m<=toMin(s.slotEnd);m+=Math.max(15,+s.slotStep||60))o.push(fromMin(m));return o}
+const byId=id=>DB.bookings.find(b=>b.id===id);
+
+/* ========== badges ========== */
+const ST={pending:['รอชำระเงิน','b-warn'],paid:['ชำระแล้ว','b-ok'],cancelled:['ยกเลิก','b-red']};
+const TR={noshow:['ลูกค้าไม่มา','b-gray'],paidcancel:['ลูกค้ายกเลิก (ไม่คืนเงิน)','b-gray'],unassigned:['รอมอบหมาย','b-red'],assigned:['มอบหมายแล้ว','b-blue'],started:['กำลังเดินทาง','b-warn'],completed:['สิ้นสุดการเดินทาง','b-ok']};
+const badge=([t,c])=>`<span class="badge ${c}">${t}</span>`;
+const stB=b=>badge(ST[b.status]);
+const trB=b=>b.status==='cancelled'?badge(['-','b-gray']):b.status==='pending'?badge(['รอชำระเงิน','b-gray']):badge(TR[b.trip]);
+
+/* ========== modal ========== */
+let modalSubmit=null;
+function openModal(html,onSubmit){const m=document.getElementById('modal');m.innerHTML=`<div class="mbox">${html}</div>`;m.classList.add('show');modalSubmit=onSubmit;const f=m.querySelector('input,select,textarea');if(f)f.focus()}
+function closeModal(){const m=document.getElementById('modal');m.classList.remove('show');m.innerHTML='';modalSubmit=null}
+function confirmBox(title,body,okLabel='ยืนยัน',cls=''){return new Promise(res=>{openModal(`<h3>${title}</h3><div>${body}</div><div class="mact"><button class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn ${cls}" data-act="mok">${okLabel}</button></div>`,null);
+  const m=document.getElementById('modal');m._res=res})}
+
+/* ========== FRONT: booking ========== */
+let VB=null; /* การจองที่กำลังแสดง {booking, phone} */
+let AV=null,avKey=''; /* ที่ว่างจากเซิร์ฟเวอร์ */
+const bf={date:addDays(today(),1),time:null,pax:{ta:2,tc:0,fa:0,fc:0},name:'',phone:'',email:'',line:'',note:''};
+let viewBookingId=null;
+function siteImg(src,alt=''){return `<img src="${src}" alt="${esc(alt)}" loading="lazy">`}
+function renderHome(){const S=PUB.site,s=PUB.settings,h=S.home,imgs=S.gallery.imgs.slice(-6).reverse();
+  return `<div class="homehero" style="background-image:linear-gradient(rgba(20,50,32,.35),rgba(20,50,32,.55)),url('${h.hero||ph('ผาแง่ม',150,1600,700)}')">
+    <h1>${esc(h.title)}</h1><p>${esc(h.subtitle)}</p><a class="btn" href="#book" style="background:#f0b54d;color:#3b2a06;font-size:16px;padding:12px 20px;text-decoration:none">จองขึ้นผาแง่ม →</a></div>
+  <div class="grid3" style="margin-bottom:16px">
+   <div class="stat"><div class="k">ค่าบริการนำเที่ยว</div><div class="v">${baht(s.groupFee)}</div><div class="s">ต่อกลุ่ม ไม่เกิน ${s.maxGroup} คน + ค่าเข้าอุทยานรายคน</div></div>
+   <div class="stat"><div class="k">รอบออกเดินทาง</div><div class="v">${s.slotStart}–${s.slotEnd}</div><div class="s">ทุกวัน${(s.seasons||[]).some(x=>x.active)?' (ยกเว้นช่วงปิดฤดูกาล)':''}</div></div>
+   <div class="stat"><div class="k">ไกด์ชุมชน</div><div class="v">${PUB.guideCount} คน</div><div class="s">พาเดินทุกกลุ่ม</div></div></div>
+  <div class="card"><p class="prose" style="margin:0">${esc(h.intro)}</p></div>
+  <div class="card"><div class="hd"><h2>ภาพบรรยากาศ</h2><a href="#gallery">ดูทั้งหมด →</a></div><div class="gal">${imgs.map(g=>`<figure data-act="lb" data-src="${g.id}">${siteImg(g.src,g.caption)}</figure>`).join('')}</div></div>
+  ${S.stays.length?`<div class="card"><div class="hd"><h2>บ้านพัก</h2><a href="#stay">ดูทั้งหมด →</a></div><div class="gal">${S.stays.map(x=>`<a href="#stay" style="text-decoration:none;color:inherit"><figure style="cursor:pointer">${siteImg(x.imgs[0]||ph(x.name,40),x.name)}<figcaption>${esc(x.name)}</figcaption></figure></a>`).join('')}</div></div>`:''}`}
+let galCat='all';
+function renderGallery(){const G=PUB.site.gallery,L=G.imgs.filter(g=>galCat==='all'||g.cat===galCat);
+  return `<div class="hd"><h2>รวมภาพ</h2><span class="mut sm">${L.length} รูป</span></div>
+  <div class="tabs" style="margin-bottom:14px;flex-wrap:wrap"><button data-act="galcat" data-k="all" class="${galCat==='all'?'on':''}">ทั้งหมด</button>${G.cats.map(c=>`<button data-act="galcat" data-k="${c.id}" class="${galCat===c.id?'on':''}">${esc(c.name)} (${G.imgs.filter(g=>g.cat===c.id).length})</button>`).join('')}</div>
+  ${L.length?`<div class="gal">${L.map(g=>`<figure data-act="lb" data-src="${g.id}">${siteImg(g.src,g.caption)}${g.caption?`<figcaption>${esc(g.caption)}</figcaption>`:''}</figure>`).join('')}</div>`:'<div class="card empty">ยังไม่มีรูปในหมวดนี้</div>'}`}
+function renderStay(){const L=PUB.site.stays;
+  return `<div class="hd"><h2>บ้านพัก</h2><span class="mut sm">ที่พักใกล้ผาแง่ม · ติดต่อและจองกับที่พักโดยตรง</span></div>
+  ${L.map(x=>`<div class="card stay"><div class="ph">${(x.imgs.length?x.imgs:[ph(x.name,40)]).slice(0,4).map(src=>`<img src="${src}" alt="${esc(x.name)}" data-act="lbsrc">`).join('')}</div>
+   <div class="bd"><h2 style="margin:0 0 6px">${esc(x.name)}</h2>${x.price?`<div class="badge b-ok" style="font-size:13px;margin-bottom:8px">${esc(x.price)}</div>`:''}<p class="prose" style="margin:0 0 10px">${esc(x.desc)}</p>
+   ${x.phone?`<p class="sm" style="margin:0 0 10px">📞 ${esc(x.phone)}</p>`:''}${x.link?`<a class="btn" href="${esc(x.link)}" target="_blank" rel="noopener">ดูรายละเอียด / จองที่พัก ↗</a><div class="sm mut" style="margin-top:4px;word-break:break-all">${esc(x.link)}</div>`:''}</div></div>`).join('')||'<div class="card empty">ยังไม่มีข้อมูลบ้านพัก</div>'}`}
+function orgTree(parent){const kids=PUB.site.org.filter(o=>(o.parent||'')===parent).sort((a,b)=>a.order-b.order);if(!kids.length)return '';
+  return `<ul>${kids.map(o=>`<li><div class="node">${o.photo?`<img src="${o.photo}" alt="">`:''}<b>${esc(o.name)}</b><span>${esc(o.pos)}</span></div>${orgTree(o.id)}</li>`).join('')}</ul>`}
+function renderAbout(){const a=PUB.site.about;
+  return `<div class="card"><h2>${esc(a.title)}</h2><p class="prose" style="margin:0">${esc(a.body)}</p></div>
+  <div class="card"><h2>ผังผู้บริหาร</h2><div style="overflow-x:auto"><div class="org">${orgTree('')||'<div class="empty">ยังไม่มีข้อมูล</div>'}</div></div></div>`}
+function renderBook(){
+  if(VB)return renderPayment(VB.booking,true);
+  const s=PUB.settings;
+  return `<div class="hero"><h1>จองขึ้นผาแง่ม</h1><p>จองรอบเดินป่าพร้อมไกด์ท้องถิ่น · กลุ่มละไม่เกิน ${s.maxGroup} คน · ออกเดินทาง ${s.slotStart}–${s.slotEnd} น.</p>
+   <svg width="220" height="120" viewBox="0 0 220 120"><path d="M0 120 L60 40 L95 80 L140 15 L220 120Z" fill="#fff"/></svg></div>
+  <form class="card" data-form="book" novalidate>
+   <h2>1. เลือกวันและเวลา</h2>
+   <div class="field" style="max-width:260px"><label>วันที่เดินป่า</label><input type="date" name="date" value="${bf.date}" min="${ymd(earliestBooking())}" max="${addDays(today(),s.bookAheadDays)}" data-bf="date"></div>
+   <p class="sm mut" style="margin-top:-6px">${leadText()?`ต้องจองล่วงหน้าอย่างน้อย <b>${leadText()}</b> · `:''}จองล่วงหน้าได้ไม่เกิน ${s.bookAheadDays} วัน${(s.seasons||[]).filter(x=>x.active).length?`<br>ช่วงปิดรับจอง: ${(s.seasons||[]).filter(x=>x.active).map(x=>`${esc(x.name)} (${seasonText(x)})`).join(' · ')}`:''}</p>
+   <label>เวลาออกเดินทาง</label><div id="slots">${slotsHTML()}</div>
+   <h2 style="margin-top:22px">2. จำนวนผู้เดินป่า</h2>
+   <p class="mut sm" style="margin-top:-6px">รวมไม่เกิน ${s.maxGroup} คนต่อกลุ่ม</p>
+   ${PAX.map(([k,l])=>`<div class="row" style="justify-content:space-between;margin-bottom:8px;max-width:420px"><span>${l} <span class="mut sm">(${baht(s.entryRates[k])}/คน)</span></span><div class="stepper"><button type="button" data-act="ppl" data-k="${k}" data-d="-1">−</button><b id="ppl_${k}">${bf.pax[k]}</b><button type="button" data-act="ppl" data-k="${k}" data-d="1">+</button></div></div>`).join('')}
+   <h2 style="margin-top:22px">3. ข้อมูลผู้จอง</h2>
+   <div class="grid2">
+    <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(bf.name)}" data-bf="name" autocomplete="name"></div>
+    <div class="field"><label>เบอร์โทรศัพท์ *</label><input name="phone" value="${esc(bf.phone)}" data-bf="phone" inputmode="tel" autocomplete="tel"></div>
+    <div class="field"><label>อีเมล</label><input name="email" value="${esc(bf.email)}" data-bf="email" type="email" autocomplete="email"></div>
+    <div class="field"><label>LINE ID</label><input name="line" value="${esc(bf.line)}" data-bf="line"></div>
+   </div>
+   <div class="field"><label>หมายเหตุ (เช่น ผู้สูงอายุ เด็ก ข้อจำกัดด้านสุขภาพ)</label><textarea name="note" rows="2" data-bf="note">${esc(bf.note)}</textarea></div>
+   <div class="price" id="price">${priceHTML()}</div>
+   <p class="sm" style="background:var(--warnbg);color:#6d4a0c;border-radius:10px;padding:9px 12px;margin:12px 0 0">${POLICY()}</p>
+   <div style="margin-top:14px"><button class="btn lg" type="submit">ยืนยันการจอง และไปหน้าชำระเงิน</button></div>
+  </form>`;
+}
+/* ===== จองล่วงหน้า & ฤดูกาล ===== */
+const MONTHS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const LEADU={h:'ชั่วโมง',d:'วัน',m:'เดือน'};
+const leadText=()=>{const l=PUB.settings.minLead||{v:0,u:'h'};return +l.v?`${l.v} ${LEADU[l.u]}`:''};
+function earliestBooking(){const l=PUB.settings.minLead||{v:0,u:'h'},d=new Date(),v=+l.v||0;
+  if(l.u==='m')d.setMonth(d.getMonth()+v);else d.setTime(d.getTime()+v*(l.u==='d'?86400e3:3600e3));return d}
+const slotOpen=(date,time)=>new Date(`${date}T${time}:00`)>=earliestBooking();
+function seasonCovers(x,date){if(x.kind==='date')return date>=x.from&&date<=x.to;
+  const m=+date.slice(5,7),f=+x.from,t=+x.to;return f<=t?(m>=f&&m<=t):(m>=f||m<=t)}
+const closedSeason=date=>(PUB.settings.seasons||[]).find(x=>x.active&&seasonCovers(x,date));
+const seasonText=x=>x.kind==='date'?`${fmtDate(x.from)} – ${fmtDate(x.to)}`:`${MONTHS[x.from-1]} – ${MONTHS[x.to-1]} ของทุกปี`;
+function slotsHTML(){
+  const key=bf.date+'|'+paxCount(bf.pax);
+  if(avKey!==key||!AV){if(avKey!==key){avKey=key;AV=null;loadAvail(key)}return '<div class="mut sm">กำลังตรวจสอบรอบที่ว่าง…</div>'}
+  if(AV.closed){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)"><b>ปิดรับจองวันนี้: ${esc(AV.closed.name)}</b><div class="sm">${esc(AV.closed.text)} · กรุณาเลือกวันอื่น</div></div>`}
+  if(AV.tooFar){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)">จองล่วงหน้าได้ไม่เกิน ${PUB.settings.bookAheadDays} วัน</div>`}
+  if(!AV.slots.length)return '<div class="mut sm">ไม่มีรอบให้จอง</div>';
+  return `<div class="slots">${AV.slots.map(x=>{const past=x.reason==='lead',dis=past||x.free<=0;if(dis&&bf.time===x.t)bf.time=null;
+    return `<button type="button" class="slot ${bf.time===x.t?'on':''}" data-act="slot" data-t="${x.t}" ${dis?'disabled':''}><b>${x.t}</b><span>${past?(leadText()?'ต้องจองล่วงหน้า':'ปิดรับแล้ว'):x.free<=0?esc(x.reason||'เต็ม'):'ว่าง '+x.free+' กลุ่ม'}</span></button>`}).join('')}</div>`;
+}
+async function loadAvail(key){const [date,people]=key.split('|');const r=await post('/api/public/availability',{date,people});if(avKey!==key)return;
+  AV=r.ok?r:{slots:[],closed:{name:r.error||'โหลดไม่สำเร็จ',text:''}};const el=document.getElementById('slots');if(el)el.innerHTML=slotsHTML()}
+const POLICY=()=>`ชำระภายใน ${PUB.settings.payDeadlineMin} นาทีหลังจอง มิฉะนั้นระบบจะยกเลิกอัตโนมัติ · <b>ชำระแล้วไม่คืนเงินทุกกรณี (รวมถึงยกเลิกหรือไม่มาตามนัด)</b> แต่ขอเลื่อนวันเดินป่าได้ โดยติดต่อเจ้าหน้าที่`;
+function priceHTML(){const s=PUB.settings,e=entryOf(bf.pax,s.entryRates);
+  return `<div class="l"><span>ค่าบริการนำเที่ยว (ต่อกลุ่ม)</span><span>${baht(s.groupFee)}</span></div>
+  ${PAX.filter(([k])=>bf.pax[k]).map(([k,l])=>`<div class="l"><span>ค่าเข้าอุทยาน ${l} ${baht(s.entryRates[k])} × ${bf.pax[k]}</span><span>${baht(s.entryRates[k]*bf.pax[k])}</span></div>`).join('')}
+  <div class="l t"><span>ยอดชำระทั้งหมด</span><span>${baht(+s.groupFee+e)}</span></div>`}
+function renderPayment(b,fromBooking){
+  const s=PUB.settings;
+  const head=b.status==='paid'?`<div class="badge b-ok" style="font-size:14px">✓ ชำระเงินแล้ว — การจองได้รับการยืนยัน</div>`:b.status==='cancelled'?`<div class="badge b-red" style="font-size:14px">การจองนี้ถูกยกเลิก${b.cancelReason?' — '+esc(b.cancelReason):''}</div>`:
+   `<h2 style="margin:0">${fromBooking?'จองสำเร็จ! ':''}กรุณาโอนเงินเพื่อยืนยันการจอง</h2><p class="mut sm" style="margin:4px 0 0">เลือกช่องทางที่สะดวก แล้วแนบหลักฐานการชำระ</p>
+   ${b.slip?'':`<div class="badge b-warn" style="font-size:14px;margin-top:8px">⏱ โอนภายใน ${new Date(b.expiresAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น. · เหลือ <span data-countdown="${b.expiresAt}">--:--</span></div>`}`;
+  return `<div class="card paybox">${head}
+   ${b.status==='pending'?(()=>{const on=chOn();if(!on.length)return '<p class="mut">ยังไม่ได้ตั้งค่าช่องทางรับชำระเงิน กรุณาติดต่อเจ้าหน้าที่</p>';if(!on.some(([k])=>k===payCh))payCh=on[0][0];
+     const auto=PUB.settings.channels[payCh]?.mode==='auto';
+     return `<p class="sm mut" style="margin:12px 0 6px">เลือกช่องทางชำระเงิน</p><div class="tabs" style="margin:0 auto 6px;flex-wrap:wrap;width:auto;justify-content:center">${on.map(([k,l,ic])=>`<button data-act="paych" data-k="${k}" class="${payCh===k?'on':''}">${ic} ${l}</button>`).join('')}</div>${payChannelHTML(b,payCh)}<p class="sm mut">แนบหลักฐานการชำระด้านล่าง เจ้าหน้าที่จะตรวจและยืนยันการจองให้โดยเร็ว</p>`})()+`
+   <div style="max-width:380px;margin:0 auto;text-align:left"><label>แนบสลิป / หลักฐานการชำระ</label><input type="file" accept="image/jpeg,image/png,image/webp" data-slip="${b.code}">
+     ${b.slip?`<p class="sm" style="color:#1d6b3a">✓ แนบสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ</p>`:''}</div>`:''}
+  </div>
+  <div class="card"><h3>รายละเอียดการจอง</h3>
+   <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลา</dt><dd>${b.time} น.</dd>
+   <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>
+   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd><dt>รวม</dt><dd><b>${baht(b.total)}</b></dd>
+   <dt>สถานะ</dt><dd>${stB(b)}</dd></dl>
+   <p class="mut sm">เก็บรหัสการจองไว้ใช้ตรวจสอบสถานะที่เมนู “ตรวจสอบการจอง”</p><p class="sm" style="color:#6d4a0c">${POLICY()}</p>
+   ${fromBooking?`<button class="btn ghost" data-act="newbook">จองรอบใหม่</button>`:''}
+  </div>`;
+}
+let checkResult=null;
+function renderCheck(){
+  return `<form class="card" data-form="check" style="max-width:520px"><h2>ตรวจสอบการจอง</h2>
+   <div class="field"><label>รหัสการจอง (เช่น PG1005)</label><input name="code" required></div>
+   <div class="field"><label>เบอร์โทรศัพท์ที่ใช้จอง</label><input name="phone" required inputmode="tel"></div>
+   <button class="btn" type="submit">ค้นหา</button></form>
+   ${checkResult?renderPayment(checkResult.booking,false):''}`;
+}
+
+/* ========== ADMIN ========== */
+let calM=today().slice(0,7),calR={preset:'month',from:'',to:''},calSel='',qDate=addDays(today(),1),page='dashboard',dashTab='day',bkF={status:'all',q:'',from:'',to:''},acc={preset:'month',from:'',to:''},payTab='unpaid',ntF='all',auF='all';
+function renderLogin(){
+  return `<form class="card login" data-form="login"><h2>เข้าสู่ระบบหลังบ้าน</h2>
+  <div class="field"><label>ชื่อผู้ใช้</label><input name="username" autocomplete="username" autocapitalize="off"></div>
+  <div class="field"><label>รหัสผ่าน</label><input name="password" type="password" autocomplete="current-password"></div>
+  <button class="btn lg" type="submit">เข้าสู่ระบบ</button>
+  ${AUTH.hasUsers?'':'<p class="sm" style="color:var(--red);margin-top:12px">ระบบยังไม่มีผู้ดูแล — ตั้งค่า ADMIN_PASSWORD ใน Cloudflare แล้วโหลดหน้านี้ใหม่</p>'}</form>`;
+}
+function renderAdmin(sub){
+  const u=me();if(!u)return renderLogin();
+  const pages=ROLES[u.role].pages;if(sub&&pages.includes(sub))page=sub;if(!pages.includes(page))page=pages[0];
+  const body={dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
+  return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
+   ${pages.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`).join('')}
+   <a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>`;
+}
+const live=()=>DB.bookings.filter(b=>b.status!=='cancelled');
+const revenueOf=list=>list.filter(b=>b.status==='paid').reduce((a,b)=>a+b.total,0);
+
+function pDashboard(){
+  const t=today(),tm=addDays(t,1),wk=weekRange(t),mo=monthRange(t),L=live();
+  const moB=L.filter(b=>inR(b.date,mo)),regMo=DB.bookings.filter(b=>inR(b.createdAt.slice(0,10),mo));
+  const tmB=L.filter(b=>b.date===tm).sort((a,b)=>a.time.localeCompare(b.time));
+  const pend=L.filter(b=>b.status==='pending');
+  const range=dashTab==='day'?[t,t]:dashTab==='week'?wk:mo;
+  const rB=L.filter(b=>b.guideId&&inR(b.date,range)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const byG=DB.guides.map(g=>({g,list:rB.filter(b=>b.guideId===g.id)})).filter(x=>x.list.length||x.g.active).sort((a,b)=>a.g.priority-b.g.priority);
+  const recent=[...DB.bookings].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,8);
+  return `<div class="hd"><h2>แดชบอร์ด</h2><span class="mut sm">${fmtDate(t)}</span></div>
+  <div class="grid4" style="margin-bottom:16px">
+   <div class="stat"><div class="k">ลงทะเบียนเดือนนี้</div><div class="v">${regMo.length} <span class="sm mut">กลุ่ม</span></div><div class="s">${regMo.reduce((a,b)=>a+b.people,0)} คน</div></div>
+   <div class="stat"><div class="k">เดินป่าพรุ่งนี้</div><div class="v">${tmB.reduce((a,b)=>a+b.people,0)} <span class="sm mut">คน</span></div><div class="s">${tmB.length} กลุ่ม</div></div>
+   <div class="stat"><div class="k">รอชำระเงิน</div><div class="v" style="color:var(--warn)">${pend.length}</div><div class="s">${baht(pend.reduce((a,b)=>a+b.total,0))}</div></div>
+   <div class="stat"><div class="k">รายรับเดือนนี้</div><div class="v" style="color:var(--g)">${baht(revenueOf(moB))}</div><div class="s">ชำระแล้ว ${moB.filter(b=>b.status==='paid').length} กลุ่ม</div></div>
+  </div>
+  <div class="card"><h3>รายรับ (ชำระแล้ว ตามวันเดินป่า)</h3><div class="grid3">
+   ${[['วันนี้',[t,t]],['สัปดาห์นี้',wk],['เดือนนี้',mo]].map(([k,r])=>{const x=L.filter(b=>inR(b.date,r)&&b.status==='paid');const sum=f=>x.reduce((a,b)=>a+f(b),0);
+     return `<div class="stat" style="background:#fafbf9"><div class="k">${k}</div><div class="v">${baht(sum(b=>b.total))}</div><div class="s">ไกด์ ${baht(sum(b=>b.split.guide))} · หมู่บ้าน ${baht(sum(b=>b.split.village))} · อุทยาน ${baht(sum(b=>b.split.park))} · ค่าเข้า ${baht(sum(b=>b.entryTotal))}</div></div>`}).join('')}
+  </div></div>
+  <div class="card"><div class="hd"><h3>ผู้ที่จะเดินป่าพรุ่งนี้ · ${fmtDate(tm)}</h3><span class="badge b-blue">${tmB.length} กลุ่ม / ${tmB.reduce((a,b)=>a+b.people,0)} คน</span></div>
+   ${tmB.length?`<div class="tbl-wrap"><table><tr><th>เวลา</th><th>รหัส</th><th>ผู้จอง</th><th>โทร</th><th class="num">คน</th><th>ชำระ</th><th>ไกด์</th></tr>
+   ${tmB.map(b=>`<tr><td><b>${b.time}</b></td><td>${b.code}</td><td>${esc(b.name)}${b.note?`<div class="sm mut">${esc(b.note)}</div>`:''}</td><td>${esc(b.phone)}</td><td class="num">${b.people}</td><td>${stB(b)}</td><td>${b.guideId?esc(gName(DB,b.guideId)):trB(b)}</td></tr>`).join('')}</table></div>`:`<div class="empty">ยังไม่มีการจองสำหรับพรุ่งนี้</div>`}</div>
+  <div class="card"><div class="hd"><h3>ไกด์ที่ได้รับมอบหมาย</h3><div class="tabs">${[['day','วันนี้'],['week','สัปดาห์นี้'],['month','เดือนนี้']].map(([k,l])=>`<button data-act="dtab" data-k="${k}" class="${dashTab===k?'on':''}">${l}</button>`).join('')}</div></div>
+   <div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ไกด์</th><th class="num">งาน</th><th class="num">ผู้เดินป่า</th><th>รายการ</th></tr>
+   ${byG.map(({g,list})=>`<tr><td>${g.priority}</td><td>${esc(g.firstName+' '+g.lastName)}${g.active?'':' <span class="badge b-gray">ปิดใช้งาน</span>'}</td><td class="num"><b>${list.length}</b></td><td class="num">${list.reduce((a,b)=>a+b.people,0)}</td>
+     <td class="sm">${list.map(b=>`${fmtDateS(b.date)} ${b.time} · ${b.code} ${trB(b)}`).join('<br>')||'<span class="mut">-</span>'}</td></tr>`).join('')}</table></div></div>
+  <div class="card"><h3>การลงทะเบียนล่าสุด</h3><div class="tbl-wrap"><table><tr><th>รหัส</th><th>จองเมื่อ</th><th>ผู้จอง</th><th>วันเดินป่า</th><th class="num">คน</th><th class="num">ยอด</th><th>สถานะ</th></tr>
+   ${recent.map(b=>`<tr><td>${b.code}</td><td class="sm">${fmtDT(b.createdAt)}</td><td>${esc(b.name)}</td><td>${fmtDateS(b.date)} ${b.time}</td><td class="num">${b.people}</td><td class="num">${baht(b.total)}</td><td>${stB(b)}</td></tr>`).join('')}</table></div></div>`;
+}
+
+function tripButtons(b,asGuide){
+  if(b.status==='cancelled'||!b.guideId)return '';
+  if(!(asGuide||can('tripAdmin')))return '';
+  if(b.trip==='assigned')return (asGuide?`<button class="btn sm red" data-act="decline" data-id="${b.id}">✕ ไม่ว่าง</button> `:'')+`<button class="btn sm" data-act="tripstart" data-id="${b.id}" ${b.status!=='paid'?'disabled title="ต้องชำระเงินก่อน"':''}>▶ ยืนยันเริ่มการเดินทาง</button>`
+    +(b.status==='paid'&&b.date<=today()?` <button class="btn sm ghost" data-act="noshow" data-id="${b.id}">ลูกค้าไม่มา</button>`:'');
+  if(b.trip==='started')return `<button class="btn sm warn" data-act="tripend" data-id="${b.id}">■ สิ้นสุดการเดินทาง</button>`;
+  return '';
+}
+function pBookings(){
+  let L=[...DB.bookings];
+  if(bkF.status!=='all')L=L.filter(b=>b.status===bkF.status);
+  if(bkF.from)L=L.filter(b=>b.date>=bkF.from);if(bkF.to)L=L.filter(b=>b.date<=bkF.to);
+  if(bkF.q){const q=bkF.q.toLowerCase();L=L.filter(b=>(b.code+b.name+b.phone).toLowerCase().includes(q))}
+  L.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const ag=activeGuides(DB);
+  return `<div class="hd"><h2>รายการจอง</h2><span class="mut sm">${L.length} รายการ</span></div>
+  <div class="card"><div class="grid4">
+   <div><label>สถานะชำระ</label><select data-chg="bkstatus">${[['all','ทั้งหมด'],['pending','รอชำระเงิน'],['paid','ชำระแล้ว'],['cancelled','ยกเลิก']].map(([k,l])=>`<option value="${k}" ${bkF.status===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div><label>ตั้งแต่วันที่</label><input type="date" value="${bkF.from}" data-chg="bkfrom"></div>
+   <div><label>ถึงวันที่</label><input type="date" value="${bkF.to}" data-chg="bkto"></div>
+   <div><label>ค้นหา (รหัส/ชื่อ/โทร)</label><input value="${esc(bkF.q)}" data-chg="bkq" placeholder="พิมพ์แล้วกด Enter"></div></div></div>
+  <div class="card"><div class="tbl-wrap"><table><tr><th>รหัส</th><th>วัน/เวลา</th><th>ผู้จอง</th><th class="num">คน</th><th class="num">ยอด</th><th>การชำระเงิน</th><th>ไกด์</th><th>การเดินทาง</th><th></th></tr>
+  ${L.map(b=>`<tr><td><b>${b.code}</b></td><td>${fmtDateS(b.date)}<br><span class="mut sm">${b.time} น.</span></td>
+   <td>${esc(b.name)}<div class="sm mut">${esc(b.phone)}</div></td><td class="num">${b.people}<div class="sm mut" style="white-space:normal;min-width:90px">${paxText(b.pax||{})}</div></td><td class="num">${baht(b.total)}</td>
+   <td>${stB(b)}${b.slip?` <button class="btn ghost sm" data-act="slip" data-id="${b.id}">สลิป</button>${b.payChannel?`<div class="sm mut">ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}${b.payFee?` · รับ ${baht(b.paidAmount)} (ค่าธรรมเนียม ${baht(b.payFee)})`:''}</div>`:''}`:''}
+     ${b.status==='pending'&&can('confirmPay')?`<div style="margin-top:4px"><button class="btn sm" data-act="confirmpay" data-id="${b.id}">ยืนยันรับเงิน</button></div>`:''}
+     ${b.status==='paid'?`<div class="sm mut">${b.paidConfirmedBy==='ระบบอัตโนมัติ'?'⚡ ':''}โดย ${esc(b.paidConfirmedBy||'-')}</div>`:''}</td>
+   <td>${b.status==='pending'?'<span class="sm mut">มอบหมายหลังชำระเงิน</span>':b.status!=='cancelled'&&can('assign')&&!isLocked({...b,manual:false})?`<select data-chg="reassign" data-id="${b.id}" style="min-width:140px"><option value="">— อัตโนมัติตามคิว —</option>${ag.map(g=>`<option value="${g.id}" ${g.id===b.guideId?'selected':''}>${g.priority}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}</select>`:esc(b.guideId?gName(DB,b.guideId):'-')}</td>
+   <td>${trB(b)}<div style="margin-top:4px">${tripButtons(b,false)}</div>${(b.declined||[]).map(d=>`<div class="sm" style="color:var(--red)">✕ ${esc(gName(DB,d.guideId))} ไม่ว่าง: ${esc(d.reason)}</div>`).join('')}</td>
+   <td>${b.status==='pending'&&can('cancel')?`<button class="btn ghost sm" data-act="cancelbk" data-id="${b.id}">ยกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('cancel')?`<button class="btn ghost sm" data-act="reschedule" data-id="${b.id}">เลื่อนวัน</button> <button class="btn ghost sm" data-act="paidcancel" data-id="${b.id}">ลูกค้ายกเลิก</button>`:''}${b.cancelReason?`<div class="sm mut">${esc(b.cancelReason)}</div>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่พบรายการ</td></tr>`}
+  </table></div></div>`;
+}
+
+function pGuides(){
+  const ag=activeGuides(DB),dG=dayGuides(DB,qDate),dB=dayBookings(DB,qDate);
+  const un=DB.bookings.filter(b=>b.status==='paid'&&b.qn!=null&&b.trip==='unassigned'&&b.date>=today());
+  const up=DB.bookings.filter(b=>b.status!=='cancelled'&&b.guideId&&b.date>=today()&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,12);
+  const ed=can('editGuides');
+  return `<div class="hd"><h2>มอบหมายงานไกด์</h2>${ed?`<button class="btn" data-act="guideform">+ เพิ่มไกด์</button>`:''}</div>
+  <div class="card"><h3>คิววนของไกด์</h3>
+   <div class="queue">${ag.map(g=>{const nx=nextQueueGuide(DB);return `<div class="qitem ${nx&&nx.id===g.id?'next':''}"><span class="n">${g.priority}</span>${esc(g.firstName)}${nx&&nx.id===g.id?` <span class="badge b-ok">รับการจองถัดไป (คิว #${DB.rotSeq+1})</span>`:''}</div>`}).join('')||'<span class="mut">ยังไม่มีไกด์ที่เปิดใช้งาน</span>'}</div>
+   <p class="mut sm" style="margin-bottom:0">คิว<b>วนต่อเนื่องไปเรื่อยๆ ไม่นับวันและไม่เริ่มใหม่</b> — การจองแต่ละรายการได้เลขคิวต่อกัน (#1, #2, #3 …) แล้วจับคู่กับไกด์ตามลำดับ 1→2→3→4→1→… · ผู้จอง<b>อยู่ที่เลขคิวเดิมเสมอ</b> เมื่อไกด์ไม่ว่าง ไกด์คนนั้นไปต่อท้าย คิวก่อนหน้าไม่เปลี่ยน และ<b>ตั้งแต่คิวนั้นเป็นต้นไปไกด์ถัดไปขยับขึ้นมาทั้งหมด</b> · ถ้าเวลาทับกัน (ภายใน ${DB.settings.tripHours} ชม.) ข้ามไปคนถัดไป</p></div>
+  <div class="card"><div class="hd"><h3>คิวรายวัน</h3><input type="date" style="width:auto" value="${qDate}" data-chg="qdate"></div>
+   <div class="grid2"><div><label>ไกด์ที่พร้อมรับงานวันนี้ (ตามลำดับ)</label>
+     ${dG.map((g,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n">${i+1}</span>${esc(g.firstName+' '+g.lastName)}</div>`).join('')||'<div class="mut sm">ไม่มีไกด์ว่าง</div>'}
+     ${ag.filter(g=>unavailOn(DB,g.id,qDate)).map(g=>`<div class="qitem" style="margin-bottom:6px;opacity:.6"><span class="n" style="background:var(--red)">✕</span>${esc(g.firstName)} — ไม่ว่าง</div>`).join('')}</div>
+    <div><label>ผู้จองวันนี้ (เลขคิววน)</label>
+     ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?'#'+(b.qn+1):'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${b.guideId?esc(gName(DB,b.guideId)):'<span style="color:var(--red)">รอมอบหมาย</span>'}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
+  ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
+   ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
+  <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th></th></tr>
+   ${[...DB.guides].sort((a,b)=>a.priority-b.priority).map(g=>`<tr><td><b>${g.priority}</b>${ed?`<div><button class="btn ghost sm" data-act="gup" data-id="${g.id}">▲</button><button class="btn ghost sm" data-act="gdown" data-id="${g.id}">▼</button></div>`:''}</td>
+    <td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td><td>${g.accountNo?`${esc(g.bankName)}<div class="sm">${esc(g.accountNo)}</div>`:'<span class="sm" style="color:var(--red)">ยังไม่มีเลขบัญชี</span>'}</td>
+    <td class="sm">📞 ${esc(g.phone)}<br>✉️ ${esc(g.email)}<br>LINE: ${esc(g.line)}${g.lineUserId?' ✓เชื่อม OA':''}<br>${(a=>a?`🔑 บัญชี: ${esc(a.username)}`:'<span style="color:var(--red)">🔑 ยังไม่มีบัญชีเข้าระบบ</span>')(DB.users.find(u=>u.guideId===g.id&&u.role==='guide'))}</td>
+    <td>${g.active?badge(['เปิดใช้งาน','b-ok']):badge(['ปิดใช้งาน','b-gray'])}</td>
+    <td>${ed?`<button class="btn ghost sm" data-act="guideform" data-id="${g.id}">แก้ไข</button> <button class="btn ghost sm" data-act="gtoggle" data-id="${g.id}">${g.active?'ปิด':'เปิด'}</button> <button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>`:''}${can('markUnavail')&&g.active?` <button class="btn sm red" data-act="unavailform" data-id="${g.id}">แจ้งไม่ว่าง</button>`:''}</td></tr>`).join('')}</table></div></div>
+  ${unavailSection()}
+  <div class="card"><h3>งานที่มอบหมายแล้ว (กำลังจะมาถึง)</h3>${up.length?`<div class="tbl-wrap"><table><tr><th>วัน/เวลา</th><th>รหัส</th><th>ผู้จอง</th><th class="num">คน</th><th>ไกด์</th><th>ชำระ</th><th>สถานะ</th></tr>
+   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${esc(gName(DB,b.guideId))}</td><td>${stB(b)}</td><td>${trB(b)}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`;
+}
+function unavailSection(){
+  const L=[...DB.unavail].sort((a,b)=>b.date.localeCompare(a.date)),dec=[];
+  DB.bookings.forEach(b=>(b.declined||[]).forEach(d=>dec.push({...d,b})));dec.sort((a,b)=>b.at.localeCompare(a.at));
+  return `<div class="card"><div class="hd"><h3>วันที่ไกด์ไม่ว่าง</h3>${can('markUnavail')?`<button class="btn sm red" data-act="unavailform">+ แจ้งไกด์ไม่ว่าง</button>`:''}</div>
+   <p class="mut sm" style="margin-top:-6px">ไกด์ที่ถูกแจ้งไม่ว่างจะไม่ถูกมอบหมายงานในวันนั้น งานที่มีอยู่แล้วจะส่งต่อให้คนถัดไป และคิวของไกด์คนนั้นย้ายไปลำดับสุดท้าย</p>
+   ${L.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>ไกด์</th><th>เหตุผล</th><th>แจ้งโดย</th><th></th></tr>${L.map(u=>`<tr><td>${fmtDate(u.date)}</td><td>${esc(gName(DB,u.guideId))}</td><td>${esc(u.reason)}</td><td class="sm">${esc(u.byName)}<br><span class="mut">${fmtDT(u.at)}</span></td><td>${can('markUnavail')?`<button class="btn ghost sm" data-act="unavaildel" data-id="${u.id}">ลบ</button>`:''}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มี</div>'}
+   ${dec.length?`<h3 style="margin-top:16px">ประวัติการปฏิเสธงาน</h3><div class="tbl-wrap"><table><tr><th>เวลา</th><th>งาน</th><th>ไกด์</th><th>เหตุผล</th><th>โดย</th><th>ส่งต่อให้</th></tr>${dec.map(d=>`<tr><td class="sm">${fmtDT(d.at)}</td><td>${d.b.code}<div class="sm mut">${fmtDateS(d.b.date)} ${d.b.time}</div></td><td>${esc(gName(DB,d.guideId))}</td><td>${esc(d.reason)}</td><td class="sm">${esc(d.byName)}</td><td>${d.b.guideId?esc(gName(DB,d.b.guideId)):trB(d.b)}</td></tr>`).join('')}</table></div>`:''}</div>`}
+function guideFormHTML(g){g=g||{priority:activeGuides(DB).length+1,active:true};
+  const f=(n,l,t='text')=>`<div class="field"><label>${l}</label><input name="${n}" type="${t}" value="${esc(g[n]??'')}"></div>`;
+  return `<h3>${g.id?'แก้ไขข้อมูลไกด์':'เพิ่มไกด์'}</h3><form data-form="guide" data-id="${g.id||''}"><div class="grid2">${f('firstName','ชื่อ *')}${f('lastName','นามสกุล *')}${f('bankName','ธนาคาร (ใส่ภายหลังได้)')}${f('accountNo','เลขที่บัญชี (ใส่ภายหลังได้)')}${f('email','อีเมล','email')}${f('phone','เบอร์โทรศัพท์ *','tel')}${f('line','LINE ID')}${f('priority','ลำดับความสำคัญ (ค่าเริ่มต้น = ต่อท้ายคิว)','number')}</div>
+  <p class="sm mut" style="margin-top:-4px">รับแจ้งเตือนทาง LINE: ให้ไกด์เพิ่มเพื่อน LINE OA ของชุมชน แล้วพิมพ์เบอร์โทรนี้ในแชท ระบบจะผูกให้อัตโนมัติ ${g.lineUserId?'<b style="color:var(--g2)">✓ ผูกแล้ว</b>':'<b style="color:var(--warn)">ยังไม่ผูก</b>'}</p>
+  ${(()=>{const acc=g.id&&DB.users.find(u=>u.guideId===g.id&&u.role==='guide');
+    return `<div style="background:var(--g3);border-radius:10px;padding:10px 12px;margin-bottom:12px"><b>บัญชีเข้าระบบของไกด์</b> <span class="sm mut">— ไกด์ใช้กดรับงาน “ไม่ว่าง” “เริ่มการเดินทาง” และ “สิ้นสุดการเดินทาง”</span>
+    ${acc?`<p class="sm" style="margin:6px 0">✓ มีบัญชีแล้ว: <b>${esc(acc.username)}</b></p><div class="field" style="margin:0"><label>ตั้งรหัสผ่านใหม่ (อย่างน้อย 6 ตัว · เว้นว่าง = ไม่เปลี่ยน)</label><input name="acctPass" type="text"></div>`:
+    `<label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" name="createAcct" style="width:auto" checked> สร้างบัญชีให้ไกด์คนนี้</label>
+     <div class="grid2"><div class="field" style="margin:0"><label>ชื่อผู้ใช้ (เว้นว่าง = ใช้เบอร์โทร)</label><input name="acctUser"></div><div class="field" style="margin:0"><label>รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input name="acctPass" type="text"></div></div>`}</div>`})()}
+  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" style="width:auto" ${g.active?'checked':''}> เปิดใช้งาน (เข้าคิวรับงาน)</label>
+  <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
+function normalizePriorities(firstId){const L=[...DB.guides].sort((a,b)=>(a.active?0:1)-(b.active?0:1)||a.priority-b.priority||(a.id===firstId?-1:b.id===firstId?1:0));L.forEach((g,i)=>g.priority=i+1)}
+
+function pMyTrips(){
+  const u=me(),g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์</div>`;
+  const L=DB.bookings.filter(b=>b.guideId===g.id&&b.status!=='cancelled').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const act=L.filter(b=>!isDone(b)),done=L.filter(b=>isDone(b)).reverse().slice(0,10);
+  const card=b=>`<div class="card"><div class="hd"><h3>${fmtDate(b.date)} · ${b.time} น.</h3>${trB(b)}</div>
+   <dl class="kv"><dt>รหัส</dt><dd>${b.code}</dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd><dt>จำนวน</dt><dd>${b.people} คน</dd><dt>การชำระ</dt><dd>${stB(b)}</dd>${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}
+   ${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
+   <div style="margin-top:10px">${tripButtons(b,true)}</div></div>`;
+  const owed=done.filter(b=>!b.payout.paid).reduce((a,b)=>a+b.split.guide,0);
+  return `<div class="hd"><h2>งานของฉัน</h2><span class="badge b-blue">ค่าไกด์รอรับ ${baht(owed)}</span></div>
+  <p class="mut sm" style="margin-top:-4px">หากไม่สะดวกรับงาน กด “ไม่ว่าง” พร้อมระบุเหตุผล ระบบจะส่งงานให้ไกด์คนถัดไปทันที และคิวของคุณจะย้ายไปลำดับสุดท้าย</p>
+  ${act.map(card).join('')||'<div class="card empty">ยังไม่มีงานที่ได้รับมอบหมาย</div>'}
+  <div class="card"><h3>งานที่เสร็จแล้ว</h3>${done.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>การจ่าย</th></tr>${done.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}${b.trip!=='completed'?'<div>'+trB(b)+'</div>':''}</td><td>${b.code}</td><td class="num">${baht(b.split.guide)}</td><td>${b.payout.paid?badge(['จ่ายแล้ว','b-ok'])+`<div class="sm mut">${fmtDT(b.payout.paidAt)}</div>`:badge(['รอจ่าย','b-warn'])}</td></tr>`).join('')}</table></div>`:'<div class="empty">-</div>'}</div>`;
+}
+
+function accRange(){const t=today();if(acc.preset==='month')return monthRange(t);if(acc.preset==='last'){const d=new Date(t+'T00:00:00');d.setDate(0);return monthRange(ymd(d))}if(acc.preset==='all')return['0000-01-01','9999-12-31'];return[acc.from||'0000-01-01',acc.to||'9999-12-31']}
+function pAccounting(){
+  const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(b=>b.split.guide),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal);
+  const gPaid=L.filter(b=>b.payout.paid).reduce((a,b)=>a+b.split.guide,0);
+  return `<div class="hd"><h2>บัญชีรายรับ</h2><button class="btn ghost sm" data-act="csv">คัดลอกเป็น CSV</button></div>
+  <div class="card"><div class="row"><div class="tabs">${[['month','เดือนนี้'],['last','เดือนก่อน'],['all','ทั้งหมด'],['custom','กำหนดเอง']].map(([k,l])=>`<button data-act="accp" data-k="${k}" class="${acc.preset===k?'on':''}">${l}</button>`).join('')}</div>
+   ${acc.preset==='custom'?`<input type="date" style="width:auto" value="${acc.from}" data-chg="accfrom"> – <input type="date" style="width:auto" value="${acc.to}" data-chg="accto">`:''}
+   <span class="mut sm">นับเฉพาะการจองที่ชำระเงินแล้ว ตามวันเดินป่า</span></div></div>
+  <div class="grid4" style="margin-bottom:16px">
+   <div class="stat"><div class="k">ส่วนของไกด์</div><div class="v">${baht(G)}</div><div class="s">จ่ายแล้ว ${baht(gPaid)} · ค้างจ่าย ${baht(G-gPaid)}</div></div>
+   <div class="stat"><div class="k">ส่วนกลางหมู่บ้าน</div><div class="v">${baht(V)}</div><div class="s">${L.length} กลุ่ม × ${baht(DB.settings.split.village)}</div></div>
+   <div class="stat"><div class="k">ส่วนของอุทยาน</div><div class="v">${baht(P)}</div><div class="s">${L.length} กลุ่ม × ${baht(DB.settings.split.park)}</div></div>
+   <div class="stat"><div class="k">ค่าเข้าพื้นที่อุทยาน</div><div class="v">${baht(E)}</div><div class="s">${sum(b=>b.people)} คน</div></div></div>
+  <div class="card"><div class="hd"><h3>รายละเอียด</h3><b>รวมทั้งหมด ${baht(G+V+P+E)}</b></div><div class="tbl-wrap"><table>
+   <tr><th>วันที่</th><th>รหัส</th><th>ไกด์</th><th class="num">คน</th><th class="num">ไกด์</th><th class="num">ส่วนกลางหมู่บ้าน</th><th class="num">อุทยาน</th><th class="num">ค่าเข้าอุทยาน</th><th class="num">รวม</th></tr>
+   ${L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gName(DB,b.guideId))}</td><td class="num">${b.people}</td><td class="num">${baht(b.split.guide)}</td><td class="num">${baht(b.split.village)}</td><td class="num">${baht(b.split.park)}</td><td class="num">${baht(b.entryTotal)}</td><td class="num"><b>${baht(b.total)}</b></td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่มีรายการในช่วงนี้</td></tr>`}
+   <tfoot><tr><td colspan="3">รวม</td><td class="num">${sum(b=>b.people)}</td><td class="num">${baht(G)}</td><td class="num">${baht(V)}</td><td class="num">${baht(P)}</td><td class="num">${baht(E)}</td><td class="num">${baht(G+V+P+E)}</td></tr></tfoot></table></div></div>`;
+}
+
+function pPayouts(){
+  const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid');
+  const L=done.filter(b=>payTab==='unpaid'?!b.payout.paid:b.payout.paid).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const owe={};done.filter(b=>!b.payout.paid).forEach(b=>owe[b.guideId]=(owe[b.guideId]||0)+b.split.guide);
+  const logs=DB.audit.filter(a=>a.action.startsWith('payout'));
+  return `<div class="hd"><h2>เบิกจ่ายค่าไกด์</h2></div>
+  <div class="card"><h3>ยอดค้างจ่ายรายไกด์</h3><div class="queue">${Object.keys(owe).map(id=>`<div class="qitem"><b>${esc(gName(DB,id))}</b> <span class="badge b-warn">${baht(owe[id])}</span></div>`).join('')||'<span class="mut">ไม่มียอดค้างจ่าย 🎉</span>'}</div>
+   <p class="mut sm" style="margin-bottom:0">รายการจะแสดงที่นี่เมื่อไกด์กด “เริ่มการเดินทาง” และ “สิ้นสุดการเดินทาง” ครบแล้ว หรือเมื่อลูกค้าไม่มา/ยกเลิกหลังชำระเงิน (ไกด์ที่ได้รับมอบหมายยังได้ค่าไกด์ตามจำนวนในระบบ และถูกย้ายไปต่อท้ายคิว)</p></div>
+  <div class="card"><div class="hd"><div class="tabs"><button data-act="ptab" data-k="unpaid" class="${payTab==='unpaid'?'on':''}">รอจ่าย (${done.filter(b=>!b.payout.paid).length})</button><button data-act="ptab" data-k="paid" class="${payTab==='paid'?'on':''}">จ่ายแล้ว (${done.filter(b=>b.payout.paid).length})</button></div></div>
+  <div class="tbl-wrap"><table><tr><th>วันที่/รหัส</th><th>ชื่อ-นามสกุลไกด์</th><th>ธนาคาร / เลขที่บัญชี</th><th>เบอร์โทร</th><th>เวลาเดินทาง</th><th class="num">ค่าไกด์</th><th></th></tr>
+  ${L.map(b=>{const g=gObj(DB,b.guideId)||{};return `<tr><td>${fmtDateS(b.date)} ${b.time}<div class="sm mut">${b.code}</div></td><td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td>
+   <td>${g.accountNo?`${esc(g.bankName)}<div><b>${esc(g.accountNo)}</b> <button class="btn ghost sm" data-act="copy" data-v="${esc(g.accountNo)}">คัดลอก</button></div>`:'<span style="color:var(--red)">ยังไม่มีเลขบัญชี — ให้ผู้จัดการไกด์เพิ่มก่อนจ่าย</span>'}</td><td>${esc(g.phone)}</td>
+   <td class="sm">${b.trip==='completed'?`เริ่ม ${fmtDT(b.startedAt)}<br>จบ ${fmtDT(b.endedAt)}`:`${trB(b)}<br>${esc(b.closeNote||'')}`}</td><td class="num"><b>${baht(b.split.guide)}</b></td>
+   <td>${b.payout.paid?`${badge(['จ่ายแล้ว','b-ok'])}<div class="sm mut">โดย ${esc(b.payout.paidByName)}<br>${fmtDT(b.payout.paidAt)}${b.payout.ref?`<br>อ้างอิง ${esc(b.payout.ref)}`:''}</div>${can('payoutUndo')?`<button class="btn ghost sm" data-act="payundo" data-id="${b.id}">ยกเลิกการยืนยัน</button>`:''}`:
+     can('payout')?`<button class="btn sm" data-act="paygd" data-id="${b.id}">ยืนยันชำระเงินให้ไกด์แล้ว</button>`:badge(['รอจ่าย','b-warn'])}</td></tr>`}).join('')||`<tr><td colspan="7" class="empty">ไม่มีรายการ</td></tr>`}</table></div></div>
+  <div class="card"><h3>Log การยืนยันจ่ายเงิน</h3>${logs.length?`<div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ดูแลระบบ</th><th>รายละเอียด</th></tr>${logs.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td><b>${esc(a.userName)}</b></td><td class="sm">${esc(a.detail)}</td></tr>`).join('')}</table></div>`:'<div class="empty">ยังไม่มี</div>'}</div>`;
+}
+
+function pNotifications(){
+  const L=DB.notifications.filter(n=>ntF==='all'||n.channel===ntF).slice(0,80);
+  return `<div class="hd"><h2>การแจ้งเตือนไกด์</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
+  <div class="card"><p class="mut sm" style="margin-top:0">ส่งผ่าน LINE OA และอีเมลทันทีที่มีการมอบหมาย/เปลี่ยนแปลงงาน · เตือนอีกครั้ง 18:00 คืนก่อนเดินป่า · สถานะ “ยังไม่ผูก” = ไกด์ยังไม่ได้พิมพ์เบอร์ใน LINE OA</p>
+  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):badge(['Email','b-blue'])}<b>${esc(gName(DB,n.guideId))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
+}
+
+function pUsers(){
+  return `<div class="hd"><h2>จัดการผู้ใช้</h2><button class="btn" data-act="userform">+ เพิ่มผู้ใช้</button></div>
+  <div class="card"><div class="tbl-wrap"><table><tr><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>ตำแหน่ง</th><th>ผูกกับไกด์</th><th>สถานะ</th><th></th></tr>
+  ${DB.users.map(u=>`<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.name)}</td><td>${ROLES[u.role].label}</td><td>${u.guideId?esc(gName(DB,u.guideId)):'-'}</td><td>${u.active?badge(['ใช้งาน','b-ok']):badge(['ระงับ','b-gray'])}</td>
+   <td><button class="btn ghost sm" data-act="userform" data-id="${u.id}">แก้ไข</button></td></tr>`).join('')}</table></div></div>
+  <div class="card"><h3>สิทธิ์ตามตำแหน่ง</h3><div class="tbl-wrap"><table><tr><th>ตำแหน่ง</th><th>เมนูที่เข้าถึงได้</th></tr>${Object.values(ROLES).map(r=>`<tr><td><b>${r.label}</b></td><td class="sm">${r.pages.map(p=>PAGES[p].replace(/^\S+\s/,'')).join(' · ')}</td></tr>`).join('')}</table></div></div>`;
+}
+function userFormHTML(u){u=u||{role:'staff',active:true};
+  return `<h3>${u.id?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้'}</h3><form data-form="user" data-id="${u.id||''}">
+  <div class="grid2"><div class="field"><label>ชื่อผู้ใช้ *</label><input name="username" value="${esc(u.username||'')}"></div>
+  <div class="field"><label>รหัสผ่าน ${u.id?'(เว้นว่าง = ไม่เปลี่ยน)':'* (อย่างน้อย 8 ตัว)'}</label><input name="password" type="password"></div>
+  <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(u.name||'')}"></div>
+  <div class="field"><label>ตำแหน่ง</label><select name="role">${Object.entries(ROLES).map(([k,r])=>`<option value="${k}" ${u.role===k?'selected':''}>${r.label}</option>`).join('')}</select></div>
+  <div class="field"><label>ผูกกับไกด์ (เฉพาะตำแหน่งไกด์)</label><select name="guideId"><option value="">-</option>${DB.guides.map(g=>`<option value="${g.id}" ${u.guideId===g.id?'selected':''}>${esc(g.firstName+' '+g.lastName)}</option>`).join('')}</select></div></div>
+  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" style="width:auto" ${u.active?'checked':''}> เปิดใช้งาน</label>
+  <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
+
+function pSettings(){const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village+ +sp.park;
+  const f=(n,l,v,t='text')=>`<div class="field"><label>${l}</label><input name="${n}" type="${t}" value="${esc(v)}"></div>`;
+  return `<div class="hd"><h2>ตั้งค่าราคาและระบบ</h2></div>
+  <form data-form="settings">
+  <div class="card"><h3>ราคา</h3><div class="grid3">${f('groupFee','ค่าบริการต่อกลุ่ม (บาท)',s.groupFee,'number')}${f('maxGroup','จำนวนคนสูงสุดต่อกลุ่ม',s.maxGroup,'number')}${f('payDeadlineMin','ชำระเงินภายใน (นาที)',s.payDeadlineMin,'number')}</div>
+   <h3>ค่าเข้าอุทยาน (ต่อคน)</h3><div class="grid4">${PAX.map(([k,l])=>f('er_'+k,l,s.entryRates[k],'number')).join('')}</div>
+   <p class="mut sm" style="margin-top:-4px">ปรับให้ตรงกับอัตราจริงของอุทยาน</p>
+   <h3>การแบ่งสัดส่วนค่าบริการต่อกลุ่ม</h3><div class="grid3">${f('sp_guide','ค่าไกด์',sp.guide,'number')}${f('sp_village','ส่วนกลางหมู่บ้าน',sp.village,'number')}${f('sp_park','ค่าอุทยาน',sp.park,'number')}</div>
+   <p class="sm ${sumSp===+s.groupFee?'mut':''}" style="${sumSp!==+s.groupFee?'color:var(--red)':''}">ผลรวมสัดส่วน ${baht(sumSp)} ${sumSp===+s.groupFee?'= ค่าบริการต่อกลุ่ม ✓':'≠ ค่าบริการต่อกลุ่ม '+baht(s.groupFee)}</p>
+   <p class="mut sm">การเปลี่ยนราคาจะมีผลกับการจองใหม่เท่านั้น — การจองเดิมเก็บราคา ณ วันที่จองไว้</p></div>
+  <div class="card"><h3>รอบเวลา</h3><div class="grid4">${f('slotStart','เริ่มรอบแรก',s.slotStart,'time')}${f('slotEnd','รอบสุดท้าย',s.slotEnd,'time')}${f('slotStep','ห่างกันทุก (นาที)',s.slotStep,'number')}${f('tripHours','ระยะเวลาเดินป่า (ชม.)',s.tripHours,'number')}</div></div>
+  <div class="card"><h3>การจองล่วงหน้า</h3><div class="grid3">
+   <div class="field"><label>ต้องจองล่วงหน้าอย่างน้อย</label><div class="row" style="gap:6px;flex-wrap:nowrap"><input name="minLead_v" type="number" min="0" value="${esc(s.minLead?.v??0)}" style="max-width:110px"><select name="minLead_u">${Object.entries(LEADU).map(([k,l])=>`<option value="${k}" ${s.minLead?.u===k?'selected':''}>${l}</option>`).join('')}</select></div></div>
+   ${f('bookAheadDays','จองล่วงหน้าได้สูงสุด (วัน)',s.bookAheadDays,'number')}</div>
+   <p class="mut sm" style="margin:0">เช่น 12 ชั่วโมง = รอบ 06:00 พรุ่งนี้ต้องจองก่อน 18:00 วันนี้ · 0 = จองได้จนถึงเวลาออกเดินทาง · ตอนนี้ลูกค้าจองได้เร็วสุด ${fmtDT(earliestBooking().toISOString())}</p></div>
+  <div class="card"><h3>ความจุ (0 = ไม่จำกัด)</h3><div class="grid3">${f('maxPeoplePerDay','จำนวนคนสูงสุดต่อวัน',s.maxPeoplePerDay,'number')}${f('maxGroupsPerSlot','จำนวนกลุ่มสูงสุดต่อรอบ',s.maxGroupsPerSlot,'number')}${f('maxGroupsPerGuideDay','กลุ่มสูงสุดต่อไกด์ต่อวัน',s.maxGroupsPerGuideDay,'number')}</div>
+   <p class="mut sm" style="margin:0">แต่ละรอบรับได้ไม่เกินจำนวนไกด์ที่ว่างเสมอ</p></div>
+  <p class="mut sm">ข้อมูลบัญชีรับเงินย้ายไปที่เมนู “ช่องทางรับชำระเงิน”</p>
+  <div class="row"><button class="btn" type="submit">บันทึกการตั้งค่า</button></div></form>
+  <div class="card" style="margin-top:16px"><div class="hd"><h3>ฤดูกาล — ช่วงปิดรับจอง</h3><button class="btn sm" data-act="seasonform">+ เพิ่มช่วงปิด</button></div>
+   <p class="mut sm" style="margin-top:-6px">ช่วงที่ “เปิดใช้” ลูกค้าจะจองวันนั้นไม่ได้ · กำหนดได้ 2 แบบ: <b>วันที่ถึงวันที่</b> (ครั้งเดียว) หรือ <b>เดือนถึงเดือน</b> (ซ้ำทุกปี เช่น ปิดฤดูฝน มิ.ย.–ก.ย.)</p>
+   ${(s.seasons||[]).length?`<div class="tbl-wrap"><table><tr><th>ชื่อ</th><th>ช่วง</th><th>สถานะ</th><th>การจองที่ค้างอยู่ในช่วงนี้</th><th></th></tr>
+   ${s.seasons.map(x=>{const hit=DB.bookings.filter(b=>b.status!=='cancelled'&&b.date>=today()&&seasonCovers(x,b.date));return `<tr><td><b>${esc(x.name)}</b></td><td>${seasonText(x)}<div class="sm mut">${x.kind==='date'?'วันที่ถึงวันที่':'เดือนถึงเดือน (ทุกปี)'}</div></td>
+    <td>${x.active?badge(['ปิดรับจอง','b-red']):badge(['ไม่ใช้งาน','b-gray'])}</td><td>${hit.length?`<span style="color:var(--warn)">${hit.length} รายการ</span><div class="sm mut">${hit.slice(0,4).map(b=>b.code).join(', ')}${hit.length>4?' …':''} — เลื่อนวันหรือติดต่อลูกค้า</div>`:'<span class="mut">-</span>'}</td>
+    <td style="white-space:nowrap"><button class="btn ghost sm" data-act="seasontoggle" data-id="${x.id}">${x.active?'ปิดใช้':'เปิดใช้'}</button> <button class="btn ghost sm" data-act="seasonform" data-id="${x.id}">แก้ไข</button> <button class="btn ghost sm" data-act="seasondel" data-id="${x.id}">ลบ</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">ยังไม่มีช่วงปิด — เปิดรับจองตลอดปี</div>'}</div>`;
+}
+const AUL={login:'เข้าสู่ระบบ',content:'เนื้อหาเว็บไซต์',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก',reschedule:'เลื่อนวัน',decline:'ไกด์แจ้งไม่ว่าง',unavail:'แจ้งไกด์ไม่ว่าง',confirm_payment:'ยืนยันรับเงิน',assign:'มอบหมายไกด์',cancel:'ยกเลิกการจอง',trip_start:'เริ่มเดินทาง',trip_end:'สิ้นสุดเดินทาง',payout_confirm:'ยืนยันจ่ายไกด์',payout_undo:'ยกเลิกยืนยันจ่าย',guide:'ข้อมูลไกด์',user:'ผู้ใช้',settings:'ตั้งค่า'};
+const CH=[['promptpay','พร้อมเพย์','📱'],['bank','โอนเข้าบัญชีธนาคาร','🏦'],['paypal','PayPal','🅿️'],['alipay','Alipay','🅰️'],['truemoney','TrueMoney Wallet','🟠']];
+const chOn=()=>CH.filter(([k])=>PUB.settings.channels[k]?.on);
+let chImgDraft={};
+/* PayPal: บวกค่าธรรมเนียมให้ลูกค้า — ยอดเรียกเก็บ C ที่หักค่าธรรมเนียม (C×% + คงที่) แล้วเหลือเท่ายอดจอง */
+function paypalCharge(total){const c=PUB.settings.channels.paypal||{};if(!c.passFee)return {charge:total,fee:0};
+  const charge=Math.ceil((total+(+c.feeFixed||0))/(1-(+c.feePct||0)/100));return {charge,fee:charge-total}}
+const AUTO_HOW={promptpay:'ตรวจสลิปผ่าน API (เช่น SlipOK / EasySlip) หรือ webhook ธนาคาร',bank:'ตรวจสลิปผ่าน API (เช่น SlipOK / EasySlip) หรือ API ธนาคาร',
+  paypal:'PayPal Checkout API + webhook (PAYMENT.CAPTURE.COMPLETED)',alipay:'ผ่านผู้ให้บริการรับชำระ เช่น Omise / 2C2P / GB Prime Pay',truemoney:'ผ่านผู้ให้บริการรับชำระ เช่น Omise / 2C2P / GB Prime Pay'};
+function confirmPayment(b,byName,how){b.status='paid';b.paidConfirmedBy=byName;b.paidConfirmedAt=nowISO();const g=assignOnPay(DB,b);
+  DB.audit.unshift({id:uid(),at:nowISO(),userId:me()?.id||'-',userName:byName,action:'confirm_payment',detail:`${how} ${b.code} ${baht(b.paidAmount||b.total)}${b.payFee?` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})`:''} → คิว #${b.qn+1} ${g?'ไกด์ '+gName(DB,g.id):'(ยังไม่มีไกด์ว่าง)'}`});return g}
+function pPayments(){const c=DB.settings.channels;
+  const f=(k,n,l,ph='')=>`<div class="field"><label>${l}</label><input name="${k}_${n}" value="${esc(c[k][n]||'')}" placeholder="${esc(ph)}"></div>`;
+  const img=(k,l)=>{const src=chImgDraft[k]??c[k].image;return `<div class="field"><label>${l}</label><input type="file" accept="image/*" data-chimg="${k}">
+    <div id="chprev_${k}" style="margin-top:6px">${src?`<img src="${src}" style="max-width:160px;border-radius:8px;border:1px solid var(--line)"> <button type="button" class="btn ghost sm" data-act="chimgdel" data-k="${k}">ลบรูป</button>`:'<span class="sm mut">ยังไม่มีรูป</span>'}</div></div>`};
+  const card=(k,body,note='')=>{const [,l,ic]=CH.find(x=>x[0]===k);return `<div class="card"><div class="hd"><h3>${ic} ${l}</h3>
+    <label style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" name="${k}_on" style="width:auto" ${c[k].on?'checked':''}> เปิดให้ลูกค้าใช้</label></div>
+    <div class="row" style="margin-bottom:10px;gap:6px"><span class="sm mut">การยืนยันรับเงิน:</span>
+      <label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--ink)"><input type="radio" name="${k}_mode" value="manual" style="width:auto" ${c[k].mode!=='auto'?'checked':''}> แมนนวล (เจ้าหน้าที่ตรวจแล้วกดยืนยัน)</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--ink)"><input type="radio" name="${k}_mode" value="auto" style="width:auto" ${c[k].mode==='auto'?'checked':''}> ออโต้ (ระบบยืนยันเองทันที)</label></div>
+    <p class="sm mut" style="margin:-4px 0 10px">ออโต้ต้องเชื่อม: ${AUTO_HOW[k]} — ระหว่างยังไม่เชื่อม ระบบจะรอเจ้าหน้าที่ยืนยัน (แมนนวล)</p>${body}${note?`<p class="mut sm" style="margin:0">${note}</p>`:''}</div>`};
+  return `<div class="hd"><h2>ช่องทางรับชำระเงิน</h2></div>
+  <p class="mut sm" style="margin-top:-6px">ช่องทางที่เปิดไว้จะแสดงในหน้าชำระเงินของลูกค้าทุกการจอง ลูกค้าแนบสลิปหรือหลักฐานการชำระ แล้วเจ้าหน้าที่กด "ยืนยันรับเงิน"</p>
+  <form data-form="payments">
+  ${card('bank',`<div class="grid3">${f('bank','bankName','ธนาคาร','เช่น ธ.ก.ส.')}${f('bank','accountName','ชื่อบัญชี')}${f('bank','accountNo','เลขที่บัญชี')}</div>`)}
+  ${card('promptpay',`<div class="grid2">${f('promptpay','id','หมายเลขพร้อมเพย์','เบอร์โทร 10 หลัก หรือเลขผู้เสียภาษี 13 หลัก')}${f('promptpay','name','ชื่อบัญชีที่แสดง')}</div>`,'ระบบสร้าง QR พร้อมเพย์ที่ใส่ยอดเงินของแต่ละการจองให้อัตโนมัติ')}
+  ${card('paypal',`<div class="grid2">${f('paypal','email','อีเมล PayPal')}${f('paypal','me','ชื่อ PayPal.Me','เช่น phangamtrail')}</div>
+    <label style="display:flex;gap:8px;align-items:center;margin:0 0 8px;color:var(--ink)"><input type="checkbox" name="paypal_passFee" style="width:auto" ${c.paypal.passFee?'checked':''}> บวกค่าธรรมเนียม PayPal ให้ลูกค้าเป็นผู้จ่าย</label>
+    <div class="grid2">${f('paypal','feePct','ค่าธรรมเนียม (%)')}${f('paypal','feeFixed','ค่าธรรมเนียมคงที่ (บาท/รายการ)')}</div>
+    <p class="sm" style="margin:0 0 6px">ตัวอย่าง: ยอดจอง ${baht(1190)} → ลูกค้าจ่ายผ่าน PayPal <b>${baht(paypalCharge(1190).charge)}</b> (ค่าธรรมเนียม ${baht(paypalCharge(1190).fee)}) · หลัง PayPal หักแล้วได้รับ ≈ ${baht(1190)}</p>`,
+    'อัตรามาตรฐาน PayPal ไทย: รับจากในประเทศ 3.9% + 11 บาท · รับจากต่างประเทศ 4.4% + 11 บาท (ตรวจอัตราจริงของบัญชีอีกครั้ง)')}
+  ${card('alipay',`<div class="grid2">${f('alipay','accountId','Alipay ID / บัญชี')}${f('alipay','name','ชื่อที่แสดง')}</div>${img('alipay','รูป QR Alipay')}`)}
+  ${card('truemoney',`<div class="grid2">${f('truemoney','phone','เบอร์ TrueMoney Wallet')}${f('truemoney','name','ชื่อที่แสดง')}</div>${img('truemoney','รูป QR TrueMoney (ถ้ามี)')}`)}
+  <button class="btn" type="submit">บันทึกช่องทางรับชำระเงิน</button></form>`}
+function payChannelHTML(b,k){const c=PUB.settings.channels[k],amt=`<div class="amount">${baht(b.total)}</div>`;
+  const cp=v=>v?` <button class="btn ghost sm" data-act="copy" data-v="${esc(v)}">คัดลอก</button>`:'';
+  const kv=rows=>`<dl class="kv" style="max-width:380px;margin:12px auto;text-align:left">${rows.filter(r=>r[1]).map(([l,v,c2])=>`<dt>${l}</dt><dd>${esc(v)}${c2?cp(v):''}</dd>`).join('')}</dl>`;
+  const pic=src=>src?`<div class="qrwrap"><img src="${src}" style="max-width:240px;display:block"></div>`:'';
+  if(k==='promptpay')return `<div class="qrwrap"><div class="pp-head">PromptPay</div><div id="qr" data-payload="${promptpayPayload(c.id,b.total)}"></div></div>${amt}${kv([['พร้อมเพย์',c.id,1],['ชื่อบัญชี',c.name]])}<p class="sm mut">สแกนแล้วยอดเงินขึ้นให้อัตโนมัติ</p>`;
+  if(k==='bank')return `${amt}${kv([['ธนาคาร',c.bankName],['ชื่อบัญชี',c.accountName],['เลขที่บัญชี',c.accountNo,1]])}`;
+  if(k==='paypal'){const {charge,fee}=paypalCharge(b.total),link=c.me?`https://www.paypal.com/paypalme/${encodeURIComponent(c.me)}/${charge}THB`:'';
+    return `<div class="price" style="max-width:380px;margin:12px auto;text-align:left"><div class="l"><span>ยอดจอง</span><span>${baht(b.total)}</span></div>
+      ${fee?`<div class="l"><span>ค่าธรรมเนียม PayPal (${c.feePct}% + ${baht(c.feeFixed)})</span><span>${baht(fee)}</span></div>`:''}
+      <div class="l t"><span>ยอดชำระผ่าน PayPal</span><span>${baht(charge)}</span></div></div>
+      ${link?`<p><a class="btn" href="${link}" target="_blank" rel="noopener">ชำระผ่าน PayPal ${baht(charge)}</a></p><p class="sm mut">${esc(link)}</p>`:''}${kv([['อีเมล PayPal',c.email,1]])}
+      <p class="sm mut">Total incl. PayPal fee: ${charge} THB. ${fee?'':''}Please attach the receipt below.</p>`}
+  if(k==='alipay')return `${pic(c.image)}${amt}${kv([['Alipay ID',c.accountId,1],['ชื่อ',c.name]])}<p class="sm mut">Scan with Alipay and pay ${b.total} THB, then attach the receipt.</p>`;
+  if(k==='truemoney')return `${pic(c.image)}${amt}${kv([['TrueMoney Wallet',c.phone,1],['ชื่อ',c.name]])}`;
+  return ''}
+let payCh=null;
+function calRange(){const t=today();if(calR.preset==='day')return[t,t];if(calR.preset==='week')return weekRange(t);if(calR.preset==='month')return monthRange(t);
+  if(calR.preset==='year'){const y=t.slice(0,4);return[`${y}-01-01`,`${y}-12-31`]}return[calR.from||t,calR.to||calR.from||t]}
+function pCalendar(){
+  const L=DB.bookings.filter(b=>b.status!=='cancelled'),byDay={};L.forEach(b=>{(byDay[b.date]=byDay[b.date]||[]).push(b)});
+  const [y,m]=calM.split('-').map(Number),first=new Date(y,m-1,1),lead=(first.getDay()+6)%7,days=new Date(y,m,0).getDate(),t=today();
+  const maxG=Math.max(1,...Object.values(byDay).map(a=>a.length));
+  const cells=[];for(let i=0;i<lead;i++)cells.push('<div class="dc out"></div>');
+  for(let d=1;d<=days;d++){const ds=`${y}-${pad(m)}-${pad(d)}`,a=byDay[ds]||[],ppl=a.reduce((x,b)=>x+b.people,0),pend=a.filter(b=>b.status==='pending').length;
+    const lv=a.length?0.18+0.62*a.length/maxG:0;
+    cells.push(`<button class="dc ${ds===t?'today':''} ${ds===calSel?'sel':''}" data-act="calday" data-d="${ds}"><span class="dn">${d}</span>${a.length?`<span class="g" style="background:rgba(47,125,82,${lv});color:${lv>.5?'#fff':'#1d4d33'}">${a.length} กลุ่ม</span><span class="p">${ppl} คน${pend?` · <span style="color:var(--warn)">รอชำระ ${pend}</span>`:''}</span>`:''}</button>`)}
+  while(cells.length%7)cells.push('<div class="dc out"></div>');
+  const mo=monthRange(calM+'-01'),mL=L.filter(b=>inR(b.date,mo));
+  const r=calRange(),R2=L.filter(b=>inR(b.date,r)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)),rd={};R2.forEach(b=>{(rd[b.date]=rd[b.date]||[]).push(b)});
+  const sum=(a,f)=>a.reduce((x,b)=>x+f(b),0),pax=(a,k)=>sum(a,b=>+(b.pax||{})[k]||0);
+  const lbl={day:'วันนี้',week:'สัปดาห์นี้',month:'เดือนนี้',year:'ปีนี้',custom:'กำหนดเอง'};
+  return `<div class="hd"><h2>ปฏิทินลูกค้า</h2><span class="mut sm">นับตามวันเดินป่า · ไม่รวมรายการที่ยกเลิก</span></div>
+  <div class="card"><div class="hd"><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="calnav" data-d="-1">‹</button><h3 style="margin:0;min-width:150px;text-align:center">${first.toLocaleDateString('th-TH',{month:'long',year:'numeric'})}</h3><button class="btn ghost sm" data-act="calnav" data-d="1">›</button><button class="btn ghost sm" data-act="calnav" data-d="0">เดือนนี้</button></div>
+   <span class="badge b-blue">ทั้งเดือน ${mL.length} กลุ่ม · ${sum(mL,b=>b.people)} คน</span></div>
+   <div class="cal">${['จ','อ','พ','พฤ','ศ','ส','อา'].map(d=>`<div class="dh">${d}</div>`).join('')}${cells.join('')}</div>
+   <p class="mut sm" style="margin:8px 0 0">สีเข้ม = กลุ่มมาก · กดวันในปฏิทินเพื่อดูรายละเอียดในตารางด้านล่าง</p></div>
+  <div class="card"><div class="hd"><h3>สรุปลูกค้า: ${lbl[calR.preset]} <span class="mut sm">(${r[0]===r[1]?fmtDate(r[0]):fmtDateS(r[0])+' – '+fmtDate(r[1])})</span></h3></div>
+   <div class="row" style="margin-bottom:12px"><div class="tabs" style="flex-wrap:wrap">${Object.entries(lbl).map(([k,l])=>`<button data-act="calp" data-k="${k}" class="${calR.preset===k?'on':''}">${l}</button>`).join('')}</div>
+   ${calR.preset==='custom'?`<input type="date" style="width:auto" value="${r[0]}" data-chg="calfrom"> – <input type="date" style="width:auto" value="${r[1]}" data-chg="calto">`:''}</div>
+   <div class="grid4" style="margin-bottom:12px">
+    <div class="stat"><div class="k">กลุ่ม</div><div class="v">${R2.length}</div><div class="s">ชำระแล้ว ${R2.filter(b=>b.status==='paid').length} · รอชำระ ${R2.filter(b=>b.status==='pending').length}</div></div>
+    <div class="stat"><div class="k">ผู้เดินป่า</div><div class="v">${sum(R2,b=>b.people)} <span class="sm mut">คน</span></div><div class="s">${Object.keys(rd).length} วันที่มีลูกค้า</div></div>
+    <div class="stat"><div class="k">คนไทย</div><div class="v">${pax(R2,'ta')+pax(R2,'tc')}</div><div class="s">ผู้ใหญ่ ${pax(R2,'ta')} · เด็ก ${pax(R2,'tc')}</div></div>
+    <div class="stat"><div class="k">ชาวต่างชาติ</div><div class="v">${pax(R2,'fa')+pax(R2,'fc')}</div><div class="s">ผู้ใหญ่ ${pax(R2,'fa')} · เด็ก ${pax(R2,'fc')}</div></div></div>
+   ${R2.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th class="num">กลุ่ม</th><th class="num">คน</th><th class="num">ชำระแล้ว</th><th class="num">รอชำระ</th><th>รายการ (เวลา · รหัส · ผู้จอง · คน · ไกด์)</th></tr>
+    ${Object.entries(rd).map(([d,a])=>`<tr><td><b>${fmtDate(d)}</b></td><td class="num"><b>${a.length}</b></td><td class="num">${sum(a,b=>b.people)}</td><td class="num">${a.filter(b=>b.status==='paid').length}</td><td class="num">${a.filter(b=>b.status==='pending').length||'-'}</td>
+     <td class="sm">${a.map(b=>`${b.time} · ${b.code} · ${esc(b.name)} · ${b.people} คน · ${b.guideId?esc(gName(DB,b.guideId)):b.status==='pending'?'<span style="color:var(--warn)">รอชำระ</span>':'<span style="color:var(--red)">รอมอบหมาย</span>'}`).join('<br>')}</td></tr>`).join('')}
+    <tfoot><tr><td>รวม</td><td class="num">${R2.length}</td><td class="num">${sum(R2,b=>b.people)}</td><td class="num">${R2.filter(b=>b.status==='paid').length}</td><td class="num">${R2.filter(b=>b.status==='pending').length}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">ไม่มีลูกค้าในช่วงนี้</div>'}</div>`}
+let cTab='home',cGalCat='',draftImgs=[],draftOne=null;
+function pContent(){const S=DB.site;const tabs=[['home','หน้าหลัก'],['gallery','รวมภาพ'],['stay','บ้านพัก'],['about','เกี่ยวกับเรา / ผังผู้บริหาร']];
+  let body='';
+  if(cTab==='home'){const h=S.home;body=`<form class="card" data-form="chome"><div class="field"><label>หัวข้อใหญ่</label><input name="title" value="${esc(h.title)}"></div>
+    <div class="field"><label>คำโปรย</label><input name="subtitle" value="${esc(h.subtitle)}"></div>
+    <div class="field"><label>ข้อความแนะนำ</label><textarea name="intro" rows="4">${esc(h.intro)}</textarea></div>
+    <div class="field"><label>ภาพหน้าปก</label><input type="file" accept="image/*" data-up="hero"><div id="up_hero" style="margin-top:6px">${h.hero?`<img src="${h.hero}" style="max-width:260px;border-radius:8px">`:'<span class="sm mut">ใช้ภาพตัวอย่าง</span>'}</div></div>
+    <button class="btn" type="submit">บันทึกหน้าหลัก</button> <a href="#home" class="btn ghost" style="text-decoration:none">ดูหน้าเว็บ</a></form>`}
+  if(cTab==='gallery'){const G=S.gallery;if(!G.cats.some(c=>c.id===cGalCat))cGalCat=G.cats[0]?.id||'';const L=G.imgs.filter(g=>g.cat===cGalCat);
+    body=`<div class="card"><div class="hd"><h3>หมวดหมู่</h3><button class="btn sm" data-act="gcatadd">+ เพิ่มหมวดหมู่</button></div>
+     <div class="tabs" style="flex-wrap:wrap">${G.cats.map(c=>`<button data-act="gcatsel" data-k="${c.id}" class="${cGalCat===c.id?'on':''}">${esc(c.name)} (${G.imgs.filter(g=>g.cat===c.id).length})</button>`).join('')}</div></div>
+     ${cGalCat?`<div class="card"><div class="hd"><h3>${esc(G.cats.find(c=>c.id===cGalCat).name)}</h3><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="gcatren">เปลี่ยนชื่อ</button><button class="btn ghost sm" data-act="gcatdel">ลบหมวด</button></div></div>
+      <div class="field" style="background:var(--g3);padding:12px;border-radius:10px"><label style="color:var(--ink)"><b>เพิ่มรูปทีละหลายรูป</b> — เลือกได้หลายไฟล์พร้อมกัน</label><input type="file" accept="image/*" multiple data-up="gallery"></div>
+      ${L.length?`<div class="gal">${L.map(g=>`<figure>${siteImg(g.src)}<button class="btn sm red del" data-act="gimgdel" data-id="${g.id}">ลบ</button><figcaption data-act="gimgcap" data-id="${g.id}" style="cursor:pointer">${g.caption?esc(g.caption):'✎ เพิ่มคำบรรยาย'}</figcaption></figure>`).join('')}</div>`:'<div class="empty">ยังไม่มีรูป</div>'}</div>`:''}`}
+  if(cTab==='stay'){body=`<div class="card"><div class="hd"><h3>บ้านพัก (${S.stays.length})</h3><button class="btn sm" data-act="stayform">+ เพิ่มบ้านพัก</button></div>
+    ${S.stays.map((x,i)=>`<div class="row" style="padding:10px 0;border-top:1px solid #eef1ec;flex-wrap:nowrap;align-items:flex-start"><img src="${x.imgs[0]||ph(x.name,40)}" style="width:96px;height:72px;object-fit:cover;border-radius:8px;flex:none">
+      <div style="flex:1;min-width:0"><b>${esc(x.name)}</b><div class="sm mut">${esc(x.price||'')} · ${x.imgs.length} รูป</div><div class="sm" style="word-break:break-all">${x.link?`🔗 ${esc(x.link)}`:'<span class="mut">ไม่มีลิงก์</span>'}</div></div>
+      <div style="white-space:nowrap"><button class="btn ghost sm" data-act="staymv" data-i="${i}" data-d="-1">▲</button><button class="btn ghost sm" data-act="staymv" data-i="${i}" data-d="1">▼</button> <button class="btn ghost sm" data-act="stayform" data-id="${x.id}">แก้ไข</button> <button class="btn ghost sm" data-act="staydel" data-id="${x.id}">ลบ</button></div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`}
+  if(cTab==='about'){const a=S.about;body=`<form class="card" data-form="cabout"><h3>เนื้อหา “เกี่ยวกับเรา”</h3><div class="field"><label>หัวข้อ</label><input name="title" value="${esc(a.title)}"></div>
+    <div class="field"><label>เนื้อหา (ขึ้นบรรทัดใหม่ได้)</label><textarea name="body" rows="8">${esc(a.body)}</textarea></div><button class="btn" type="submit">บันทึกเนื้อหา</button></form>
+    <div class="card"><div class="hd"><h3>ผังผู้บริหาร</h3><button class="btn sm" data-act="orgform">+ เพิ่มบุคคล</button></div>
+     <p class="mut sm" style="margin-top:-6px">กำหนด “อยู่ภายใต้” เพื่อจัดลำดับชั้นในผัง · ลำดับ = ตำแหน่งซ้าย-ขวาในชั้นเดียวกัน</p>
+     <div style="overflow-x:auto;margin-bottom:12px"><div class="org">${orgTree('')}</div></div>
+     <div class="tbl-wrap"><table><tr><th></th><th>ชื่อ</th><th>ตำแหน่ง</th><th>อยู่ภายใต้</th><th class="num">ลำดับ</th><th></th></tr>
+     ${S.org.map(o=>`<tr><td><img src="${o.photo||avatar('',150)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover"></td><td>${esc(o.name)}</td><td>${esc(o.pos)}</td><td>${o.parent?esc((S.org.find(x=>x.id===o.parent)||{}).pos||'-'):'<span class="mut">— ระดับบนสุด</span>'}</td><td class="num">${o.order}</td>
+      <td style="white-space:nowrap"><button class="btn ghost sm" data-act="orgform" data-id="${o.id}">แก้ไข</button> <button class="btn ghost sm" data-act="orgdel" data-id="${o.id}">ลบ</button></td></tr>`).join('')}</table></div></div>`}
+  return `<div class="hd"><h2>จัดการเนื้อหาเว็บไซต์</h2><a href="#${cTab==='stay'?'stay':cTab}" class="btn ghost sm" style="text-decoration:none">ดูหน้าเว็บ ↗</a></div>
+  <div class="tabs" style="margin-bottom:14px;flex-wrap:wrap">${tabs.map(([k,l])=>`<button data-act="ctab" data-k="${k}" class="${cTab===k?'on':''}">${l}</button>`).join('')}</div>${body}`}
+function stayFormHTML(x){x=x||{name:'',desc:'',price:'',phone:'',link:'',imgs:[]};draftImgs=[...x.imgs];
+  return `<h3>${x.id?'แก้ไข':'เพิ่ม'}บ้านพัก</h3><form data-form="stay" data-id="${x.id||''}">
+  <div class="field"><label>ชื่อบ้านพัก *</label><input name="name" value="${esc(x.name)}"></div>
+  <div class="field"><label>รายละเอียด</label><textarea name="desc" rows="3">${esc(x.desc)}</textarea></div>
+  <div class="grid2"><div class="field"><label>ราคา (ข้อความ)</label><input name="price" value="${esc(x.price)}" placeholder="เช่น 800 บาท/คืน"></div><div class="field"><label>เบอร์ติดต่อ</label><input name="phone" value="${esc(x.phone)}"></div></div>
+  <div class="field"><label>ลิงก์ (เว็บไซต์ / Facebook / Agoda / LINE ฯลฯ)</label><input name="link" value="${esc(x.link)}" placeholder="https://"></div>
+  <div class="field"><label>รูปภาพ (เลือกได้หลายรูป · รูปแรก = รูปหลัก)</label><input type="file" accept="image/*" multiple data-up="stay"><div id="draftimgs" class="gal" style="margin-top:8px">${draftGal()}</div></div>
+  <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
+const draftGal=()=>draftImgs.map((src,i)=>`<figure style="cursor:default">${siteImg(src)}<button type="button" class="btn sm red del" data-act="draftdel" data-i="${i}">✕</button>${i?`<button type="button" class="btn sm ghost" style="position:absolute;left:5px;top:5px" data-act="draftfirst" data-i="${i}">ตั้งเป็นรูปหลัก</button>`:'<figcaption>รูปหลัก</figcaption>'}</figure>`).join('');
+function orgFormHTML(o){const S=DB.site;o=o||{name:'',pos:'',parent:S.org[0]?.id||'',photo:'',order:1};draftOne=o.photo||'';
+  const desc=id=>{const out=[id];S.org.filter(x=>x.parent===id).forEach(x=>out.push(...desc(x.id)));return out},bad=o.id?desc(o.id):[];
+  return `<h3>${o.id?'แก้ไข':'เพิ่ม'}บุคคลในผังผู้บริหาร</h3><form data-form="org" data-id="${o.id||''}"><div class="grid2">
+   <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(o.name)}"></div><div class="field"><label>ตำแหน่ง *</label><input name="pos" value="${esc(o.pos)}"></div>
+   <div class="field"><label>อยู่ภายใต้</label><select name="parent"><option value="">— ระดับบนสุด —</option>${S.org.filter(x=>!bad.includes(x.id)).map(x=>`<option value="${x.id}" ${o.parent===x.id?'selected':''}>${esc(x.pos)} · ${esc(x.name)}</option>`).join('')}</select></div>
+   <div class="field"><label>ลำดับ</label><input name="order" type="number" value="${o.order}"></div></div>
+   <div class="field"><label>รูปถ่าย</label><input type="file" accept="image/*" data-up="org"><div id="up_org" style="margin-top:6px">${o.photo?`<img src="${o.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover">`:''}</div></div>
+   <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
+function pAudit(){const L=DB.audit.filter(a=>auF==='all'||a.action===auF).slice(0,150);
+  return `<div class="hd"><h2>บันทึกการใช้งาน (Audit log)</h2><select style="width:auto" data-chg="auf"><option value="all">ทุกประเภท</option>${Object.entries(AUL).map(([k,l])=>`<option value="${k}" ${auF===k?'selected':''}>${l}</option>`).join('')}</select></div>
+  <div class="card"><div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr>${L.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td>${esc(a.userName)}</td><td>${badge([AUL[a.action]||a.action,'b-gray'])}</td><td class="sm">${esc(a.detail)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มี</td></tr>'}</table></div></div>`}
+
+/* ========== render / routing ========== */
+function render(){
+  const h=location.hash.slice(1)||'home',app=document.getElementById('app');
+  if(!booted||!PUB){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
+  if(h.startsWith('admin')&&DB===null&&AUTH.checking){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
+  const sec=h.startsWith('admin')?'admin':['check','book','gallery','stay','about'].includes(h)?h:'home';
+  document.querySelectorAll('#topnav a').forEach(a=>a.classList.toggle('on',a.dataset.nav===sec));
+  app.innerHTML=sec==='admin'?renderAdmin(h.split('-')[1]):({check:renderCheck,book:renderBook,gallery:renderGallery,stay:renderStay,about:renderAbout,home:renderHome})[sec]();
+  const q=document.getElementById('qr');
+  if(q){try{const c=qrcode(0,'M');c.addData(q.dataset.payload);c.make();q.innerHTML=c.createSvgTag({cellSize:5,margin:2});const sv=q.querySelector('svg');sv.style.width='220px';sv.style.height='220px';sv.style.display='block'}catch(e){q.textContent=q.dataset.payload}}
+}
+
+setInterval(()=>{const els=document.querySelectorAll('[data-countdown]');els.forEach(el=>{const ms=new Date(el.dataset.countdown)-Date.now();
+  if(ms<=0){if(!el._done){el._done=1;refreshVB()}return}el.textContent=`${Math.floor(ms/60000)}:${pad(Math.floor(ms/1000)%60)}`})},1000);
+
+
+/* ========== events ========== */
+const ACT={
+  slot:el=>{bf.time=el.dataset.t;document.getElementById('slots').innerHTML=slotsHTML()},
+  ppl:el=>{const k=el.dataset.k,d=+el.dataset.d,n=Math.max(0,bf.pax[k]+d),tot=paxCount(bf.pax)-bf.pax[k]+n;
+    if(tot>PUB.settings.maxGroup)return toast(`รวมได้ไม่เกิน ${PUB.settings.maxGroup} คนต่อกลุ่ม`);if(tot<1)return;
+    bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
+  calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
+  calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
+  calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
+  seasonform:el=>{const x=(DB.settings.seasons||[]).find(y=>y.id===el.dataset.id)||{kind:'month',from:'6',to:'9',active:true,name:''};
+    openModal(`<h3>${x.id?'แก้ไข':'เพิ่ม'}ช่วงปิดรับจอง</h3><form data-form="season" data-id="${x.id||''}">
+    <div class="field"><label>ชื่อ / เหตุผล *</label><input name="name" value="${esc(x.name)}" placeholder="เช่น ปิดเส้นทางฤดูฝน"></div>
+    <div class="row" style="margin-bottom:10px"><label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--ink)"><input type="radio" name="kind" value="date" style="width:auto" ${x.kind==='date'?'checked':''} data-act="seasonkind"> วันที่ถึงวันที่</label>
+     <label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--ink)"><input type="radio" name="kind" value="month" style="width:auto" ${x.kind==='month'?'checked':''} data-act="seasonkind"> เดือนถึงเดือน (ซ้ำทุกปี)</label></div>
+    <div id="sk_date" class="grid2" style="${x.kind==='date'?'':'display:none'}"><div class="field"><label>ตั้งแต่วันที่</label><input type="date" name="dfrom" value="${x.kind==='date'?x.from:today()}"></div><div class="field"><label>ถึงวันที่</label><input type="date" name="dto" value="${x.kind==='date'?x.to:today()}"></div></div>
+    <div id="sk_month" class="grid2" style="${x.kind==='month'?'':'display:none'}"><div class="field"><label>ตั้งแต่เดือน</label><select name="mfrom">${MONTHS.map((m,i)=>`<option value="${i+1}" ${+x.from===i+1&&x.kind==='month'?'selected':''}>${m}</option>`).join('')}</select></div><div class="field"><label>ถึงเดือน</label><select name="mto">${MONTHS.map((m,i)=>`<option value="${i+1}" ${+x.to===i+1&&x.kind==='month'?'selected':''}>${m}</option>`).join('')}</select></div></div>
+    <p class="sm mut" style="margin-top:-4px">ช่วงเดือนข้ามปีได้ เช่น พ.ย. – ก.พ.</p>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" style="width:auto" ${x.active?'checked':''}> เปิดใช้ (ปิดรับจองในช่วงนี้)</label>
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`)},
+  seasonkind:el=>{const k=el.value;document.getElementById('sk_date').style.display=k==='date'?'':'none';document.getElementById('sk_month').style.display=k==='month'?'':'none'},
+  seasontoggle:el=>call('seasonToggle',{id:el.dataset.id}),
+  seasondel:async el=>{const x=DB.settings.seasons.find(y=>y.id===el.dataset.id);if(!await confirmBox('ลบช่วงปิดรับจอง?',`${esc(x.name)} · ${seasonText(x)}`,'ลบ','red'))return;call('seasonDel',{id:x.id})},
+  galcat:el=>{galCat=el.dataset.k;render()},
+  lb:el=>{const g=PUB.site.gallery.imgs.find(x=>x.id===el.dataset.src);if(g)showLb(g.src,g.caption)},
+  lbsrc:el=>showLb(el.src,''),
+  lbclose:()=>{document.querySelector('.lb')?.remove()},
+  ctab:el=>{cTab=el.dataset.k;render()},
+  gcatsel:el=>{cGalCat=el.dataset.k;render()},
+  gcatadd:()=>openModal(`<h3>เพิ่มหมวดหมู่รูป</h3><form data-form="gcat"><div class="field"><label>ชื่อหมวดหมู่</label><input name="name"></div><div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">เพิ่ม</button></div></form>`),
+  gcatren:()=>{const c=DB.site.gallery.cats.find(x=>x.id===cGalCat);openModal(`<h3>เปลี่ยนชื่อหมวดหมู่</h3><form data-form="gcat" data-id="${c.id}"><div class="field"><label>ชื่อหมวดหมู่</label><input name="name" value="${esc(c.name)}"></div><div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`)},
+  gcatdel:async()=>{const G=DB.site.gallery,c=G.cats.find(x=>x.id===cGalCat),n=G.imgs.filter(g=>g.cat===c.id).length;if(!await confirmBox('ลบหมวดหมู่?',`${esc(c.name)} — รูปในหมวดนี้ ${n} รูปจะถูกลบด้วย`,'ลบ','red'))return;call('gcatDel',{id:c.id})},
+  gimgdel:async el=>{if(!await confirmBox('ลบรูปนี้?','','ลบ','red'))return;call('gimgDel',{id:el.dataset.id})},
+  gimgcap:el=>{const g=DB.site.gallery.imgs.find(x=>x.id===el.dataset.id);openModal(`<h3>คำบรรยายรูป</h3><form data-form="gcap" data-id="${g.id}"><img src="${g.src}" style="max-width:100%;border-radius:8px;margin-bottom:8px"><div class="field"><input name="caption" value="${esc(g.caption)}"></div><div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`)},
+  stayform:el=>openModal(stayFormHTML(DB.site.stays.find(x=>x.id===el.dataset.id))),
+  staydel:async el=>{const x=DB.site.stays.find(y=>y.id===el.dataset.id);if(!await confirmBox('ลบบ้านพัก?',esc(x.name),'ลบ','red'))return;call('stayDel',{id:x.id})},
+  staymv:el=>call('stayMove',{i:+el.dataset.i,d:+el.dataset.d}),
+  draftdel:el=>{draftImgs.splice(+el.dataset.i,1);document.getElementById('draftimgs').innerHTML=draftGal()},
+  draftfirst:el=>{const [x]=draftImgs.splice(+el.dataset.i,1);draftImgs.unshift(x);document.getElementById('draftimgs').innerHTML=draftGal()},
+  orgform:el=>openModal(orgFormHTML(DB.site.org.find(x=>x.id===el.dataset.id))),
+  orgdel:async el=>{const S=DB.site,o=S.org.find(x=>x.id===el.dataset.id),kids=S.org.filter(x=>x.parent===o.id);if(!await confirmBox('ลบบุคคลนี้?',`${esc(o.pos)} · ${esc(o.name)}${kids.length?`<br>ผู้ที่อยู่ภายใต้ ${kids.length} คน จะย้ายขึ้นไปอยู่ภายใต้ผู้บังคับบัญชาของคนนี้แทน`:''}`,'ลบ','red'))return;call('orgDel',{id:o.id})},
+  paych:el=>{payCh=el.dataset.k;render()},
+  chimgdel:el=>{chImgDraft[el.dataset.k]='';document.getElementById('chprev_'+el.dataset.k).innerHTML='<span class="sm mut">ลบรูปแล้ว (ยังไม่บันทึก)</span>'},
+  newbook:()=>{VB=null;avKey='';render();scrollTo(0,0)},
+  copy:el=>{navigator.clipboard?.writeText(el.dataset.v).then(()=>toast('คัดลอกแล้ว'),()=>toast('คัดลอกไม่ได้ — กรุณาคัดลอกเอง'))},
+  mcancel:()=>{const m=document.getElementById('modal');m._res&&m._res(false);m._res=null;closeModal()},
+  mok:()=>{const m=document.getElementById('modal');const r=m._res;const ref=m.querySelector('[name=ref]')?.value||'';m._res=null;closeModal();r&&r(ref||true)},
+  logout:async()=>{await post('/api/auth/logout');DB=null;location.hash='admin';render()},
+  chpw:()=>openModal(`<h3>เปลี่ยนรหัสผ่าน</h3><form data-form="chpw"><div class="field"><label>รหัสผ่านเดิม</label><input name="old" type="password" autocomplete="current-password"></div>
+    <div class="field"><label>รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)</label><input name="new" type="password" autocomplete="new-password"></div><div class="field"><label>ยืนยันรหัสผ่านใหม่</label><input name="new2" type="password" autocomplete="new-password"></div>
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`),
+  dtab:el=>{dashTab=el.dataset.k;render()},
+  accp:el=>{acc.preset=el.dataset.k;render()},
+  ptab:el=>{payTab=el.dataset.k;render()},
+  ntf:el=>{ntF=el.dataset.k;render()},
+  confirmpay:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันรับเงิน',`${b.code} · ${esc(b.name)}<br>ยอด <b>${baht(b.paidAmount||b.total)}</b>${b.payFee?` <span class="sm mut">(รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})</span>`:''}${b.payChannel?`<br>ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}`:''}${b.slip?'':'<br><span style="color:var(--warn)">⚠ ลูกค้ายังไม่ได้แนบหลักฐาน — ตรวจยอดเงินเข้าบัญชีก่อนยืนยัน</span>'}`))return;call('confirmPay',{id:b.id})},
+  noshow:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันลูกค้าไม่มา',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ไกด์ ${esc(gName(DB,b.guideId))} ยังได้ค่าไกด์ <b>${baht(b.split.guide)}</b> และจะถูกย้ายไปต่อท้ายคิว`,'ยืนยันลูกค้าไม่มา','warn'))return;call('noshow',{id:b.id})},
+  paidcancel:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
+    if(!await confirmBox('ลูกค้ายกเลิก (ไม่คืนเงิน)',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ${g?`ไกด์ ${esc(g.firstName+' '+g.lastName)} ได้ค่าไกด์ <b>${baht(b.split.guide)}</b> ย้ายไปต่อท้ายคิว และว่างรับงานอื่นในเวลานั้นได้`:'<span style="color:var(--red)">ยังไม่มีไกด์ได้รับมอบหมาย — ค่าไกด์จะไม่ถูกจ่ายให้ใคร</span>'}`,'ยืนยันการยกเลิก','red'))return;call('paidcancel',{id:b.id})},
+  reschedule:el=>{const b=byId(el.dataset.id);openModal(`<h3>เลื่อนวันเดินป่า ${b.code}</h3><p class="sm mut">ชำระแล้วไม่คืนเงิน แต่เลื่อนวันได้ · เลขคิว #${b.qn+1} คงเดิม</p>
+    <form data-form="reschedule" data-id="${b.id}"><div class="grid2"><div class="field"><label>วันที่ใหม่</label><input type="date" name="date" value="${b.date}" min="${today()}"></div>
+    <div class="field"><label>เวลา</label><select name="time">${slotList().map(t=>`<option ${t===b.time?'selected':''}>${t}</option>`).join('')}</select></div></div>
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึกการเลื่อนวัน</button></div></form>`)},
+  slip:el=>{const b=byId(el.dataset.id);openModal(`<h3>หลักฐานการชำระ ${b.code}</h3><img class="slipimg" src="${b.slip}"><div class="mact"><a class="btn ghost" href="${b.slip}" target="_blank" rel="noopener" style="text-decoration:none">เปิดรูปเต็ม</a><button class="btn ghost" data-act="mcancel">ปิด</button></div>`)},
+  cancelbk:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการจอง?',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}`,'ยกเลิกการจอง','red'))return;call('cancelBooking',{id:b.id})},
+  tripstart:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันเริ่มการเดินทาง',`${b.code} · ${b.people} คน · ${fmtDate(b.date)} ${b.time}`))return;call('tripStart',{id:b.id})},
+  tripend:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันสิ้นสุดการเดินทาง',`${b.code} · เริ่มเมื่อ ${fmtDT(b.startedAt)}<br>รายการจะถูกส่งไปหน้าเบิกจ่ายค่าไกด์`,'สิ้นสุดการเดินทาง','warn'))return;call('tripEnd',{id:b.id})},
+  paygd:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
+    const r=await confirmBox('ยืนยันชำระเงินให้ไกด์',`<dl class="kv"><dt>ไกด์</dt><dd>${esc(g.firstName+' '+g.lastName)}</dd><dt>บัญชี</dt><dd>${esc(g.bankName)} ${esc(g.accountNo)}</dd><dt>โทร</dt><dd>${esc(g.phone)}</dd><dt>งาน</dt><dd>${b.code} · ${fmtDateS(b.date)} ${b.time}</dd><dt>ยอด</dt><dd><b>${baht(b.split.guide)}</b></dd></dl>
+      <div class="field" style="margin-top:10px"><label>เลขอ้างอิงการโอน (ถ้ามี)</label><input name="ref"></div><p class="sm mut">ระบบจะบันทึกว่าคุณ (${esc(me().name)}) เป็นผู้กดยืนยัน</p>`,'ยืนยันจ่ายแล้ว');
+    if(!r)return;call('payGuide',{id:b.id,ref:r===true?'':r})},
+  payundo:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการยืนยันจ่าย?',`${b.code} — จะถูกบันทึกใน log`,'ยกเลิกการยืนยัน','red'))return;call('payUndo',{id:b.id})},
+  guideform:el=>openModal(guideFormHTML(el.dataset.id&&gObj(DB,el.dataset.id))),
+  gtoggle:el=>call('guideToggle',{id:el.dataset.id}),
+  gup:el=>call('guideMove',{id:el.dataset.id,d:-1}),gdown:el=>call('guideMove',{id:el.dataset.id,d:1}),
+  gnotify:el=>call('guideTest',{id:el.dataset.id}),
+  autoall:()=>call('autoAll'),
+  decline:el=>{const b=byId(el.dataset.id);openModal(`<h3>แจ้งไม่ว่างรับงาน</h3><p>${b.code} · ${fmtDate(b.date)} ${b.time} น. · ${b.people} คน</p>
+    <form data-form="decline" data-id="${b.id}"><div class="field"><label>เหตุผล *</label><select name="preset"><option>ติดธุระส่วนตัว</option><option>เจ็บป่วย</option><option>ติดงานอื่น</option><option>เดินทางไม่สะดวก</option><option value="">อื่น ๆ (ระบุด้านล่าง)</option></select></div>
+    <div class="field"><label>รายละเอียดเพิ่มเติม</label><textarea name="reason" rows="2"></textarea></div>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="wholeDay" style="width:auto"> ไม่ว่างทั้งวัน (ไม่รับงานอื่นในวันนี้ด้วย)</label>
+    <p class="sm" style="color:var(--red)">งานนี้จะถูกส่งต่อให้ไกด์คนถัดไปทันที และคิวของคุณจะย้ายไปลำดับสุดท้าย</p>
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">ยืนยันไม่ว่าง</button></div></form>`)},
+  unavailform:el=>{const gid=el.dataset.id||'';openModal(`<h3>แจ้งไกด์ไม่ว่างรับงาน</h3><form data-form="unavail">
+    <div class="field"><label>ไกด์</label><select name="guideId">${activeGuides(DB).map(g=>`<option value="${g.id}" ${g.id===gid?'selected':''}>${g.priority}. ${esc(g.firstName+' '+g.lastName)}</option>`).join('')}</select></div>
+    <div class="field"><label>วันที่ไม่ว่าง</label><input type="date" name="date" value="${today()}" min="${today()}"></div>
+    <div class="field"><label>เหตุผล *</label><input name="reason"></div>
+    <p class="sm mut">งานที่มอบหมายไว้ในวันนั้น (ที่ยังไม่เริ่มเดินทาง) จะถูกส่งต่อให้ไกด์คนถัดไป และคิวของไกด์คนนี้ย้ายไปลำดับสุดท้าย</p>
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">บันทึกไม่ว่าง</button></div></form>`)},
+  unavaildel:async el=>{const u=DB.unavail.find(x=>x.id===el.dataset.id);if(!await confirmBox('ลบวันไม่ว่าง?',`${esc(gName(DB,u.guideId))} · ${fmtDate(u.date)}<br><span class="sm mut">ลำดับคิวจะไม่ถูกย้ายกลับ (ปรับเองได้ด้วยปุ่ม ▲▼)</span>`,'ลบ','red'))return;call('unavailDel',{id:u.id})},
+  userform:el=>openModal(userFormHTML(el.dataset.id&&DB.users.find(u=>u.id===el.dataset.id))),
+  csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','total'],...L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.total])];
+    navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')ACT.mcancel()});
+document.addEventListener('input',e=>{const k=e.target.dataset.bf;if(!k)return;bf[k]=e.target.value;if(k==='date'){bf.time=null;document.getElementById('slots').innerHTML=slotsHTML()}});
+async function refreshVB(){if(!VB)return;const r=await post('/api/public/lookup',{code:VB.booking.code,phone:VB.phone});if(r.ok){VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;render()}}
+let busy=false;
+document.addEventListener('change',async e=>{
+  const el=e.target,k=el.dataset.chg;
+  if(el.dataset.slip){const f=el.files[0];if(!f||!VB)return;if(busy)return;busy=true;toast('กำลังอัปโหลด…');
+    try{const data=await shrinkTo(f,1400,.8);if(!data){toast('อ่านไฟล์รูปไม่ได้');return}
+      const blob=await (await fetch(data)).blob(),fd=new FormData();fd.append('file',new File([blob],'slip.jpg',{type:'image/jpeg'}));fd.append('code',VB.booking.code);fd.append('phone',VB.phone);fd.append('channel',payCh);
+      const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return}
+      VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;toast('แนบหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจสอบ');render()}finally{busy=false}return}
+  if(el.dataset.up){const files=[...el.files];if(!files.length)return;const kind2=el.dataset.up;if(busy)return;busy=true;
+    try{
+    if(kind2==='gallery'){const urls=[];toast(`กำลังอัปโหลด ${files.length} รูป…`);for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)urls.push(u)}}
+      if(urls.length)await call('galleryAdd',{cat:cGalCat,urls});return}
+    if(kind2==='stay'){toast('กำลังอัปโหลด…');for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)draftImgs.push(u)}}document.getElementById('draftimgs').innerHTML=draftGal();el.value='';return}
+    if(kind2==='hero'){const d=await shrinkTo(files[0],2000,.8);draftOne=d&&await uploadImg(d);if(draftOne)document.getElementById('up_hero').innerHTML=`<img src="${draftOne}" style="max-width:260px;border-radius:8px"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
+    if(kind2==='org'){const d=await shrinkTo(files[0],400,.85);draftOne=d&&await uploadImg(d);if(draftOne)document.getElementById('up_org').innerHTML=`<img src="${draftOne}" style="width:64px;height:64px;border-radius:50%;object-fit:cover"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
+    }finally{busy=false}}
+  if(el.dataset.chimg){const f=el.files[0];if(!f)return;const k2=el.dataset.chimg;const d=await shrinkTo(f,1000,.9);const u=d&&await uploadImg(d);if(!u)return;chImgDraft[k2]=u;document.getElementById('chprev_'+k2).innerHTML=`<img src="${u}" style="max-width:160px;border-radius:8px;border:1px solid var(--line)"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
+  if(!k)return;
+  if(k==='bkstatus')bkF.status=el.value;else if(k==='bkfrom')bkF.from=el.value;else if(k==='bkto')bkF.to=el.value;else if(k==='bkq')bkF.q=el.value;
+  else if(k==='accfrom')acc.from=el.value;else if(k==='accto')acc.to=el.value;else if(k==='auf')auF=el.value;else if(k==='qdate')qDate=el.value||today();else if(k==='calfrom'){calR.from=el.value;if(calR.to<calR.from)calR.to=calR.from}else if(k==='calto')calR.to=el.value;
+  else if(k==='reassign'){call('reassign',{id:el.dataset.id,guideId:el.value});return}
+  render();
+});
+function showLb(src,cap){document.querySelector('.lb')?.remove();const d=document.createElement('div');d.className='lb';d.dataset.act='lbclose';d.innerHTML=`<img src="${src}">${cap?`<p>${esc(cap)}</p>`:''}<p class="sm" style="opacity:.7">แตะเพื่อปิด</p>`;document.body.appendChild(d)}
+function shrinkTo(file,max,q){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q))};img.onerror=()=>res(null);img.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)})}
+const fdOf=f=>Object.fromEntries(new FormData(f));
+document.addEventListener('submit',async e=>{
+  const f=e.target,kind=f.dataset.form;if(!kind)return;e.preventDefault();const fd=fdOf(f);
+  const btn=f.querySelector('button[type=submit]');if(btn?.disabled)return;if(btn)btn.disabled=true;
+  try{
+  if(kind==='book'){
+    Object.assign(bf,{name:fd.name.trim(),phone:fd.phone.trim(),email:fd.email.trim(),line:fd.line.trim(),note:fd.note.trim()});
+    if(!bf.time)return toast('กรุณาเลือกเวลาออกเดินทาง');if(!bf.name)return toast('กรุณากรอกชื่อ-นามสกุล');
+    const phone=bf.phone.replace(/\D/g,'');if(!/^0\d{8,9}$/.test(phone)&&!/^\d{8,15}$/.test(phone))return toast('กรุณากรอกเบอร์โทรให้ถูกต้อง');
+    const r=await post('/api/public/createBooking',{...bf,pax:{...bf.pax},phone});
+    if(!r.ok){toast(r.error||'จองไม่สำเร็จ');avKey='';document.getElementById('slots').innerHTML=slotsHTML();return}
+    VB={booking:r.booking,phone};payCh=null;Object.assign(bf,{time:null,name:'',phone:'',email:'',line:'',note:''});avKey='';render();scrollTo(0,0);return}
+  if(kind==='check'){const phone=fd.phone.replace(/\D/g,'');const r=await post('/api/public/lookup',{code:fd.code,phone});payCh=null;
+    if(!r.ok){checkResult=null;toast(r.error||'ไม่พบการจอง');render();return}checkResult={booking:r.booking,phone};VB={booking:r.booking,phone};render();return}
+  if(kind==='login'){const r=await post('/api/auth/login',{username:fd.username.trim(),password:fd.password});if(!r.ok)return toast(r.error||'เข้าสู่ระบบไม่สำเร็จ');
+    await loadAdmin();page=ROLES[DB.me.role].pages[0];location.hash='admin-'+page;render();return}
+  if(kind==='chpw'){if(fd.new!==fd.new2)return toast('รหัสผ่านใหม่ไม่ตรงกัน');if(await call('changePassword',{old:fd.old,new:fd.new}))closeModal();return}
+  if(kind==='decline'){const reason=[fd.preset,(fd.reason||'').trim()].filter(Boolean).join(' — ');if(!reason)return toast('กรุณาระบุเหตุผล');
+    if(await call('decline',{id:f.dataset.id,reason,wholeDay:!!fd.wholeDay}))closeModal();return}
+  if(kind==='unavail'){if(await call('unavail',{guideId:fd.guideId,date:fd.date,reason:fd.reason}))closeModal();return}
+  if(kind==='chome'){const p={title:fd.title,subtitle:fd.subtitle,intro:fd.intro};if(draftOne)p.hero=draftOne;if(await call('homeSave',p))draftOne=null;return}
+  if(kind==='cabout'){call('aboutSave',{title:fd.title,body:fd.body});return}
+  if(kind==='gcat'){const r=await call('gcatSave',{id:f.dataset.id||'',name:fd.name});if(r){if(r.id&&!f.dataset.id){cGalCat=r.id;render()}closeModal()}return}
+  if(kind==='gcap'){if(await call('gimgCap',{id:f.dataset.id,caption:fd.caption}))closeModal();return}
+  if(kind==='stay'){if(await call('staySave',{id:f.dataset.id||'',name:fd.name,desc:fd.desc,price:fd.price,phone:fd.phone,link:fd.link,imgs:[...draftImgs]}))closeModal();return}
+  if(kind==='org'){const p={id:f.dataset.id||'',name:fd.name,pos:fd.pos,parent:fd.parent||'',order:fd.order};if(draftOne)p.photo=draftOne;if(await call('orgSave',p)){draftOne=null;closeModal()}return}
+  if(kind==='season'){const k=fd.kind==='date'?'date':'month';if(await call('seasonSave',{id:f.dataset.id||'',name:fd.name,kind:k,from:k==='date'?fd.dfrom:fd.mfrom,to:k==='date'?fd.dto:fd.mto,active:!!fd.active}))closeModal();return}
+  if(kind==='payments'){const p={...fd};['bank','promptpay','paypal','alipay','truemoney'].forEach(k=>p[k+'_on']=!!fd[k+'_on']);p.paypal_passFee=!!fd.paypal_passFee;
+    for(const k in chImgDraft)p[k+'_image']=chImgDraft[k];if(await call('paymentsSave',p))chImgDraft={};return}
+  if(kind==='reschedule'){if(await call('reschedule',{id:f.dataset.id,date:fd.date,time:fd.time}))closeModal();return}
+  if(kind==='guide'){if(await call('guideSave',{...fd,id:f.dataset.id||'',active:!!fd.active,createAcct:!!fd.createAcct}))closeModal();return}
+  if(kind==='user'){if(await call('userSave',{...fd,id:f.dataset.id||'',active:!!fd.active}))closeModal();return}
+  if(kind==='settings'){call('settingsSave',fd);return}
+  }finally{if(btn&&document.body.contains(btn))btn.disabled=false}
+});
+window.addEventListener('hashchange',async()=>{const h=location.hash.slice(1);if(h.startsWith('admin')&&DB)await loadAdmin();render()});
+
+/* เริ่มต้น: โหลดข้อมูลสาธารณะ + ตรวจสถานะเข้าสู่ระบบ */
+(async()=>{
+  render();
+  if(!await loadPub()){document.getElementById('app').innerHTML='<div class="card empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง</div>';return}
+  booted=true;bf.date=addDays(PUB.today,1);
+  const [m,st]=await Promise.all([api('/api/auth/me'),api('/api/auth/status')]);AUTH.hasUsers=st.hasUsers!==false;
+  if(m.me)await loadAdmin();
+  render();
+  setInterval(async()=>{if(DB&&location.hash.startsWith('#admin')&&!document.querySelector('#modal.show')){await loadAdmin();render()}},60000);
+})();
+</script>
+</body>
+</html>
