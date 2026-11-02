@@ -141,6 +141,7 @@ export function availability(db, date, people) {
   const cs = closedSeason(db, date);
   if (cs) return { date, closed: { name: cs.name, text: seasonText(cs) }, slots: [] };
   if (date > addDays(today(), db.settings.bookAheadDays)) return { date, tooFar: true, slots: [] };
+  if (!dayGuides(db, date).length) return { date, noGuide: true, slots: [] };
   return {
     date, slots: slotList(db).map(t => {
       if (!slotOpen(db, date, t)) return { t, free: 0, reason: 'lead' };

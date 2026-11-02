@@ -348,6 +348,7 @@ function slotsHTML(){
   if(avKey!==key||!AV){if(avKey!==key){avKey=key;AV=null;loadAvail(key)}return '<div class="mut sm">กำลังตรวจสอบรอบที่ว่าง…</div>'}
   if(AV.closed){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)"><b>ปิดรับจองวันนี้: ${esc(AV.closed.name)}</b><div class="sm">${esc(AV.closed.text)} · กรุณาเลือกวันอื่น</div></div>`}
   if(AV.tooFar){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)">จองล่วงหน้าได้ไม่เกิน ${PUB.settings.bookAheadDays} วัน</div>`}
+  if(AV.noGuide){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)"><b>วันนี้ยังไม่มีไกด์รับงาน</b><div class="sm">กรุณาเลือกวันอื่น หรือติดต่อเจ้าหน้าที่</div></div>`}
   if(!AV.slots.length)return '<div class="mut sm">ไม่มีรอบให้จอง</div>';
   return `<div class="slots">${AV.slots.map(x=>{const past=x.reason==='lead',dis=past||x.free<=0;if(dis&&bf.time===x.t)bf.time=null;
     return `<button type="button" class="slot ${bf.time===x.t?'on':''}" data-act="slot" data-t="${x.t}" ${dis?'disabled':''}><b>${x.t}</b><span>${past?(leadText()?'ต้องจองล่วงหน้า':'ปิดรับแล้ว'):x.free<=0?esc(x.reason||'เต็ม'):'ว่าง '+x.free+' กลุ่ม'}</span></button>`}).join('')}</div>`;
