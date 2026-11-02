@@ -30,7 +30,7 @@ crons = ["*/5 * * * *"]
 [vars]
 MAIN_HOST = "phangamtrail.com"
 ADMIN_USERNAME = "admin"
-# MAIL_FROM = "ผาแง่ม <no-reply@phangamtrail.com>"   ← ใส่เมื่อยืนยันโดเมนกับ Resend แล้ว
+MAIL_FROM = "ผาแง่ม Trail <booking@phangamtrail.com>"   # ผู้ส่งอีเมล (ต้องยืนยันโดเมน phangamtrail.com กับ Resend)
 
 # ความลับ (ตั้งด้วย: npx wrangler secret put ชื่อ)
 #   ADMIN_PASSWORD        รหัสผ่านผู้ดูแลระบบคนแรก (ใช้ครั้งแรกเท่านั้น)
