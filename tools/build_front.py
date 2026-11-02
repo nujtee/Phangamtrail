@@ -60,7 +60,7 @@ const isLocked=b=>b.trip==='started'||isDone(b)||b.manual;
 function streamNext(db,ptr,b){const G=activeGuides(db);if(!G.length)return null;const i=G.findIndex(g=>g.id===ptr),st=i>=0?i+1:0;
   for(let k=0;k<G.length;k++){const g=G[(st+k)%G.length];if(!b||!guideBlocked(db,g.id,b.date,b.time,b.id,b))return g}return null}
 const nextQueueGuide=db=>streamNext(db,db.lastGuideId,null);
-function slotList(){const s=(DB||PUB).settings,o=[];for(let m=toMin(s.slotStart);m<=toMin(s.slotEnd);m+=Math.max(15,+s.slotStep||60))o.push(fromMin(m));return o}
+function slotList(){const s=(DB||PUB).settings,o=[];for(let m=toMin(s.slotStart);m<=toMin(s.slotEnd);m+=Math.max(5,+s.slotStep||15))o.push(fromMin(m));return o}
 const byId=id=>DB.bookings.find(b=>b.id===id);
 
 '''

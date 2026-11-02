@@ -58,7 +58,7 @@ export function seedState() {
     settings: {
       groupFee: 1100, entryRates: { ta: 30, tc: 30, fa: 30, fc: 30 }, maxGroup: 6, payDeadlineMin: 30,
       maxPeoplePerDay: 0, maxGroupsPerSlot: 0, maxGroupsPerGuideDay: 1, minLead: { v: 12, u: 'h' }, seasons: [],
-      slotStart: '06:00', slotEnd: '12:00', slotStep: 60, tripHours: 3, bookAheadDays: 60,
+      slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60,
       split: { guide: 700, village: 100, park: 300 },
       channels: {
         bank: { on: false, mode: 'manual', bankName: '', accountName: '', accountNo: '' },
@@ -89,7 +89,7 @@ const gObj = (db, id) => db.guides.find(g => g.id === id);
 const gName = (db, id) => { const g = gObj(db, id); return g ? `${g.firstName} ${g.lastName}` : '-' };
 const byId = (db, id) => db.bookings.find(b => b.id === id) || fail('ไม่พบรายการจอง');
 export const activeGuides = db => db.guides.filter(g => g.active).sort((a, b) => a.priority - b.priority);
-export function slotList(db) { const s = db.settings, o = []; for (let m = toMin(s.slotStart); m <= toMin(s.slotEnd); m += Math.max(15, +s.slotStep)) o.push(fromMin(m)); return o }
+export function slotList(db) { const s = db.settings, o = []; for (let m = toMin(s.slotStart); m <= toMin(s.slotEnd); m += Math.max(5, +s.slotStep || 15)) o.push(fromMin(m)); return o }
 function guideBusy(db, gid, date, time, exceptId) {
   const dur = db.settings.tripHours * 60, st = toMin(time);
   return db.bookings.some(b => b.id !== exceptId && b.guideId === gid && b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date && Math.abs(toMin(b.time) - st) < dur);
@@ -234,7 +234,7 @@ export function publicState(db) {
   const s = db.settings, ch = {};
   for (const [k, f] of Object.entries(PUBLIC_CH)) { if (s.channels[k]?.on) { ch[k] = {}; f.forEach(x => ch[k][x] = s.channels[k][x]) } else ch[k] = { on: false } }
   return {
-    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
+    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
     site: db.site, guideCount: activeGuides(db).length, today: today(),
   };
 }
@@ -457,13 +457,14 @@ export const adminActions = {
     const split = { guide: n('sp_guide'), village: n('sp_village'), park: n('sp_park') }, groupFee = n('groupFee');
     if (split.guide + split.village + split.park !== groupFee) fail(`ผลรวมสัดส่วน (${baht(split.guide + split.village + split.park)}) ต้องเท่ากับค่าบริการต่อกลุ่ม (${baht(groupFee)})`);
     if (!/^\d\d:\d\d$/.test(p.slotStart || '') || !/^\d\d:\d\d$/.test(p.slotEnd || '') || toMin(p.slotEnd) < toMin(p.slotStart)) fail('รอบเวลาไม่ถูกต้อง');
+    if (+p.slotStep && (+p.slotStep < 5 || +p.slotStep > 240)) fail('ระยะห่างแต่ละรอบต้องอยู่ระหว่าง 5–240 นาที');
     Object.assign(s, {
-      groupFee, split, maxGroup: Math.max(1, n('maxGroup')), slotStep: Math.max(15, n('slotStep')), tripHours: n('tripHours'), bookAheadDays: Math.max(1, n('bookAheadDays')),
+      groupFee, split, maxGroup: Math.max(1, n('maxGroup')), slotStep: Math.min(240, Math.max(5, n('slotStep') || 15)), slotV2: true, tripHours: n('tripHours'), bookAheadDays: Math.max(1, n('bookAheadDays')),
       payDeadlineMin: Math.max(5, n('payDeadlineMin')), maxPeoplePerDay: n('maxPeoplePerDay'), maxGroupsPerSlot: n('maxGroupsPerSlot'), maxGroupsPerGuideDay: n('maxGroupsPerGuideDay'),
       slotStart: p.slotStart, slotEnd: p.slotEnd, minLead: { v: n('minLead_v'), u: ['h', 'd', 'm'].includes(p.minLead_u) ? p.minLead_u : 'h' },
       entryRates: Object.fromEntries(PAX.map(([k]) => [k, n('er_' + k)])),
     });
-    log(db, 'settings', `ปรับตั้งค่า: กลุ่ม ${baht(groupFee)}, ค่าเข้า ${PAX.map(([k]) => s.entryRates[k]).join('/')}, ไกด์ ${split.guide}/หมู่บ้าน ${split.village}/อุทยาน ${split.park}, สูงสุด ${s.maxGroup} คน, ชำระใน ${s.payDeadlineMin} นาที, จองล่วงหน้า ≥ ${s.minLead.v}${s.minLead.u} ≤ ${s.bookAheadDays} วัน`);
+    log(db, 'settings', `ปรับตั้งค่า: กลุ่ม ${baht(groupFee)}, ค่าเข้า ${PAX.map(([k]) => s.entryRates[k]).join('/')}, รอบ ${s.slotStart}–${s.slotEnd} ทุก ${s.slotStep} นาที, ไกด์ ${split.guide}/หมู่บ้าน ${split.village}/อุทยาน ${split.park}, สูงสุด ${s.maxGroup} คน, ชำระใน ${s.payDeadlineMin} นาที, จองล่วงหน้า ≥ ${s.minLead.v}${s.minLead.u} ≤ ${s.bookAheadDays} วัน`);
     return { msg: 'บันทึกการตั้งค่าแล้ว' };
   },
   seasonSave(db, p) {

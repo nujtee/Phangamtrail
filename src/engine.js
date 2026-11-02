@@ -49,6 +49,7 @@ export class Engine extends DurableObject {
     db.audit = this.sql.exec(`SELECT json FROM audit ORDER BY n DESC LIMIT ${KEEP}`).toArray().map(r => JSON.parse(r.json));
     db.notifications = this.sql.exec(`SELECT json FROM notif ORDER BY n DESC LIMIT ${KEEP}`).toArray().map(r => JSON.parse(r.json));
     this.db = db;
+    if (!db.settings.slotV2) { db.settings.slotStep = 15; db.settings.slotV2 = true; this.persist() } // ปรับรอบเป็นทุก 15 นาที (ครั้งเดียว)
     if (!db.users.length && this.env.ADMIN_PASSWORD) { db.users.push({ id: 'u' + uid(), username: this.env.ADMIN_USERNAME || 'admin', pw: await hashPw(this.env.ADMIN_PASSWORD), name: 'ผู้ดูแลระบบ', role: 'superadmin', active: true }); this.persist() }
     return db;
   }
