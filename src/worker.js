@@ -31,6 +31,7 @@ export default {
       return json({ url: '/img/' + key });
     }
 
+    if (path === '/api/public/slip') return json({ error: 'not found' }, 404); // ใช้ผ่าน slip-upload เท่านั้น
     // ลูกค้าแนบสลิป (ตรวจรหัสจอง + เบอร์โทรที่ engine)
     if (path === '/api/public/slip-upload' && req.method === 'POST') {
       const fd = await req.formData().catch(() => null); const file = fd?.get('file');
@@ -43,7 +44,9 @@ export default {
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(x => x.toString(16).padStart(2, '0')).join('');
       const qr = String(fd.get('qr') || '').trim().slice(0, 512);
       await env.IMAGES.put(key, buf, { httpMetadata: { contentType: file.type } });
-      const r = await engine(env).fetch(new Request('https://do/api/public/slip', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone'), channel: fd.get('channel'), url: '/img/' + key, hash, qr }) }));
+      let verify = null;
+      if (qr && env.SLIPOK_API_KEY && env.SLIPOK_BRANCH_ID) verify = await slipokVerify(env, qr);
+      const r = await engine(env).fetch(new Request('https://do/api/public/slip', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone'), channel: fd.get('channel'), url: '/img/' + key, hash, qr, verify }) }));
       if (!r.ok) ctx.waitUntil(env.IMAGES.delete(key));
       return r;
     }
@@ -88,3 +91,14 @@ export default {
     ctx.waitUntil(engine(env).fetch(new Request('https://do/internal/tick', { method: 'POST' })));
   },
 };
+
+/* ตรวจสลิปกับ SlipOK (ใช้เมื่อช่องทางตั้งเป็น "ออโต้" และตั้งค่า SLIPOK_API_KEY + SLIPOK_BRANCH_ID) */
+async function slipokVerify(env, qr) {
+  try {
+    const r = await fetch(`https://api.slipok.com/api/line/apikey/${env.SLIPOK_BRANCH_ID}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-authorization': env.SLIPOK_API_KEY }, body: JSON.stringify({ data: qr, log: true }) });
+    const j = await r.json().catch(() => ({}));
+    const d = j.data || {};
+    if (r.ok && j.success && d.success !== false) return { ok: true, amount: +d.amount || 0, ref: d.transRef || '', msg: 'ตรวจสลิปผ่าน' };
+    return { ok: false, amount: +d.amount || 0, ref: d.transRef || '', msg: j.message || `ตรวจสลิปไม่ผ่าน (${j.code || r.status})` };
+  } catch (e) { return { ok: false, amount: 0, ref: '', msg: 'ติดต่อระบบตรวจสลิปไม่ได้' } }
+}

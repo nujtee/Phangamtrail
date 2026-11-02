@@ -163,6 +163,16 @@ function notifyGuide(db, g, b, kind) {
   if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] ${head} ${b.code}` });
 }
 
+function notifyCustomer(db, b, kind) {
+  if (!b.email) return;
+  const det = `รหัสจอง: ${b.code}\nวันที่: ${fmtDate(b.date)}\nเวลาออกเดินทาง: ${b.time} น.\nจำนวน: ${b.people} คน (${PAX.filter(([k]) => b.pax?.[k]).map(([k, l]) => `${l} ${b.pax[k]}`).join(', ')})\nผู้จอง: ${b.name} โทร ${b.phone}\nยอดชำระ: ${baht(b.paidAmount || b.total)}`;
+  const T = {
+    slip: ['ได้รับสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ', `เรียน คุณ${b.name}\n\nเราได้รับหลักฐานการชำระเงินของการจอง ${b.code} แล้ว เจ้าหน้าที่จะตรวจสอบและแจ้งผลทางอีเมลนี้อีกครั้ง\n\n${det}`],
+    confirmed: ['การจองเสร็จสมบูรณ์ ✅', `เรียน คุณ${b.name}\n\nการชำระเงินได้รับการยืนยันแล้ว การจองของคุณเสร็จสมบูรณ์\n\n${det}\nสถานะ: ชำระแล้ว — จองสำเร็จ\n\nกรุณามาถึงจุดนัดพบก่อนเวลาออกเดินทาง 15 นาที\nตรวจสอบการจองได้ที่ https://phangamtrail.com (เมนู "ตรวจสอบการจอง")\nชำระแล้วไม่คืนเงินทุกกรณี · ขอเลื่อนวันได้โดยติดต่อเจ้าหน้าที่`],
+  }[kind];
+  db.$notify.push({ id: uid(), at: nowISO(), guideId: null, custName: b.name, bookingId: b.id, channel: 'email', to: b.email, toLabel: b.email, subject: `[ผาแง่ม] ${T[0]} ${b.code}`, message: T[1], status: 'pending' });
+}
+
 /* ===== คิวไกด์ (คิววนต่อเนื่อง ไม่นับวัน) ===== */
 function streamNext(db, ptr, b) {
   const G = activeGuides(db); if (!G.length) return null; const i = G.findIndex(g => g.id === ptr), st = i >= 0 ? i + 1 : 0;
@@ -209,6 +219,7 @@ function paypalCharge(db, total) {
 function confirmPayment(db, b, how) {
   b.status = 'paid'; b.paidConfirmedBy = db.$actor?.name || 'ระบบอัตโนมัติ'; b.paidConfirmedAt = nowISO();
   const g = assignOnPay(db, b);
+  notifyCustomer(db, b, 'confirmed');
   log(db, 'confirm_payment', `${how} ${b.code} ${baht(b.paidAmount || b.total)}${b.payFee ? ` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})` : ''} → คิว #${b.qn + 1} ${g ? 'ไกด์ ' + gName(db, g.id) : '(ยังไม่มีไกด์ว่าง)'}`);
   return g;
 }
@@ -242,7 +253,7 @@ export function publicState(db) {
 export function bookingView(b) {
   if (!b) return null;
   const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'name', 'createdAt'];
-  const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); return o;
+  const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); if (b.email) o.email = b.email.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2'); return o;
 }
 const safeUser = u => ({ id: u.id, username: u.username, name: u.name, role: u.role, guideId: u.guideId || null, active: u.active });
 export function adminState(db, actor) {
@@ -312,8 +323,16 @@ export const publicActions = {
     if (p.channel === 'paypal') { const x = paypalCharge(db, b.total); b.paidAmount = x.charge; b.payFee = x.fee } else { b.paidAmount = b.total; b.payFee = 0 }
     db.$actor = { id: '-', name: 'ลูกค้า (' + b.name + ')', role: 'public' };
     log(db, 'slip', `แนบหลักฐานการชำระ ${b.code} ผ่าน ${p.channel}${qr ? ' (อ่าน QR สลิปได้)' : ' (อ่าน QR สลิปไม่ได้ — ตรวจด้วยตา)'}`);
-    // ออโต้: ต้องมีผู้ให้บริการตรวจสอบการชำระ (ยังไม่ได้เชื่อม) → ระบบรอเจ้าหน้าที่ยืนยันแบบแมนนวล
-    return { booking: bookingView(b), autoPending: ch.mode === 'auto' };
+    // ออโต้: ตรวจสลิปกับผู้ให้บริการ (SlipOK) ผ่าน → ยืนยันทันที / ไม่ผ่านหรือยังไม่เชื่อม → รอเจ้าหน้าที่
+    const v = p.verify || null, need = b.paidAmount || b.total;
+    b.slipVerify = v ? { ok: !!v.ok, amount: +v.amount || 0, ref: String(v.ref || '').slice(0, 80), msg: String(v.msg || '').slice(0, 200), at: nowISO() } : null;
+    if (ch.mode === 'auto' && v?.ok && +v.amount >= need) {
+      db.$actor = { id: 'auto', name: 'ระบบอัตโนมัติ (ตรวจสลิป)', role: 'system' };
+      confirmPayment(db, b, 'ยืนยันอัตโนมัติ (สลิปผ่านการตรวจ)');
+      return { booking: bookingView(b), verified: true };
+    }
+    notifyCustomer(db, b, 'slip');
+    return { booking: bookingView(b), verified: false, verifyMsg: v && !v.ok ? b.slipVerify.msg : '' };
   },
 };
 

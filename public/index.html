@@ -87,6 +87,9 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .hero svg{position:absolute;right:-10px;bottom:-6px;opacity:.22}
 .rules{white-space:pre-wrap;background:var(--bg,#f4f5f1);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:260px;overflow:auto;line-height:1.6;font-size:.95em}
 .rulesok{display:flex;gap:8px;align-items:flex-start;margin:10px 0 14px;color:var(--ink);font-weight:600}
+.done{padding:8px 4px 4px}.done .ic{font-size:54px;line-height:1}.done h2{margin:8px 0 6px;font-size:28px}.done p{margin:4px 0}
+.done.ok h2{color:#1d6b3a}.done.wait h2{color:#8a5a00}
+.finish{margin:16px auto 0;max-width:520px;background:#e7f3ec;border:2px solid #1d6b3a;color:#1d4d33;border-radius:14px;padding:12px 16px;font-size:18px}
 .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
 .slot{border:1px solid #cfd8d1;background:#fff;border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;font:inherit}
 .slot b{display:block;font-size:16px}.slot span{font-size:11.5px;color:var(--mut)}
@@ -368,8 +371,24 @@ function priceHTML(){const s=PUB.settings,e=entryOf(bf.pax,s.entryRates);
   return `<div class="l"><span>ค่าบริการนำเที่ยว (ต่อกลุ่ม)</span><span>${baht(s.groupFee)}</span></div>
   ${PAX.filter(([k])=>bf.pax[k]).map(([k,l])=>`<div class="l"><span>ค่าเข้าอุทยาน ${l} ${baht(s.entryRates[k])} × ${bf.pax[k]}</span><span>${baht(s.entryRates[k]*bf.pax[k])}</span></div>`).join('')}
   <div class="l t"><span>ยอดชำระทั้งหมด</span><span>${baht(+s.groupFee+e)}</span></div>`}
+function renderDone(b,fromBooking){
+  const ok=b.status==='paid';
+  const top=ok?`<div class="done ok"><div class="ic">✅</div><h2>จองสำเร็จ</h2><p>การชำระเงินได้รับการยืนยันแล้ว — การจองของคุณเสร็จสมบูรณ์</p>${b.email?`<p class="sm">ส่งรายละเอียดการจองไปที่อีเมล <b>${esc(b.email)}</b></p>`:''}</div>`
+   :`<div class="done wait"><div class="ic">⏳</div><h2>รอเจ้าหน้าที่ตรวจสอบสลิป</h2><p>ได้รับหลักฐานการชำระเงินแล้ว เมื่อเจ้าหน้าที่ตรวจสอบเรียบร้อย<br>ระบบจะแจ้งผลการจองทางอีเมล${b.email?` <b>${esc(b.email)}</b>`:''}</p></div>`;
+  return `<div class="card" style="text-align:center">${top}
+   <div class="finish">🎉 <b>จบกระบวนการจองเรียบร้อย</b><div class="sm">ไม่ต้องทำรายการเพิ่ม · กรุณาบันทึกรายละเอียดการจองเก็บไว้</div></div>
+   <div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn lg" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${ok?'':`<button class="btn ghost" data-act="refreshbk">🔄 ตรวจสถานะล่าสุด</button>`}</div></div>
+  <div class="card"><h3>รายละเอียดการจอง</h3>
+   <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลาออกเดินทาง</dt><dd>${b.time} น.</dd>
+   <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>${b.email?`<dt>อีเมล</dt><dd>${esc(b.email)}</dd>`:''}
+   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd><dt>ยอดชำระ</dt><dd><b>${baht(b.paidAmount||b.total)}</b></dd>
+   <dt>สถานะ</dt><dd>${ok?'<span class="badge b-ok">จองสำเร็จ</span>':'<span class="badge b-warn">รอเจ้าหน้าที่ตรวจสอบสลิป</span>'}</dd></dl>
+   <p class="mut sm">ใช้รหัสการจองและเบอร์โทรตรวจสอบสถานะได้ที่เมนู “ตรวจสอบการจอง” · ชำระแล้วไม่คืนเงินทุกกรณี แต่ขอเลื่อนวันได้โดยติดต่อเจ้าหน้าที่</p>
+   <div class="row" style="gap:8px;flex-wrap:wrap">${!ok&&fromBooking?`<button class="btn ghost sm" data-act="reslip">ส่งสลิปใหม่</button>`:''}${fromBooking?`<button class="btn ghost sm" data-act="newbook">จองรอบใหม่</button>`:''}</div></div>`;
+}
 function renderPayment(b,fromBooking){
   const s=PUB.settings;
+  if(b.status==='paid'||(b.status==='pending'&&b.slip&&!(VB&&VB.reslip)))return renderDone(b,fromBooking);
   const head=b.status==='paid'?`<div class="badge b-ok" style="font-size:14px">✓ ชำระเงินแล้ว — การจองได้รับการยืนยัน</div>`:b.status==='cancelled'?`<div class="badge b-red" style="font-size:14px">การจองนี้ถูกยกเลิก${b.cancelReason?' — '+esc(b.cancelReason):''}</div>`:
    `<h2 style="margin:0">${fromBooking?'จองสำเร็จ! ':''}กรุณาโอนเงินเพื่อยืนยันการจอง</h2><p class="mut sm" style="margin:4px 0 0">เลือกช่องทางที่สะดวก แล้วแนบหลักฐานการชำระ</p>
    ${b.slip?'':`<div class="badge b-warn" style="font-size:14px;margin-top:8px">⏱ โอนภายใน ${new Date(b.expiresAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น. · เหลือ <span data-countdown="${b.expiresAt}">--:--</span></div>`}`;
@@ -587,9 +606,9 @@ function pPayouts(){
 
 function pNotifications(){
   const L=DB.notifications.filter(n=>ntF==='all'||n.channel===ntF).slice(0,80);
-  return `<div class="hd"><h2>การแจ้งเตือนไกด์</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
+  return `<div class="hd"><h2>การแจ้งเตือน</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
   <div class="card"><p class="mut sm" style="margin-top:0">ส่งผ่าน LINE OA และอีเมลทันทีที่มีการมอบหมาย/เปลี่ยนแปลงงาน · เตือนอีกครั้ง 18:00 คืนก่อนเดินป่า · สถานะ “ยังไม่ผูก” = ไกด์ยังไม่ได้พิมพ์เบอร์ใน LINE OA</p>
-  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):badge(['Email','b-blue'])}<b>${esc(gName(DB,n.guideId))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
+  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):badge(['Email','b-blue'])}<b>${esc(n.guideId?gName(DB,n.guideId):'ลูกค้า: '+(n.custName||'-'))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
 }
 
 function pUsers(){
@@ -832,7 +851,9 @@ const ACT={
       const qr=await slipQR(f).catch(()=>'');
       const blob=await (await fetch(data)).blob(),fd=new FormData();fd.append('file',new File([blob],'slip.jpg',{type:'image/jpeg'}));fd.append('qr',qr||'');fd.append('code',VB.booking.code);fd.append('phone',VB.phone);fd.append('channel',payCh);
       const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return}
-      VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;toast('แนบหลักฐานแล้ว — รอเจ้าหน้าที่ตรวจสอบ');URL.revokeObjectURL(slipDraft.url);slipDraft=null;render()}finally{busy=false}},
+      VB.booking=r.booking;VB.reslip=false;if(checkResult)checkResult.booking=r.booking;toast(r.verified?'ตรวจสลิปผ่าน — จองสำเร็จ':'ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ');URL.revokeObjectURL(slipDraft.url);slipDraft=null;render();scrollTo(0,0)}finally{busy=false}},
+  reslip:()=>{if(VB){VB.reslip=true;render()}},
+  refreshbk:async()=>{if(!VB)return toast('กด “ค้นหา” อีกครั้งเพื่ออัปเดตสถานะ');await refreshVB();toast('อัปเดตสถานะแล้ว')},
   slipchange:()=>{if(slipDraft)URL.revokeObjectURL(slipDraft.url);slipDraft=null;setSlipBox();const i=document.querySelector('[data-slip]');if(i)i.click()},
   savebk:async()=>{const b=VB?.booking||checkResult?.booking;if(!b)return;try{await saveBookingImage(b)}catch(e){toast('บันทึกไม่สำเร็จ')}},
   newbook:()=>{slipDraft=null;VB=null;avKey='';render();scrollTo(0,0)},
@@ -899,7 +920,7 @@ function slipBoxHTML(b){const d=slipDraft&&slipDraft.code===b.code?slipDraft:nul
    <div class="row" style="gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap"><button class="btn lg" data-act="sendslip">📤 ส่งสลิป</button><button class="btn ghost" data-act="slipchange">เปลี่ยนรูป</button></div></div>`}
 function setSlipBox(){const el=document.getElementById('slipbox');if(el&&VB)el.innerHTML=slipBoxHTML(VB.booking)}
 async function saveBookingImage(b){
-  const F=getComputedStyle(document.body).fontFamily||'sans-serif',W=1080,rows=[['รหัสการจอง',b.code],['วันที่',fmtDate(b.date)],['เวลาออกเดินทาง',b.time+' น.'],['จำนวน',b.people+' คน'],['',paxText(b.pax||{})],['ผู้จอง',b.name],['เบอร์โทร',b.phone],['ค่าบริการกลุ่ม',baht(b.groupFee)],['ค่าเข้าอุทยาน',baht(b.entryTotal)],['ยอดรวม',baht(b.total)],['สถานะ',ST[b.status]?.[0]||b.status]];
+  const F=getComputedStyle(document.body).fontFamily||'sans-serif',W=1080,rows=[['รหัสการจอง',b.code],['วันที่',fmtDate(b.date)],['เวลาออกเดินทาง',b.time+' น.'],['จำนวน',b.people+' คน'],['',paxText(b.pax||{})],['ผู้จอง',b.name],['เบอร์โทร',b.phone],...(b.email?[['อีเมล',b.email]]:[]),['ค่าบริการกลุ่ม',baht(b.groupFee)],['ค่าเข้าอุทยาน',baht(b.entryTotal)],['ยอดรวม',baht(b.total)],['สถานะ',b.status==='paid'?'จองสำเร็จ (ชำระแล้ว)':b.status==='pending'&&b.slip?'รอเจ้าหน้าที่ตรวจสอบสลิป':(ST[b.status]?.[0]||b.status)]];
   const H=330+rows.length*76+230,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   x.fillStyle='#f4f5f1';x.fillRect(0,0,W,H);x.fillStyle='#1f5c40';x.fillRect(0,0,W,210);
   x.fillStyle='#fff';x.font=`bold 64px ${F}`;x.fillText('ผาแง่ม Trail',60,105);x.font=`36px ${F}`;x.fillText('รายละเอียดการจองเดินป่า',60,165);
