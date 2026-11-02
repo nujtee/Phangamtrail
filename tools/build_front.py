@@ -34,11 +34,15 @@ const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body||{})});
 async function loadPub(){const r=await api('/api/public/state');if(r.ok)PUB=r;return r.ok}
 async function loadAdmin(){const r=await api('/api/admin/state');DB=r.ok?r:null;return r.ok}
 /* คำสั่งหลังบ้าน: ส่งไปเซิร์ฟเวอร์ → ได้สถานะใหม่ → แสดงผล */
+let DIRTY=false;
+document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('form[data-form]'))DIRTY=true},true);
+document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('form[data-form]'))DIRTY=true},true);
+window.addEventListener('hashchange',()=>{DIRTY=false});
 async function call(name,p){
   const r=await post('/api/admin/'+name,p);
   if(r.status===401){DB=null;render();toast('กรุณาเข้าสู่ระบบใหม่');return null}
   if(!r.ok){toast(r.error||'ทำรายการไม่สำเร็จ');return null}
-  DB=r.state;if(r.msg)toast(r.msg);await loadPub();render();return r}
+  DIRTY=false;DB=r.state;if(r.msg)toast(r.msg);await loadPub();render();return r}
 async function uploadImg(dataURL){const blob=await (await fetch(dataURL)).blob();
   const r=await api('/api/admin/upload',{method:'POST',body:blob,headers:{'content-type':blob.type||'image/jpeg'}});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return null}return r.url}
 const gObj=(db,id)=>db.guides.find(g=>g.id===id);

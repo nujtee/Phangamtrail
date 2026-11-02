@@ -165,5 +165,5 @@ window.addEventListener('hashchange',async()=>{const h=location.hash.slice(1);if
   const [m,st]=await Promise.all([api('/api/auth/me'),api('/api/auth/status')]);AUTH.hasUsers=st.hasUsers!==false;
   if(m.me)await loadAdmin();
   render();
-  setInterval(async()=>{if(DB&&location.hash.startsWith('#admin')&&!document.querySelector('#modal.show')){await loadAdmin();render()}},60000);
+  setInterval(async()=>{const ae=document.activeElement;if(DB&&location.hash.startsWith('#admin')&&!document.querySelector('#modal.show')&&!DIRTY&&!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))){await loadAdmin();render()}},60000);
 })();

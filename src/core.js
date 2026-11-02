@@ -490,9 +490,8 @@ export const adminActions = {
     const chk = { bank: x => !!(x.accountNo && x.accountName) || 'ใส่ชื่อบัญชีและเลขที่บัญชี', promptpay: x => [10, 13, 15].includes(x.id.length) || 'หมายเลขพร้อมเพย์ต้องเป็น 10 หรือ 13 หลัก', paypal: x => !!(x.email || x.me) || 'ใส่อีเมลหรือชื่อ PayPal.Me', alipay: x => !!(x.image || x.accountId) || 'ใส่ Alipay ID หรืออัปโหลด QR', truemoney: x => !!(x.phone || x.image) || 'ใส่เบอร์หรืออัปโหลด QR' };
     const names = { bank: 'บัญชีธนาคาร', promptpay: 'พร้อมเพย์', paypal: 'PayPal', alipay: 'Alipay', truemoney: 'TrueMoney' };
     for (const k in nc) if (nc[k].on) { const r = chk[k](nc[k]); if (r !== true) fail(`${names[k]}: ${r}`) }
-    if (!Object.values(nc).some(x => x.on)) fail('ต้องเปิดอย่างน้อย 1 ช่องทาง');
     db.settings.channels = nc; log(db, 'settings', `ปรับช่องทางรับชำระเงิน: ${Object.keys(nc).filter(k => nc[k].on).map(k => `${names[k]} (${nc[k].mode === 'auto' ? 'ออโต้' : 'แมนนวล'})`).join(', ')}`);
-    return { msg: 'บันทึกช่องทางรับชำระเงินแล้ว' };
+    return { msg: Object.values(nc).some(x => x.on) ? 'บันทึกช่องทางรับชำระเงินแล้ว' : 'บันทึกแล้ว — แต่ยังไม่ได้ติ๊ก "เปิดให้ลูกค้าใช้" ลูกค้าจะยังชำระเงินไม่ได้' };
   },
   /* ----- เนื้อหาเว็บไซต์ ----- */
   homeSave(db, p) { need(db.$actor, 'content'); const h = db.site.home; Object.assign(h, { title: str(p.title, 120) || 'ผาแง่ม', subtitle: str(p.subtitle, 300), intro: String(p.intro || '').slice(0, 3000) }); if (p.hero !== undefined) h.hero = str(p.hero, 300); log(db, 'content', 'แก้ไขหน้าหลัก'); return { msg: 'บันทึกหน้าหลักแล้ว' } },
