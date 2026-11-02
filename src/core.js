@@ -305,10 +305,13 @@ export const publicActions = {
     const b = db.bookings.find(x => (x.id === p.id || x.code === code) && x.phone === phone) || fail('ไม่พบการจอง');
     if (b.status !== 'pending') fail('รายการนี้ไม่อยู่ในสถานะรอชำระ');
     const ch = db.settings.channels[p.channel]; if (!ch?.on) fail('ช่องทางชำระเงินไม่ถูกต้อง');
-    b.slip = p.url; b.payChannel = p.channel;
+    const qr = String(p.qr || '').trim().slice(0, 512), hash = String(p.hash || '').slice(0, 64);
+    const dup = db.bookings.find(x => x !== b && x.slip && ((qr && x.slipQr === qr) || (hash && x.slipHash === hash)));
+    if (dup) fail(`สลิปนี้เคยถูกใช้แล้วกับการจอง ${dup.code} — กรุณาใช้สลิปของการโอนครั้งนี้ หากเข้าใจผิดกรุณาติดต่อเจ้าหน้าที่`);
+    b.slip = p.url; b.payChannel = p.channel; b.slipQr = qr || null; b.slipHash = hash || null; b.slipAt = nowISO();
     if (p.channel === 'paypal') { const x = paypalCharge(db, b.total); b.paidAmount = x.charge; b.payFee = x.fee } else { b.paidAmount = b.total; b.payFee = 0 }
     db.$actor = { id: '-', name: 'ลูกค้า (' + b.name + ')', role: 'public' };
-    log(db, 'slip', `แนบหลักฐานการชำระ ${b.code} ผ่าน ${p.channel}`);
+    log(db, 'slip', `แนบหลักฐานการชำระ ${b.code} ผ่าน ${p.channel}${qr ? ' (อ่าน QR สลิปได้)' : ' (อ่าน QR สลิปไม่ได้ — ตรวจด้วยตา)'}`);
     // ออโต้: ต้องมีผู้ให้บริการตรวจสอบการชำระ (ยังไม่ได้เชื่อม) → ระบบรอเจ้าหน้าที่ยืนยันแบบแมนนวล
     return { booking: bookingView(b), autoPending: ch.mode === 'auto' };
   },

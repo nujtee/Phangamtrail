@@ -39,8 +39,11 @@ export default {
       if (file.size > MAX_IMG) return json({ error: 'ไฟล์ใหญ่เกิน 5 MB' }, 400);
       const code = String(fd.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const key = `slips/${code}-${crypto.randomUUID()}.${ext}`;
-      await env.IMAGES.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
-      const r = await engine(env).fetch(new Request('https://do/api/public/slip', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone'), channel: fd.get('channel'), url: '/img/' + key }) }));
+      const buf = await file.arrayBuffer();
+      const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(x => x.toString(16).padStart(2, '0')).join('');
+      const qr = String(fd.get('qr') || '').trim().slice(0, 512);
+      await env.IMAGES.put(key, buf, { httpMetadata: { contentType: file.type } });
+      const r = await engine(env).fetch(new Request('https://do/api/public/slip', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone'), channel: fd.get('channel'), url: '/img/' + key, hash, qr }) }));
       if (!r.ok) ctx.waitUntil(env.IMAGES.delete(key));
       return r;
     }
