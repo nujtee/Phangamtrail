@@ -83,7 +83,16 @@ export default {
     if (path.startsWith('/internal/')) return new Response('not found', { status: 404 });
 
     // หน้าเว็บ
-    const res = await env.ASSETS.fetch(req);
+    let res = await env.ASSETS.fetch(req);
+    if ((path === '/' || path === '/index.html') && req.method === 'GET' && (res.headers.get('content-type') || '').includes('text/html')) {
+      // ฝังข้อมูลหน้าเว็บไว้ใน HTML เลย → ไม่ต้องรอคำขอแยก (เร็วขึ้น และไม่ติดส่วนขยายเบราว์เซอร์ที่บล็อกคำขอเบื้องหลัง)
+      const st = await Promise.race([engine(env).fetch(new Request('https://do/api/public/state')).then(r => r.ok ? r.text() : null).catch(() => null), new Promise(r => setTimeout(() => r(null), 2500))]);
+      if (st) {
+        const safe = st.replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+        res = new HTMLRewriter().on('head', { element(e) { e.append(`<script>window.__PUB=${safe}</script>`, { html: true }) } }).transform(res);
+      }
+      const h0 = new Headers(res.headers); h0.set('cache-control', 'no-store'); res = new Response(res.body, { status: res.status, headers: h0 });
+    }
     const h = new Headers(res.headers);
     h.set('x-content-type-options', 'nosniff'); h.set('referrer-policy', 'strict-origin-when-cross-origin'); h.set('x-frame-options', 'SAMEORIGIN');
     return new Response(res.body, { status: res.status, headers: h });

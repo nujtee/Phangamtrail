@@ -233,9 +233,13 @@ function avatar(t,hue){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width=
 async function api(path,opt={}){
   try{const r=await fetch(path,{credentials:'same-origin',...opt,headers:{...(opt.body&&!(opt.body instanceof FormData)&&typeof opt.body==='string'?{'content-type':'application/json'}:{}),...(opt.headers||{})}});
     const j=await r.json().catch(()=>({error:'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง'}));return {ok:r.ok,status:r.status,...j}}
-  catch(e){return {ok:false,status:0,error:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ('+(e&&e.message||e)+')'}}}
+  catch(e){try{return await xhrApi(path,opt)}catch(e2){return {ok:false,status:0,error:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ('+(e&&e.message||e)+')'}}}}
+/* สำรอง: บางส่วนขยายเบราว์เซอร์ทำให้ fetch ใช้ไม่ได้ → ใช้ XMLHttpRequest แทน */
+function xhrApi(path,opt={}){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.open(opt.method||'GET',path);x.withCredentials=true;
+  const hd={...(opt.body&&typeof opt.body==='string'?{'content-type':'application/json'}:{}),...(opt.headers||{})};for(const k in hd)x.setRequestHeader(k,hd[k]);
+  x.onload=()=>{let j;try{j=JSON.parse(x.responseText)}catch(_){j={error:'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง'}}ok({ok:x.status>=200&&x.status<300,status:x.status,...j})};x.onerror=()=>no(new Error('xhr failed'));x.send(opt.body||null)})}
 const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body||{})});
-let PUBERR='';async function loadPub(){const r=await api('/api/public/state');if(r.ok)PUB=r;else PUBERR=(r.status?'HTTP '+r.status+' · ':'')+(r.error||'');return r.ok}
+let PUBERR='';async function loadPub(){if(window.__PUB&&!PUB){PUB=window.__PUB;window.__PUB=null;return true}const r=await api('/api/public/state');if(r.ok)PUB=r;else PUBERR=(r.status?'HTTP '+r.status+' · ':'')+(r.error||'');return r.ok}
 async function loadAdmin(){const r=await api('/api/admin/state');DB=r.ok?r:null;return r.ok}
 /* คำสั่งหลังบ้าน: ส่งไปเซิร์ฟเวอร์ → ได้สถานะใหม่ → แสดงผล */
 let DIRTY=false;
