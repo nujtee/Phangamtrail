@@ -593,12 +593,14 @@ function pMyTrips(){
   <div class="card"><h3>งานที่เสร็จแล้ว</h3>${done.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>การจ่าย</th></tr>${done.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}${b.trip!=='completed'?'<div>'+trB(b)+'</div>':''}</td><td>${b.code}</td><td class="num">${baht(b.split.guide)}</td><td>${b.payout.paid?badge(['จ่ายแล้ว','b-ok'])+`<div class="sm mut">${fmtDT(b.payout.paidAt)}</div>`:badge(['รอจ่าย','b-warn'])}</td></tr>`).join('')}</table></div>`:'<div class="empty">-</div>'}</div>`;
 }
 
+function accData(){const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const all=acc.preset==='all',text=all?'ทั้งหมด':`${fmtDateS(r[0])} – ${fmtDateS(r[1])}`;return {L,label:{text,file:all?'all':`${r[0]}_${r[1]}`.replace(/0000-01-01|9999-12-31/g,'x')}}}
 function accRange(){const t=today();if(acc.preset==='month')return monthRange(t);if(acc.preset==='last'){const d=new Date(t+'T00:00:00');d.setDate(0);return monthRange(ymd(d))}if(acc.preset==='all')return['0000-01-01','9999-12-31'];return[acc.from||'0000-01-01',acc.to||'9999-12-31']}
 function pAccounting(){
   const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(b=>b.split.guide),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal),VH=sum(b=>b.vehicleTotal||0);
   const gPaid=L.filter(b=>b.payout.paid).reduce((a,b)=>a+b.split.guide,0);
-  return `<div class="hd"><h2>บัญชีรายรับ</h2><button class="btn ghost sm" data-act="csv">คัดลอกเป็น CSV</button></div>
+  return `<div class="hd"><h2>บัญชีรายรับ</h2><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="accpdf">📄 ส่งออก PDF</button><button class="btn ghost sm" data-act="acccsv">⬇ ดาวน์โหลด CSV</button><button class="btn ghost sm" data-act="csv">คัดลอก CSV</button></div></div>
   <div class="card"><div class="row"><div class="tabs">${[['month','เดือนนี้'],['last','เดือนก่อน'],['all','ทั้งหมด'],['custom','กำหนดเอง']].map(([k,l])=>`<button data-act="accp" data-k="${k}" class="${acc.preset===k?'on':''}">${l}</button>`).join('')}</div>
    ${acc.preset==='custom'?`<input type="date" style="width:auto" value="${acc.from}" data-chg="accfrom"> – <input type="date" style="width:auto" value="${acc.to}" data-chg="accto">`:''}
    <span class="mut sm">นับเฉพาะการจองที่ชำระเงินแล้ว ตามวันเดินป่า</span></div></div>
@@ -934,6 +936,30 @@ const ACT={
     <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">บันทึกไม่ว่าง</button></div></form>`)},
   unavaildel:async el=>{const u=DB.unavail.find(x=>x.id===el.dataset.id);if(!await confirmBox('ลบวันไม่ว่าง?',`${esc(gName(DB,u.guideId))} · ${fmtDate(u.date)}<br><span class="sm mut">ลำดับคิวจะไม่ถูกย้ายกลับ (ปรับเองได้ด้วยปุ่ม ▲▼)</span>`,'ลบ','red'))return;call('unavailDel',{id:u.id})},
   userform:el=>openModal(userFormHTML(el.dataset.id&&DB.users.find(u=>u.id===el.dataset.id))),
+  acccsv:()=>{const {L,label}=accData();const head=['วันที่','รหัส','ไกด์','คน','ค่าไกด์','ส่วนกลางหมู่บ้าน','อุทยาน','ค่าเข้าอุทยาน','จำนวนรถ','ค่ารถ','รวม'];
+    const rows=L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.vehicleTotal||0,b.total]);
+    const S=i=>rows.reduce((a,r)=>a+(+r[i]||0),0);rows.push(['รวม','','',S(3),S(4),S(5),S(6),S(7),S(8),S(9),S(10)]);
+    const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+    const blob=new Blob(['﻿'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`phangam-income-${label.file}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('ดาวน์โหลด CSV แล้ว')},
+  accpdf:()=>{const {L,label}=accData(),w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
+    const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(b=>b.split.guide),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal),VH=sum(b=>b.vehicleTotal||0),gPaid=L.filter(b=>b.payout?.paid).reduce((a,b)=>a+b.split.guide,0);
+    const tr=L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gName(DB,b.guideId))}</td><td class="n">${b.people}</td><td class="n">${baht(b.split.guide)}</td><td class="n">${baht(b.split.village)}</td><td class="n">${baht(b.split.park)}</td><td class="n">${baht(b.entryTotal)}</td><td class="n">${baht(b.vehicleTotal||0)}</td><td class="n"><b>${baht(b.total)}</b></td></tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:#888">ไม่มีรายการในช่วงนี้</td></tr>';
+    w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>รายงานบัญชีรายรับ ผาแง่ม ${label.text}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>@page{size:A4 landscape;margin:12mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:12px;margin:0}h1{font-size:20px;margin:0;color:#1f5c40}.sub{color:#6b7280;margin:2px 0 14px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}.c{border:1px solid #d9e2dc;border-radius:8px;padding:8px 10px}.c .k{color:#6b7280;font-size:11px}.c .v{font-size:17px;font-weight:700}.c .s{font-size:10px;color:#6b7280}
+table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#eef4f0;font-weight:600}.n{text-align:right}tfoot td{font-weight:700;border-top:2px solid #1f5c40;background:#f6f8f6}
+.ft{margin-top:14px;color:#9ca3af;font-size:10px}.bar{margin:0 0 12px}.bar button{font:inherit;padding:6px 14px;border-radius:8px;border:0;background:#1f5c40;color:#fff;cursor:pointer}@media print{.bar{display:none}}@media screen{body{padding:18px;max-width:1200px;margin:auto}}</style></head><body>
+<div class="bar"><button onclick="print()">🖨 พิมพ์ / บันทึกเป็น PDF</button></div>
+<h1>รายงานบัญชีรายรับ — ผาแง่ม Trail</h1><div class="sub">ช่วง: ${label.text} · นับเฉพาะการจองที่ชำระแล้ว ตามวันเดินป่า · ${L.length} กลุ่ม ${sum(b=>b.people)} คน</div>
+<div class="cards"><div class="c"><div class="k">ส่วนของไกด์</div><div class="v">${baht(G)}</div><div class="s">จ่ายแล้ว ${baht(gPaid)} · ค้าง ${baht(G-gPaid)}</div></div>
+<div class="c"><div class="k">ส่วนกลางหมู่บ้าน</div><div class="v">${baht(V)}</div></div><div class="c"><div class="k">ส่วนของอุทยาน</div><div class="v">${baht(P)}</div></div>
+<div class="c"><div class="k">ค่าเข้าพื้นที่อุทยาน + ค่ารถ</div><div class="v">${baht(E+VH)}</div><div class="s">ค่าเข้า ${baht(E)} · ค่ารถ ${baht(VH)}</div></div><div class="c"><div class="k">รวมทั้งหมด</div><div class="v">${baht(G+V+P+E+VH)}</div></div></div>
+<table><thead><tr><th>วันที่</th><th>รหัส</th><th>ไกด์</th><th class="n">คน</th><th class="n">ไกด์</th><th class="n">ส่วนกลางหมู่บ้าน</th><th class="n">อุทยาน</th><th class="n">ค่าเข้าอุทยาน</th><th class="n">ค่ารถ</th><th class="n">รวม</th></tr></thead><tbody>${tr}</tbody>
+<tfoot><tr><td colspan="3">รวม</td><td class="n">${sum(b=>b.people)}</td><td class="n">${baht(G)}</td><td class="n">${baht(V)}</td><td class="n">${baht(P)}</td><td class="n">${baht(E)}</td><td class="n">${baht(VH)}</td><td class="n">${baht(G+V+P+E+VH)}</td></tr></tfoot></table>
+<div class="ft">ออกรายงานโดย ${esc(me()?.name||'')} · ${new Date().toLocaleString('th-TH')} · phangamtrail.com</div>
+<script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);w.document.close()},
   csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','vehicles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.vehicleTotal||0,b.total])];
     navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
 };
