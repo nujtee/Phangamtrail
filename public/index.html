@@ -18,6 +18,7 @@ body{margin:0;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:v
 a{color:var(--g2)}
 .topbar{background:var(--g);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;position:sticky;top:0;z-index:20;flex-wrap:wrap}
 .brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;margin-right:auto}
+.brand img.logo{height:36px;max-width:120px;object-fit:contain;border-radius:6px;background:#fff2}
 .brand small{font-weight:400;opacity:.75;font-size:12px}
 .topnav{display:flex;gap:4px;flex-wrap:wrap}
 .topnav a{color:#dfeee4;text-decoration:none;padding:6px 12px;border-radius:999px;font-size:14px}
@@ -158,7 +159,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">⛰️ ผาแง่ม Trail <small>ระบบจองเดินป่า</small></div>
+  <div class="brand"><span id="brandIcon">⛰️</span> ผาแง่ม Trail <small>ระบบจองเดินป่า</small></div>
   <nav class="topnav" id="topnav">
     <a href="#home" data-nav="home">หน้าหลัก</a>
     <a href="#gallery" data-nav="gallery">รวมภาพ</a>
@@ -772,7 +773,10 @@ function pCalendar(){
 let cTab='home',cGalCat='',draftImgs=[],draftOne=null;
 function pContent(){const S=DB.site;const tabs=[['home','หน้าหลัก'],['gallery','รวมภาพ'],['stay','บ้านพัก'],['about','เกี่ยวกับเรา / ผังผู้บริหาร']];
   let body='';
-  if(cTab==='home'){const h=S.home;body=`<form class="card" data-form="chome"><div class="field"><label>หัวข้อใหญ่</label><input name="title" value="${esc(h.title)}"></div>
+  if(cTab==='home'){const h=S.home;body=`<div class="card"><h3>โลโก้</h3><div class="row" style="gap:16px;align-items:center;flex-wrap:wrap"><div style="width:120px;height:80px;border:1px dashed var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#1f5c40">${S.logo?`<img src="${S.logo}" style="max-width:110px;max-height:70px;object-fit:contain">`:'<span class="sm" style="color:#fff">ยังไม่มีโลโก้</span>'}</div>
+    <div><div class="row" style="gap:6px"><label class="btn sm" style="cursor:pointer;margin:0;display:inline-block;width:auto">${S.logo?'เปลี่ยนโลโก้':'อัปโหลดโลโก้'}<input type="file" accept="image/png,image/jpeg,image/webp" data-up="logo" style="display:none"></label> ${S.logo?'<button class="btn ghost sm" data-act="logodel">ลบโลโก้</button>':''}</div>
+    <p class="sm mut" style="margin:8px 0 0">แสดงที่มุมซ้ายบนของเว็บและไอคอนแท็บเบราว์เซอร์ · แนะนำไฟล์ PNG พื้นหลังโปร่งใส สี่เหลี่ยมจัตุรัสหรือแนวนอน · บันทึกทันทีเมื่ออัปโหลด</p></div></div></div>
+    <form class="card" data-form="chome"><div class="field"><label>หัวข้อใหญ่</label><input name="title" value="${esc(h.title)}"></div>
     <div class="field"><label>คำโปรย</label><input name="subtitle" value="${esc(h.subtitle)}"></div>
     <div class="field"><label>ข้อความแนะนำ</label><textarea name="intro" rows="4">${esc(h.intro)}</textarea></div>
     <div class="field"><label>ภาพหน้าปก</label><input type="file" accept="image/*" data-up="hero"><div id="up_hero" style="margin-top:6px">${h.hero?`<img src="${h.hero}" style="max-width:260px;border-radius:8px">`:'<span class="sm mut">ใช้ภาพตัวอย่าง</span>'}</div></div>
@@ -819,7 +823,7 @@ function pAudit(){const L=DB.audit.filter(a=>auF==='all'||a.action===auF).slice(
   <div class="card"><div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr>${L.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td>${esc(a.userName)}</td><td>${badge([AUL[a.action]||a.action,'b-gray'])}</td><td class="sm">${esc(a.detail)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มี</td></tr>'}</table></div></div>`}
 
 /* ========== render / routing ========== */
-function render(){{const na=document.getElementById('navAdmin');if(na)na.textContent=DB?'หลังบ้าน':'Login'}
+function render(){{const na=document.getElementById('navAdmin');if(na)na.textContent=DB?'หลังบ้าน':'Login';const bi=document.getElementById('brandIcon'),lg=PUB?.site?.logo||'';if(bi&&bi.dataset.v!==lg){bi.dataset.v=lg;bi.innerHTML=lg?`<img class="logo" src="${lg}" alt="โลโก้">`:'⛰️';let fi=document.querySelector('link[rel=icon]');if(fi&&lg)fi.href=lg}}
   const h=location.hash.slice(1)||'home',app=document.getElementById('app');
   if(!booted||!PUB){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
   if(h.startsWith('admin')&&DB===null&&AUTH.checking){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
@@ -842,6 +846,7 @@ const ACT={
     bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
   veh:el=>{bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+(+el.dataset.d)));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
   lineunlink:async el=>{const g=DB.guides.find(x=>x.id===el.dataset.id);if(g&&await confirmBox('ยกเลิกการผูก LINE',`${esc(g.firstName+' '+g.lastName)} จะไม่ได้รับแจ้งเตือนทาง LINE จนกว่าจะผูกใหม่`))call('lineUnlink',{id:g.id})},
+  logodel:async()=>{if(await confirmBox('ลบโลโก้','เว็บจะกลับไปใช้ไอคอนภูเขาแทน'))call('logoSave',{logo:''})},
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
@@ -1006,6 +1011,7 @@ document.addEventListener('change',async e=>{
     if(kind2==='gallery'){const urls=[];toast(`กำลังอัปโหลด ${files.length} รูป…`);for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)urls.push(u)}}
       if(urls.length)await call('galleryAdd',{cat:cGalCat,urls});return}
     if(kind2==='stay'){toast('กำลังอัปโหลด…');for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)draftImgs.push(u)}}document.getElementById('draftimgs').innerHTML=draftGal();el.value='';return}
+    if(kind2==='logo'){const f=files[0],png=f.type==='image/png'||f.type==='image/webp';const d=await shrinkTo(f,400,.9,png?'image/png':'image/jpeg');const u=d&&await uploadImg(d);if(u)await call('logoSave',{logo:u});return}
     if(kind2==='hero'){const d=await shrinkTo(files[0],1600,.72);draftOne=d&&await uploadImg(d);if(draftOne)document.getElementById('up_hero').innerHTML=`<img src="${draftOne}" style="max-width:260px;border-radius:8px"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
     if(kind2==='org'){const d=await shrinkTo(files[0],400,.85);draftOne=d&&await uploadImg(d);if(draftOne)document.getElementById('up_org').innerHTML=`<img src="${draftOne}" style="width:64px;height:64px;border-radius:50%;object-fit:cover"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
     }finally{busy=false}}
@@ -1017,7 +1023,7 @@ document.addEventListener('change',async e=>{
   render();
 });
 function showLb(src,cap){document.querySelector('.lb')?.remove();const d=document.createElement('div');d.className='lb';d.dataset.act='lbclose';d.innerHTML=`<img src="${src}">${cap?`<p>${esc(cap)}</p>`:''}<p class="sm" style="opacity:.7">แตะเพื่อปิด</p>`;document.body.appendChild(d)}
-function shrinkTo(file,max,q){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q))};img.onerror=()=>res(null);img.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)})}
+function shrinkTo(file,max,q,type='image/jpeg'){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL(type,q))};img.onerror=()=>res(null);img.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)})}
 const fdOf=f=>Object.fromEntries(new FormData(f));
 document.addEventListener('submit',async e=>{
   const f=e.target,kind=f.dataset.form;if(!kind)return;e.preventDefault();const fd=fdOf(f);

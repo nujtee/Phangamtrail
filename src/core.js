@@ -530,6 +530,7 @@ export const adminActions = {
     return { msg: Object.values(nc).some(x => x.on) ? 'บันทึกช่องทางรับชำระเงินแล้ว' : 'บันทึกแล้ว — แต่ยังไม่ได้ติ๊ก "เปิดให้ลูกค้าใช้" ลูกค้าจะยังชำระเงินไม่ได้' };
   },
   /* ----- เนื้อหาเว็บไซต์ ----- */
+  logoSave(db, p) { need(db.$actor, 'content'); const u = str(p.logo, 300); if (u && !/^\/img\//.test(u)) fail('ไฟล์โลโก้ไม่ถูกต้อง'); db.site.logo = u; log(db, 'content', u ? 'อัปโหลด/เปลี่ยนโลโก้' : 'ลบโลโก้'); return { msg: u ? 'บันทึกโลโก้แล้ว' : 'ลบโลโก้แล้ว' } },
   homeSave(db, p) { need(db.$actor, 'content'); const h = db.site.home; Object.assign(h, { title: str(p.title, 120) || 'ผาแง่ม', subtitle: str(p.subtitle, 300), intro: String(p.intro || '').slice(0, 3000) }); if (p.hero !== undefined) h.hero = str(p.hero, 300); log(db, 'content', 'แก้ไขหน้าหลัก'); return { msg: 'บันทึกหน้าหลักแล้ว' } },
   aboutSave(db, p) { need(db.$actor, 'content'); Object.assign(db.site.about, { title: str(p.title, 120) || 'เกี่ยวกับเรา', body: String(p.body || '').slice(0, 10000) }); log(db, 'content', 'แก้ไขเนื้อหาเกี่ยวกับเรา'); return { msg: 'บันทึกแล้ว' } },
   gcatSave(db, p) { need(db.$actor, 'content'); const name = str(p.name, 80); if (!name) fail('กรุณาใส่ชื่อหมวดหมู่'); const G = db.site.gallery; let id = p.id; if (id) (G.cats.find(c => c.id === id) || fail('ไม่พบหมวด')).name = name; else { id = 'c' + uid(); G.cats.push({ id, name }) } log(db, 'content', `หมวดรูป "${name}"`); return { id } },
