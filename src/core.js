@@ -184,11 +184,13 @@ function autoAssign(db, b) {
   if (g) { b.guideId = g.id; b.trip = 'assigned'; db.lastGuideId = g.id; notifyGuide(db, g, b, 'new'); return g }
   b.guideId = null; b.trip = 'unassigned'; return null;
 }
-function assignOnPay(db, b) { b.qn = db.rotSeq++; return autoAssign(db, b) }
-function rerunFrom(db, startQn) {
-  const all = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null).sort((a, b) => a.qn - b.qn), t = today();
-  const prev = [...all].reverse().find(b => b.qn < startQn && b.guideId && !b.manual); let ptr = prev ? prev.guideId : null;
-  const seg = all.filter(b => b.qn >= startQn), before = new Map();
+/* ลำดับคิว = วันเดินจริง → เวลา → ลำดับการชำระ (กลุ่มที่เดินก่อนได้ไกด์ก่อน; กลุ่มใหม่ที่เดินก่อนแทรกเข้ามา → คิวหลังจากนั้นขยับ) */
+const qKey = b => `${b.date}|${b.time}|${String(b.qn ?? 0).padStart(9, '0')}`;
+function assignOnPay(db, b) { b.qn = db.rotSeq++; rerunFrom(db, qKey(b)); return gObj(db, b.guideId) || null }
+function rerunFrom(db, startKey) {
+  const all = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null).sort((a, b) => qKey(a).localeCompare(qKey(b))), t = today();
+  const prev = [...all].reverse().find(b => qKey(b) < startKey && b.guideId && !b.manual); let ptr = prev ? prev.guideId : null;
+  const seg = all.filter(b => qKey(b) >= startKey), before = new Map();
   seg.forEach(b => { if (!isLocked(b) && b.date >= t) { before.set(b.id, b.guideId); b.guideId = null } });
   const changes = [];
   seg.forEach(b => {
@@ -198,7 +200,7 @@ function rerunFrom(db, startQn) {
     if (old !== b.guideId) { changes.push({ b, old, nw: b.guideId }); if (old && gObj(db, old)) notifyGuide(db, gObj(db, old), b, 'cancel'); if (g) notifyGuide(db, g, b, 'new') }
   });
   db.lastGuideId = ptr;
-  changes.forEach(c => log(db, 'assign', `จัดคิวใหม่ #${c.b.qn + 1} ${c.b.code} (${fmtDateS(c.b.date)} ${c.b.time}): ${c.old ? gName(db, c.old) : '-'} → ${c.nw ? gName(db, c.nw) : 'รอมอบหมาย'}`));
+  changes.forEach(c => log(db, 'assign', `จัดคิวใหม่ ${c.b.code} (${fmtDateS(c.b.date)} ${c.b.time}): ${c.old ? gName(db, c.old) : '-'} → ${c.nw ? gName(db, c.nw) : 'รอมอบหมาย'}`));
   return changes;
 }
 function markGuideUnavailable(db, gid, date, reason, bookingId) {
@@ -208,7 +210,7 @@ function markGuideUnavailable(db, gid, date, reason, bookingId) {
   moveToLast(db, gid);
   log(db, u.role === 'guide' ? 'decline' : 'unavail', `${g.firstName} ${g.lastName} ไม่ว่าง ${bookingId ? 'งาน ' + byId(db, bookingId).code : 'ทั้งวัน'} ${fmtDate(date)} — เหตุผล: ${reason} · ย้ายไปลำดับสุดท้าย (${g.priority})`);
   const aff = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null && b.date === date && !isLocked(b) && (bookingId ? b.id === bookingId : b.guideId === gid));
-  return aff.length ? rerunFrom(db, Math.min(...aff.map(b => b.qn))) : [];
+  return aff.length ? rerunFrom(db, aff.map(qKey).sort()[0]) : [];
 }
 
 /* ===== ชำระเงิน ===== */
@@ -220,7 +222,7 @@ function confirmPayment(db, b, how) {
   b.status = 'paid'; b.paidConfirmedBy = db.$actor?.name || 'ระบบอัตโนมัติ'; b.paidConfirmedAt = nowISO();
   const g = assignOnPay(db, b);
   notifyCustomer(db, b, 'confirmed');
-  log(db, 'confirm_payment', `${how} ${b.code} ${baht(b.paidAmount || b.total)}${b.payFee ? ` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})` : ''} → คิว #${b.qn + 1} ${g ? 'ไกด์ ' + gName(db, g.id) : '(ยังไม่มีไกด์ว่าง)'}`);
+  log(db, 'confirm_payment', `${how} ${b.code} ${baht(b.paidAmount || b.total)}${b.payFee ? ` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})` : ''} → ${g ? 'ไกด์ ' + gName(db, g.id) : '(ยังไม่มีไกด์ว่าง)'}`);
   return g;
 }
 export function expirePending(db) {
@@ -345,7 +347,7 @@ export const adminActions = {
     if (b.status !== 'pending') fail('รายการนี้ไม่อยู่ในสถานะรอชำระ');
     if (!b.paidAmount) b.paidAmount = b.total;
     const g = confirmPayment(db, b, 'ยืนยันรับเงิน (แมนนวล)');
-    return { msg: g ? `ยืนยันแล้ว · คิว #${b.qn + 1} → ${gName(db, g.id)}` : 'ยืนยันแล้ว แต่ยังไม่มีไกด์ว่าง' };
+    return { msg: g ? `ยืนยันแล้ว → ไกด์ ${gName(db, g.id)}` : 'ยืนยันแล้ว แต่ยังไม่มีไกด์ว่าง' };
   },
   cancelBooking(db, p) {
     need(db.$actor, 'cancel'); const b = byId(db, p.id);
@@ -374,14 +376,11 @@ export const adminActions = {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date || '') || !slotList(db).includes(p.time)) fail('กรุณาเลือกวันและเวลา');
     if (p.date < today()) fail('เลื่อนไปวันที่ผ่านมาแล้วไม่ได้');
     const od = b.date, ot = b.time; if (p.date === od && p.time === ot) return { msg: 'ไม่มีการเปลี่ยนแปลง' };
-    b.date = p.date; b.time = p.time; const old = gObj(db, b.guideId);
-    if (old && !b.manual && !guideBlocked(db, old.id, b.date, b.time, b.id, b)) { notifyGuide(db, old, b, 'new'); log(db, 'reschedule', `เลื่อน ${b.code} ${fmtDateS(od)} ${ot} → ${fmtDateS(b.date)} ${b.time} (ไกด์เดิม ${old.firstName})`) }
-    else {
-      if (old) notifyGuide(db, old, b, 'cancel'); b.manual = false; b.guideId = null;
-      const prev = db.bookings.filter(x => x.qn != null && x.qn < b.qn && x.guideId && x.status !== 'cancelled').sort((x, y) => y.qn - x.qn)[0];
-      const g = streamNext(db, prev?.guideId || null, b); b.guideId = g ? g.id : null; b.trip = g ? 'assigned' : 'unassigned'; if (g) notifyGuide(db, g, b, 'new');
-      log(db, 'reschedule', `เลื่อน ${b.code} ${fmtDateS(od)} ${ot} → ${fmtDateS(b.date)} ${b.time} · ไกด์ ${old ? old.firstName : '-'} → ${g ? g.firstName : 'รอมอบหมาย'}`);
-    }
+    const oldKey = qKey(b), old = gObj(db, b.guideId); b.date = p.date; b.time = p.time;
+    if (b.manual && old && guideBlocked(db, old.id, b.date, b.time, b.id, b)) b.manual = false;
+    const ch = rerunFrom(db, [oldKey, qKey(b)].sort()[0]);
+    if (old && old.id === b.guideId && !ch.some(c => c.b === b)) notifyGuide(db, old, b, 'new'); // ไกด์เดิม → แจ้งวันใหม่
+    log(db, 'reschedule', `เลื่อน ${b.code} ${fmtDateS(od)} ${ot} → ${fmtDateS(b.date)} ${b.time} · ไกด์ ${old ? old.firstName : '-'} → ${b.guideId ? gName(db, b.guideId) : 'รอมอบหมาย'}${ch.length > 1 ? ` (จัดคิวใหม่อีก ${ch.length - 1} งาน)` : ''}`);
     return { msg: 'เลื่อนวันแล้ว' };
   },
   tripStart(db, p) {
@@ -411,7 +410,7 @@ export const adminActions = {
   reassign(db, p) {
     need(db.$actor, 'assign'); const b = byId(db, p.id), gid = p.guideId || '', old = gObj(db, b.guideId);
     if (b.status !== 'paid' || b.qn == null) fail('มอบหมายได้หลังชำระเงินแล้ว'); if (b.trip === 'started' || isDone(b)) fail('งานนี้เริ่มหรือจบแล้ว');
-    if (!gid) { b.manual = false; log(db, 'assign', `${b.code} กลับไปใช้คิวอัตโนมัติ`); rerunFrom(db, b.qn); return { msg: 'กลับไปใช้คิวอัตโนมัติแล้ว' } }
+    if (!gid) { b.manual = false; log(db, 'assign', `${b.code} กลับไปใช้คิวอัตโนมัติ`); rerunFrom(db, qKey(b)); return { msg: 'กลับไปใช้คิวอัตโนมัติแล้ว' } }
     const ng = gObj(db, gid) || fail('ไม่พบไกด์');
     if (guideBlocked(db, gid, b.date, b.time, b.id)) fail(unavailOn(db, gid, b.date) ? 'ไกด์คนนี้แจ้งไม่ว่างในวันดังกล่าว' : 'ไกด์คนนี้ติดงานหรือรับงานครบแล้วในวันนั้น');
     if (old && old.id !== gid) notifyGuide(db, old, b, 'cancel');
@@ -422,7 +421,7 @@ export const adminActions = {
   autoAll(db) {
     need(db.$actor, 'assign');
     const un = db.bookings.filter(b => b.status === 'paid' && b.qn != null && b.trip === 'unassigned' && b.date >= today());
-    const n = un.length ? rerunFrom(db, Math.min(...un.map(b => b.qn))).length : 0; return { msg: `จัดคิวใหม่ ${n} งาน` };
+    const n = un.length ? rerunFrom(db, un.map(qKey).sort()[0]).length : 0; return { msg: `จัดคิวใหม่ ${n} งาน` };
   },
   decline(db, p) {
     const b = byId(db, p.id); if (!ownTrip(db, b)) fail('ไม่ใช่งานของคุณ');

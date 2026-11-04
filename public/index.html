@@ -265,7 +265,7 @@ function guideBusy(db,gid,date,time,exceptId){const dur=db.settings.tripHours*60
 const unavailOn=(db,gid,date)=>(db.unavail||[]).some(u=>u.guideId===gid&&u.date===date);
 const guideDayCount=(db,gid,date,exceptId)=>db.bookings.filter(b=>b.id!==exceptId&&b.guideId===gid&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date).length;
 function guideBlocked(db,gid,date,time,exceptId,b){const cap=+db.settings.maxGroupsPerGuideDay||0;return (cap>0&&guideDayCount(db,gid,date,exceptId)>=cap)||guideBusy(db,gid,date,time,exceptId)||unavailOn(db,gid,date)||!!(b&&(b.declined||[]).some(d=>d.guideId===gid))}
-const dayBookings=(db,date)=>db.bookings.filter(b=>b.date===date&&b.status!=='cancelled').sort((a,b)=>(a.qn??1e9)-(b.qn??1e9)||a.createdAt.localeCompare(b.createdAt));
+const dayBookings=(db,date)=>db.bookings.filter(b=>b.date===date&&b.status!=='cancelled').sort((a,b)=>a.time.localeCompare(b.time)||(a.qn??1e9)-(b.qn??1e9)||a.createdAt.localeCompare(b.createdAt));
 const dayGuides=(db,date)=>activeGuides(db).filter(g=>!unavailOn(db,g.id,date));
 const DONE=['completed','noshow','paidcancel'];const isDone=b=>DONE.includes(b.trip);
 const isLocked=b=>b.trip==='started'||isDone(b)||b.manual;
@@ -516,14 +516,14 @@ function pGuides(){
   const ed=can('editGuides');
   return `<div class="hd"><h2>มอบหมายงานไกด์</h2>${ed?`<button class="btn" data-act="guideform">+ เพิ่มไกด์</button>`:''}</div>
   <div class="card"><h3>คิววนของไกด์</h3>
-   <div class="queue">${ag.map(g=>{const nx=nextQueueGuide(DB);return `<div class="qitem ${nx&&nx.id===g.id?'next':''}"><span class="n">${g.priority}</span>${esc(g.firstName)}${nx&&nx.id===g.id?` <span class="badge b-ok">รับการจองถัดไป (คิว #${DB.rotSeq+1})</span>`:''}</div>`}).join('')||'<span class="mut">ยังไม่มีไกด์ที่เปิดใช้งาน</span>'}</div>
-   <p class="mut sm" style="margin-bottom:0">คิว<b>วนต่อเนื่องไปเรื่อยๆ ไม่นับวันและไม่เริ่มใหม่</b> — การจองแต่ละรายการได้เลขคิวต่อกัน (#1, #2, #3 …) แล้วจับคู่กับไกด์ตามลำดับ 1→2→3→4→1→… · ผู้จอง<b>อยู่ที่เลขคิวเดิมเสมอ</b> เมื่อไกด์ไม่ว่าง ไกด์คนนั้นไปต่อท้าย คิวก่อนหน้าไม่เปลี่ยน และ<b>ตั้งแต่คิวนั้นเป็นต้นไปไกด์ถัดไปขยับขึ้นมาทั้งหมด</b> · ถ้าเวลาทับกัน (ภายใน ${DB.settings.tripHours} ชม.) ข้ามไปคนถัดไป</p></div>
+   <div class="queue">${ag.map(g=>{const nx=nextQueueGuide(DB);return `<div class="qitem ${nx&&nx.id===g.id?'next':''}"><span class="n">${g.priority}</span>${esc(g.firstName)}${nx&&nx.id===g.id?` <span class="badge b-ok">คนถัดไปในคิว</span>`:''}</div>`}).join('')||'<span class="mut">ยังไม่มีไกด์ที่เปิดใช้งาน</span>'}</div>
+   <p class="mut sm" style="margin-bottom:0">จับคู่ไกด์<b>เรียงตามวันและเวลาที่เดินจริง</b> (วันเดียวกันเวลาเดียวกัน → ใครชำระก่อนได้ก่อน) ไกด์วนตามลำดับ 1→2→3→…→1 ต่อเนื่องไม่เริ่มใหม่ · เมื่อมีกลุ่มใหม่ที่<b>เดินก่อน</b>แทรกเข้ามา หรือไกด์แจ้งไม่ว่าง ระบบจัดคู่ใหม่ตั้งแต่จุดนั้นเป็นต้นไป (งานที่เดินก่อนหน้าไม่เปลี่ยน) และแจ้งเตือนไกด์ที่ถูกเปลี่ยนงานอัตโนมัติ · งานที่เริ่มเดินแล้ว/กำหนดไกด์เอง ไม่ถูกเปลี่ยน</p></div>
   <div class="card"><div class="hd"><h3>คิวรายวัน</h3><input type="date" style="width:auto" value="${qDate}" data-chg="qdate"></div>
    <div class="grid2"><div><label>ไกด์ที่พร้อมรับงานวันนี้ (ตามลำดับ)</label>
      ${dG.map((g,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n">${i+1}</span>${esc(g.firstName+' '+g.lastName)}</div>`).join('')||'<div class="mut sm">ไม่มีไกด์ว่าง</div>'}
      ${ag.filter(g=>unavailOn(DB,g.id,qDate)).map(g=>`<div class="qitem" style="margin-bottom:6px;opacity:.6"><span class="n" style="background:var(--red)">✕</span>${esc(g.firstName)} — ไม่ว่าง</div>`).join('')}</div>
-    <div><label>ผู้จองวันนี้ (เลขคิววน)</label>
-     ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?'#'+(b.qn+1):'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${b.guideId?esc(gName(DB,b.guideId)):'<span style="color:var(--red)">รอมอบหมาย</span>'}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
+    <div><label>กลุ่มที่เดินวันนี้ (เรียงตามเวลา)</label>
+     ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?b.time:'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${b.guideId?esc(gName(DB,b.guideId)):'<span style="color:var(--red)">รอมอบหมาย</span>'}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
   ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
    ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
   <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th></th></tr>
@@ -877,7 +877,7 @@ const ACT={
   noshow:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันลูกค้าไม่มา',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ไกด์ ${esc(gName(DB,b.guideId))} ยังได้ค่าไกด์ <b>${baht(b.split.guide)}</b> และจะถูกย้ายไปต่อท้ายคิว`,'ยืนยันลูกค้าไม่มา','warn'))return;call('noshow',{id:b.id})},
   paidcancel:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
     if(!await confirmBox('ลูกค้ายกเลิก (ไม่คืนเงิน)',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ${g?`ไกด์ ${esc(g.firstName+' '+g.lastName)} ได้ค่าไกด์ <b>${baht(b.split.guide)}</b> ย้ายไปต่อท้ายคิว และว่างรับงานอื่นในเวลานั้นได้`:'<span style="color:var(--red)">ยังไม่มีไกด์ได้รับมอบหมาย — ค่าไกด์จะไม่ถูกจ่ายให้ใคร</span>'}`,'ยืนยันการยกเลิก','red'))return;call('paidcancel',{id:b.id})},
-  reschedule:el=>{const b=byId(el.dataset.id);openModal(`<h3>เลื่อนวันเดินป่า ${b.code}</h3><p class="sm mut">ชำระแล้วไม่คืนเงิน แต่เลื่อนวันได้ · เลขคิว #${b.qn+1} คงเดิม</p>
+  reschedule:el=>{const b=byId(el.dataset.id);openModal(`<h3>เลื่อนวันเดินป่า ${b.code}</h3><p class="sm mut">ชำระแล้วไม่คืนเงิน แต่เลื่อนวันได้ · ระบบจะจัดคู่ไกด์ใหม่ตามวันที่เดินจริง</p>
     <form data-form="reschedule" data-id="${b.id}"><div class="grid2"><div class="field"><label>วันที่ใหม่</label><input type="date" name="date" value="${b.date}" min="${today()}"></div>
     <div class="field"><label>เวลา</label><select name="time">${slotList().map(t=>`<option ${t===b.time?'selected':''}>${t}</option>`).join('')}</select></div></div>
     <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึกการเลื่อนวัน</button></div></form>`)},
