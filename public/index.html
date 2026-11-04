@@ -164,7 +164,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
     <a href="#stay" data-nav="stay">บ้านพัก</a>
     <a href="#book" data-nav="book" class="cta">จองขึ้นผาแง่ม</a>
     <a href="#about" data-nav="about">เกี่ยวกับเรา</a>
-    <span class="navsub"><a href="#check" data-nav="check">ตรวจสอบการจอง</a><a href="#admin" data-nav="admin">หลังบ้าน</a></span>
+    <span class="navsub"><a href="#check" data-nav="check">ตรวจสอบการจอง</a><a href="#admin" data-nav="admin" id="navAdmin">Login</a></span>
   </nav>
 </header>
 <main id="app"></main>
@@ -789,7 +789,7 @@ function pAudit(){const L=DB.audit.filter(a=>auF==='all'||a.action===auF).slice(
   <div class="card"><div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr>${L.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td>${esc(a.userName)}</td><td>${badge([AUL[a.action]||a.action,'b-gray'])}</td><td class="sm">${esc(a.detail)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มี</td></tr>'}</table></div></div>`}
 
 /* ========== render / routing ========== */
-function render(){
+function render(){{const na=document.getElementById('navAdmin');if(na)na.textContent=DB?'หลังบ้าน':'Login'}
   const h=location.hash.slice(1)||'home',app=document.getElementById('app');
   if(!booted||!PUB){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
   if(h.startsWith('admin')&&DB===null&&AUTH.checking){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
@@ -1003,7 +1003,8 @@ window.addEventListener('hashchange',async()=>{const h=location.hash.slice(1);if
 /* เริ่มต้น: โหลดข้อมูลสาธารณะ + ตรวจสถานะเข้าสู่ระบบ */
 (async()=>{
   render();
-  if(!await loadPub()){document.getElementById('app').innerHTML='<div class="card empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง</div>';return}
+  let okPub=false;for(let i=0;i<3&&!okPub;i++){if(i)await new Promise(r=>setTimeout(r,1500*i));okPub=await loadPub()}
+  if(!okPub){document.getElementById('app').innerHTML='<div class="card empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง<div style="margin-top:10px"><button class="btn" onclick="location.reload()">ลองใหม่</button></div></div>';return}
   booted=true;bf.date=addDays(PUB.today,1);
   const [m,st]=await Promise.all([api('/api/auth/me'),api('/api/auth/status')]);AUTH.hasUsers=st.hasUsers!==false;
   if(m.me)await loadAdmin();
