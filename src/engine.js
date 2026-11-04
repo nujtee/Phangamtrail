@@ -142,11 +142,11 @@ export class Engine extends DurableObject {
 
       if (path.startsWith('/api/admin/')) {
         const actor = await this.actorOf(req); if (!actor) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
-        if (path === '/api/admin/state') { const db = await this.load(); return json(adminState(db, actor)) }
+        if (path === '/api/admin/state') { const db = await this.load(); return json({ ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET) }) }
         const name = path.slice(11), fn = adminActions[name]; if (!fn || req.method !== 'POST') return json({ error: 'not found' }, 404);
         const p = await req.json().catch(() => ({}));
         const out = await this.run(actor, db => fn(db, p, { hash: hashPw, verify: verifyPw }));
-        const db = await this.load(); return json({ ...out, state: adminState(db, actor) });
+        const db = await this.load(); return json({ ...out, state: { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET) } });
       }
       if (path === '/internal/can') { // worker ถามสิทธิ์ก่อนอัปโหลดรูป
         const actor = await this.actorOf(req); return json({ actor });
@@ -169,15 +169,24 @@ export class Engine extends DurableObject {
     await this.run({ id: '-', name: 'LINE OA', role: 'system' }, db => {
       for (const ev of body.events || []) {
         const userId = ev.source?.userId; if (!userId || !ev.replyToken) continue;
-        if (ev.type === 'follow') { replies.push([ev.replyToken, 'สวัสดีครับ ไกด์ผาแง่มพิมพ์ “เบอร์โทรศัพท์” ที่ลงทะเบียนไว้ เพื่อเปิดรับแจ้งเตือนงานนำเที่ยว']); continue }
+        const by = db.settings.lineLinkBy || 'both', how = { phone: '“เบอร์โทรศัพท์”', name: '“ชื่อ นามสกุล”', both: '“เบอร์โทรศัพท์” หรือ “ชื่อ นามสกุล”' }[by] || 'เบอร์โทรศัพท์';
+        if (ev.type === 'follow') { replies.push([ev.replyToken, `สวัสดีครับ ไกด์ผาแง่มพิมพ์ ${how} ที่ลงทะเบียนไว้ เพื่อผูกบัญชีและรับแจ้งเตือนงานนำเที่ยว`]); continue }
         if (ev.type !== 'message' || ev.message?.type !== 'text') continue;
-        const digits = ev.message.text.replace(/\D/g, '');
-        const g = digits.length >= 9 && db.guides.find(x => x.phone.replace(/\D/g, '') === digits);
+        const text = ev.message.text.trim(), digits = text.replace(/\D/g, '');
+        const norm = t => String(t || '').toLowerCase().replace(/^(นาย|นางสาว|นาง|น\.ส\.|mr\.?|mrs\.?|ms\.?|miss)\s*/i, '').replace(/[\s.]+/g, '');
+        let g = null, err = '';
+        if (by !== 'name' && digits.length >= 9 && digits.length >= text.replace(/\s/g, '').length - 2) {
+          g = db.guides.find(x => x.active !== false && (x.phone || '').replace(/\D/g, '') === digits) || null;
+          if (!g) err = 'ไม่พบเบอร์นี้ในรายชื่อไกด์';
+        } else if (by !== 'phone') {
+          const k = norm(text), m = k.length >= 3 ? db.guides.filter(x => x.active !== false && norm(`${x.firstName}${x.lastName}`) === k) : [];
+          if (m.length === 1) g = m[0]; else err = m.length > 1 ? 'พบไกด์ชื่อนี้มากกว่า 1 คน กรุณาพิมพ์เบอร์โทรแทน' : 'ไม่พบชื่อ-นามสกุลนี้ในรายชื่อไกด์ (พิมพ์ชื่อและนามสกุลให้ตรงกับที่ลงทะเบียน)';
+        } else err = 'กรุณาพิมพ์เบอร์โทรศัพท์ที่ลงทะเบียนไว้';
         if (g) {
           db.guides.forEach(x => { if (x !== g && x.lineUserId === userId) x.lineUserId = '' });
           g.lineUserId = userId; db.$audit.push({ id: uid(), at: nowISO(), userId: '-', userName: 'LINE OA', action: 'guide', detail: `ผูก LINE กับไกด์ ${g.firstName} ${g.lastName}` });
-          replies.push([ev.replyToken, `ผูกบัญชีสำเร็จ ✅ คุณ${g.firstName} จะได้รับแจ้งเตือนงานนำเที่ยวผ่าน LINE นี้`]);
-        } else replies.push([ev.replyToken, 'ไม่พบเบอร์นี้ในรายชื่อไกด์ กรุณาพิมพ์เบอร์โทรที่ลงทะเบียนไว้ หรือติดต่อผู้จัดการไกด์']);
+          replies.push([ev.replyToken, `ผูกบัญชีสำเร็จ ✅ คุณ${g.firstName} ${g.lastName} จะได้รับแจ้งเตือนงานนำเที่ยวผ่าน LINE นี้`]);
+        } else replies.push([ev.replyToken, `${err} — กรุณาพิมพ์ ${how} ให้ตรงกับที่ลงทะเบียน หรือติดต่อผู้จัดการไกด์`]);
       }
     });
     if (this.env.LINE_CHANNEL_TOKEN) for (const [replyToken, text] of replies)

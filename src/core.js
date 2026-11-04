@@ -58,7 +58,7 @@ export function seedState() {
     settings: {
       groupFee: 1100, entryRates: { ta: 30, tc: 30, fa: 30, fc: 30 }, maxGroup: 6, payDeadlineMin: 30,
       maxPeoplePerDay: 0, maxGroupsPerSlot: 0, maxGroupsPerGuideDay: 1, minLead: { v: 12, u: 'h' }, seasons: [],
-      slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60, rules: '', vehicleFee: 30,
+      slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60, rules: '', vehicleFee: 30, lineLinkBy: 'both', lineOa: '',
       split: { guide: 700, village: 100, park: 300 },
       channels: {
         bank: { on: false, mode: 'manual', bankName: '', accountName: '', accountNo: '' },
@@ -407,6 +407,17 @@ export const adminActions = {
   payUndo(db, p) {
     need(db.$actor, 'payoutUndo'); const b = byId(db, p.id); if (!b.payout?.paid) fail('รายการนี้ยังไม่ได้จ่าย');
     log(db, 'payout_undo', `ยกเลิกยืนยันจ่าย ${b.code} (เดิมยืนยันโดย ${b.payout.paidByName})`); b.payout = { paid: false }; return { msg: 'ยกเลิกการยืนยันแล้ว' };
+  },
+  lineLinkSave(db, p) {
+    need(db.$actor, 'markUnavail'); const s = db.settings;
+    s.lineLinkBy = ['phone', 'name', 'both'].includes(p.lineLinkBy) ? p.lineLinkBy : 'both';
+    s.lineOa = str(p.lineOa, 200);
+    log(db, 'settings', `ตั้งค่าการผูก LINE ของไกด์: ${{ phone: 'เบอร์โทร', name: 'ชื่อ-นามสกุล', both: 'เบอร์โทร หรือ ชื่อ-นามสกุล' }[s.lineLinkBy]}`);
+    return { msg: 'บันทึกการตั้งค่าผูก LINE แล้ว' };
+  },
+  lineUnlink(db, p) {
+    need(db.$actor, 'markUnavail'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'); g.lineUserId = '';
+    log(db, 'guide', `ยกเลิกการผูก LINE ของไกด์ ${g.firstName} ${g.lastName}`); return { msg: 'ยกเลิกการผูก LINE แล้ว' };
   },
   reassign(db, p) {
     need(db.$actor, 'assign'); const b = byId(db, p.id), gid = p.guideId || '', old = gObj(db, b.guideId);

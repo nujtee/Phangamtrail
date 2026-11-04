@@ -512,6 +512,24 @@ function pBookings(){
   </table></div></div>`;
 }
 
+function qrSvg(t,px=170){try{const c=qrcode(0,'M');c.addData(t);c.make();return c.createSvgTag({cellSize:4,margin:2}).replace('<svg ',`<svg style="width:${px}px;height:${px}px" `)}catch(e){return ''}}
+function lineLinkCard(){const s=DB.settings,by=s.lineLinkBy||'both',G=[...DB.guides].filter(g=>g.active!==false).sort((a,b)=>a.priority-b.priority),ok=G.filter(g=>g.lineUserId).length,ed=can('markUnavail');
+  const oa=(s.lineOa||'').trim(),link=!oa?'':/^https?:\/\//i.test(oa)?oa:`https://line.me/R/ti/p/${encodeURIComponent(oa.startsWith('@')?oa:'@'+oa)}`;
+  const how={phone:'เบอร์โทรศัพท์',name:'ชื่อ นามสกุล',both:'เบอร์โทรศัพท์ หรือ ชื่อ นามสกุล'}[by];
+  return `<div class="card"><div class="hd"><h3>📲 ไกด์ผูก LINE รับแจ้งเตือนงาน</h3><span class="badge ${ok===G.length&&G.length?'b-ok':'b-warn'}">ผูกแล้ว ${ok}/${G.length} คน</span></div>
+   ${DB.lineReady===false?`<p class="sm" style="background:var(--warnbg);color:#6d4a0c;border-radius:10px;padding:8px 12px;margin-top:0">⚠ ยังไม่ได้ตั้งค่า LINE OA ในระบบ (LINE_CHANNEL_TOKEN / LINE_CHANNEL_SECRET) — ไกด์จะยังผูกไม่ได้จนกว่าจะตั้งค่า</p>`:''}
+   <div class="grid2" style="align-items:start">
+    <div>${ed?`<form data-form="linelink">
+      <label>ไกด์ใช้อะไรผูกบัญชี</label>
+      ${[['phone','เบอร์โทรศัพท์','เช่น 0861944842'],['name','ชื่อ + นามสกุล','เช่น สุริยา เราเท่า'],['both','ได้ทั้งสองแบบ','พิมพ์เบอร์โทร หรือ ชื่อ นามสกุล ก็ได้']].map(([k,l,d])=>`<label style="display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--ink)"><input type="radio" name="lineLinkBy" value="${k}" style="width:auto" ${by===k?'checked':''}> <b>${l}</b> <span class="sm mut">${d}</span></label>`).join('')}
+      <div class="field" style="margin-top:10px"><label>LINE OA ของชุมชน (เช่น @phangam หรือลิงก์เพิ่มเพื่อน https://lin.ee/…)</label><input name="lineOa" value="${esc(oa)}" placeholder="@phangam"></div>
+      <button class="btn sm" type="submit">บันทึก</button></form>`:`<p class="sm">วิธีผูก: พิมพ์ <b>${how}</b></p>`}
+     <div style="background:var(--g3);border-radius:10px;padding:10px 12px;margin-top:12px" class="sm"><b>ขั้นตอนสำหรับไกด์</b>
+      <ol style="margin:6px 0 0;padding-left:18px"><li>เพิ่มเพื่อน LINE OA ${oa?`<b>${esc(oa)}</b>`:''} (สแกน QR ข้างๆ)</li><li>พิมพ์ <b>${how}</b> ที่ลงทะเบียนไว้ในแชท</li><li>ระบบตอบ “ผูกบัญชีสำเร็จ ✅” แล้วจะได้รับแจ้งเตือนงานทาง LINE</li></ol></div></div>
+    <div style="text-align:center">${link?`${qrSvg(link)}<div class="sm"><a href="${esc(link)}" target="_blank" rel="noopener">${esc(link)}</a></div><button class="btn ghost sm" style="margin-top:6px" data-act="copy" data-v="${esc(link)}">คัดลอกลิงก์ส่งให้ไกด์</button>`:'<p class="sm mut">ใส่ LINE OA ID เพื่อแสดง QR ให้ไกด์สแกน</p>'}</div></div>
+   <div class="tbl-wrap" style="margin-top:12px"><table><tr><th>ไกด์</th><th>เบอร์</th><th>สถานะ LINE</th><th></th></tr>
+    ${G.map(g=>`<tr><td>${esc(g.firstName+' '+g.lastName)}</td><td class="sm">${esc(g.phone)}</td><td>${g.lineUserId?'<span class="badge b-ok">✓ ผูกแล้ว</span>':'<span class="badge b-warn">ยังไม่ผูก</span>'}</td>
+     <td style="text-align:right">${g.lineUserId?`<button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>${ed?` <button class="btn ghost sm" data-act="lineunlink" data-id="${g.id}">ยกเลิกการผูก</button>`:''}`:''}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มีไกด์</td></tr>'}</table></div></div>`}
 function pGuides(){
   const ag=activeGuides(DB),dG=dayGuides(DB,qDate),dB=dayBookings(DB,qDate);
   const un=DB.bookings.filter(b=>b.status==='paid'&&b.qn!=null&&b.trip==='unassigned'&&b.date>=today());
@@ -529,6 +547,7 @@ function pGuides(){
      ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?b.time:'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${b.guideId?esc(gName(DB,b.guideId)):'<span style="color:var(--red)">รอมอบหมาย</span>'}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
   ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
    ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
+  ${lineLinkCard()}
   <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th></th></tr>
    ${[...DB.guides].sort((a,b)=>a.priority-b.priority).map(g=>`<tr><td><b>${g.priority}</b>${ed?`<div><button class="btn ghost sm" data-act="gup" data-id="${g.id}">▲</button><button class="btn ghost sm" data-act="gdown" data-id="${g.id}">▼</button></div>`:''}</td>
     <td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td><td>${g.accountNo?`${esc(g.bankName)}<div class="sm">${esc(g.accountNo)}</div>`:'<span class="sm" style="color:var(--red)">ยังไม่มีเลขบัญชี</span>'}</td>
@@ -549,7 +568,7 @@ function unavailSection(){
 function guideFormHTML(g){g=g||{priority:activeGuides(DB).length+1,active:true};
   const f=(n,l,t='text')=>`<div class="field"><label>${l}</label><input name="${n}" type="${t}" value="${esc(g[n]??'')}"></div>`;
   return `<h3>${g.id?'แก้ไขข้อมูลไกด์':'เพิ่มไกด์'}</h3><form data-form="guide" data-id="${g.id||''}"><div class="grid2">${f('firstName','ชื่อ *')}${f('lastName','นามสกุล *')}${f('bankName','ธนาคาร (ใส่ภายหลังได้)')}${f('accountNo','เลขที่บัญชี (ใส่ภายหลังได้)')}${f('email','อีเมล','email')}${f('phone','เบอร์โทรศัพท์ *','tel')}${f('line','LINE ID')}${f('priority','ลำดับความสำคัญ (ค่าเริ่มต้น = ต่อท้ายคิว)','number')}</div>
-  <p class="sm mut" style="margin-top:-4px">รับแจ้งเตือนทาง LINE: ให้ไกด์เพิ่มเพื่อน LINE OA ของชุมชน แล้วพิมพ์เบอร์โทรนี้ในแชท ระบบจะผูกให้อัตโนมัติ ${g.lineUserId?'<b style="color:var(--g2)">✓ ผูกแล้ว</b>':'<b style="color:var(--warn)">ยังไม่ผูก</b>'}</p>
+  <p class="sm mut" style="margin-top:-4px">รับแจ้งเตือนทาง LINE: ให้ไกด์เพิ่มเพื่อน LINE OA ของชุมชน แล้วพิมพ์${{phone:'เบอร์โทร',name:'ชื่อ นามสกุล',both:'เบอร์โทร หรือ ชื่อ นามสกุล'}[DB.settings.lineLinkBy||'both']}ในแชท ระบบจะผูกให้อัตโนมัติ ${g.lineUserId?'<b style="color:var(--g2)">✓ ผูกแล้ว</b>':'<b style="color:var(--warn)">ยังไม่ผูก</b>'}</p>
   ${(()=>{const acc=g.id&&DB.users.find(u=>u.guideId===g.id&&u.role==='guide');
     return `<div style="background:var(--g3);border-radius:10px;padding:10px 12px;margin-bottom:12px"><b>บัญชีเข้าระบบของไกด์</b> <span class="sm mut">— ไกด์ใช้กดรับงาน “ไม่ว่าง” “เริ่มการเดินทาง” และ “สิ้นสุดการเดินทาง”</span>
     ${acc?`<p class="sm" style="margin:6px 0">✓ มีบัญชีแล้ว: <b>${esc(acc.username)}</b></p><div class="field" style="margin:0"><label>ตั้งรหัสผ่านใหม่ (อย่างน้อย 6 ตัว · เว้นว่าง = ไม่เปลี่ยน)</label><input name="acctPass" type="text"></div>`:
@@ -820,6 +839,7 @@ const ACT={
     if(tot>PUB.settings.maxGroup)return toast(`รวมได้ไม่เกิน ${PUB.settings.maxGroup} คนต่อกลุ่ม`);if(tot<1)return;
     bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
   veh:el=>{bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+(+el.dataset.d)));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
+  lineunlink:async el=>{const g=DB.guides.find(x=>x.id===el.dataset.id);if(g&&await confirmBox('ยกเลิกการผูก LINE',`${esc(g.firstName+' '+g.lastName)} จะไม่ได้รับแจ้งเตือนทาง LINE จนกว่าจะผูกใหม่`))call('lineUnlink',{id:g.id})},
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
@@ -1005,6 +1025,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='reschedule'){if(await call('reschedule',{id:f.dataset.id,date:fd.date,time:fd.time}))closeModal();return}
   if(kind==='guide'){if(await call('guideSave',{...fd,id:f.dataset.id||'',active:!!fd.active,createAcct:!!fd.createAcct}))closeModal();return}
   if(kind==='user'){if(await call('userSave',{...fd,id:f.dataset.id||'',active:!!fd.active}))closeModal();return}
+  if(kind==='linelink'){call('lineLinkSave',{lineLinkBy:fd.lineLinkBy,lineOa:fd.lineOa});return}
   if(kind==='settings'){call('settingsSave',fd);return}
   }finally{if(btn&&document.body.contains(btn))btn.disabled=false}
 });
