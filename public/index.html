@@ -386,7 +386,7 @@ function renderDone(b,fromBooking){
    :`<div class="done wait"><div class="ic">⏳</div><h2>รอเจ้าหน้าที่ตรวจสอบสลิป</h2><p>ได้รับหลักฐานการชำระเงินแล้ว เมื่อเจ้าหน้าที่ตรวจสอบเรียบร้อย<br>ระบบจะแจ้งผลการจองทางอีเมล${b.email?` <b>${esc(b.email)}</b>`:''}</p></div>`;
   return `<div class="card" style="text-align:center">${top}
    <div class="finish">🎉 <b>จบกระบวนการจองเรียบร้อย</b><div class="sm">ไม่ต้องทำรายการเพิ่ม · กรุณาบันทึกรายละเอียดการจองเก็บไว้</div></div>
-   <div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn lg" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${ok?'':`<button class="btn ghost" data-act="refreshbk">🔄 ตรวจสถานะล่าสุด</button>`}</div></div>
+   <div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn lg" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${ok?`<button class="btn ghost lg" data-act="custreceipt">🧾 ใบเสร็จรับเงิน</button>`:''}${ok?'':`<button class="btn ghost" data-act="refreshbk">🔄 ตรวจสถานะล่าสุด</button>`}</div></div>
   <div class="card"><h3>รายละเอียดการจอง</h3>
    <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลาออกเดินทาง</dt><dd>${b.time} น.</dd>
    <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>${b.email?`<dt>อีเมล</dt><dd>${esc(b.email)}</dd>`:''}
@@ -506,7 +506,7 @@ function pBookings(){
    <td>${esc(b.name)}<div class="sm mut">${esc(b.phone)}</div></td><td class="num">${b.people}<div class="sm mut" style="white-space:normal;min-width:90px">${paxText(b.pax||{})}</div></td><td class="num">${baht(b.total)}</td>
    <td>${stB(b)}${b.slip?` <button class="btn ghost sm" data-act="slip" data-id="${b.id}">สลิป</button>${slipTag(b)}${b.payChannel?`<div class="sm mut">ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}${b.payFee?` · รับ ${baht(b.paidAmount)} (ค่าธรรมเนียม ${baht(b.payFee)})`:''}</div>`:''}`:''}
      ${b.status==='pending'&&can('confirmPay')?`<div style="margin-top:4px"><button class="btn sm" data-act="confirmpay" data-id="${b.id}">ยืนยันรับเงิน</button></div>`:''}
-     ${b.status==='paid'?`<div class="sm mut">${b.paidConfirmedBy==='ระบบอัตโนมัติ'?'⚡ ':''}โดย ${esc(b.paidConfirmedBy||'-')}</div>`:''}</td>
+     ${b.status==='paid'?`<div class="sm mut">${b.paidConfirmedBy==='ระบบอัตโนมัติ'?'⚡ ':''}โดย ${esc(b.paidConfirmedBy||'-')}</div><button class="btn ghost sm" style="margin-top:4px" data-act="receipt" data-id="${b.id}">🧾 ใบเสร็จ</button>`:''}</td>
    <td>${b.status==='pending'?'<span class="sm mut">มอบหมายหลังชำระเงิน</span>':b.status!=='cancelled'&&can('assign')&&!isLocked({...b,manual:false})?`<select data-chg="reassign" data-id="${b.id}" style="min-width:140px"><option value="">— อัตโนมัติตามคิว —</option>${ag.map(g=>`<option value="${g.id}" ${g.id===b.guideId?'selected':''}>${g.priority}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}</select>`:esc(b.guideId?gName(DB,b.guideId):'-')}</td>
    <td>${trB(b)}<div style="margin-top:4px">${tripButtons(b,false)}</div>${(b.declined||[]).map(d=>`<div class="sm" style="color:var(--red)">✕ ${esc(gName(DB,d.guideId))} ไม่ว่าง: ${esc(d.reason)}</div>`).join('')}</td>
    <td>${b.status==='pending'&&can('cancel')?`<button class="btn ghost sm" data-act="cancelbk" data-id="${b.id}">ยกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('cancel')?`<button class="btn ghost sm" data-act="reschedule" data-id="${b.id}">เลื่อนวัน</button> <button class="btn ghost sm" data-act="paidcancel" data-id="${b.id}">ลูกค้ายกเลิก</button>`:''}${b.cancelReason?`<div class="sm mut">${esc(b.cancelReason)}</div>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่พบรายการ</td></tr>`}
@@ -658,6 +658,40 @@ function userFormHTML(u){u=u||{role:'staff',active:true};
   <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" style="width:auto" ${u.active?'checked':''}> เปิดใช้งาน</label>
   <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
 
+let rcptImg=null;
+function rcptBoxHTML(){const img=rcptImg??(DB.settings.receipt||{}).image;return `
+    <div style="width:110px;height:80px;border:1px dashed var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff">${img?`<img src="${img}" style="max-width:100px;max-height:70px;object-fit:contain">`:'<span class="sm mut">ไม่มีรูป</span>'}</div>
+    <label class="btn ghost sm" style="cursor:pointer;margin:0;display:inline-block;width:auto">${img?'เปลี่ยนรูป':'อัปโหลดรูป'}<input type="file" accept="image/png,image/jpeg,image/webp" data-up="rcpt" style="display:none"></label>
+    ${img?'<button type="button" class="btn ghost sm" data-act="rcptimgdel">ลบรูป</button>':''}${PUB?.site?.logo&&!img?'<button type="button" class="btn ghost sm" data-act="rcptuselogo">ใช้โลโก้เว็บ</button>':''}${rcptImg!==null?'<span class="sm" style="color:var(--warn)">ยังไม่บันทึก</span>':''}`}
+function setRcptBox(){const e=document.getElementById('rcptbox');if(e)e.innerHTML=rcptBoxHTML()}
+const ONES=['','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'],POS=['','สิบ','ร้อย','พัน','หมื่น','แสน'];
+function bahtText(n){n=Math.round(+n||0);if(!n)return 'ศูนย์บาทถ้วน';const g=x=>{let t='';const d=String(x).split('').reverse();d.forEach((c,i)=>{c=+c;if(!c)return;let w=ONES[c];if(i===1&&c===1)w='';if(i===1&&c===2)w='ยี่';if(i===0&&c===1&&d.length>1&&+d[1])w='เอ็ด';t=w+POS[i]+t});return t};
+  let out='',m=Math.floor(n/1e6),r=n%1e6;if(m)out=bahtText(m).replace('บาทถ้วน','')+'ล้าน';out+=g(r);return out+'บาทถ้วน'}
+function receiptDoc(b,R){R=R||{};const rows=[['ค่าบริการนำเที่ยวพร้อมไกด์ (ต่อกลุ่ม)',1,b.groupFee]];
+  PAX.forEach(([k,l])=>{const q=b.pax?.[k];if(q){const rate=b.entryRates?.[k]??(q?Math.round((b.entryTotal||0)/(b.people||1)):0);rows.push([`ค่าเข้าพื้นที่อุทยาน ${l}`,q,rate])}});
+  if(b.vehicles)rows.push(['ค่ารถเข้าอุทยาน (คัน)',b.vehicles,b.vehicleFee||Math.round((b.vehicleTotal||0)/b.vehicles)]);
+  if(b.payFee)rows.push(['ค่าธรรมเนียม PayPal',1,b.payFee]);
+  const total=rows.reduce((a,r)=>a+r[1]*r[2],0),ch=(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1],paid=b.paidConfirmedAt?fmtDate(b.paidConfirmedAt.slice(0,10)):fmtDate(today());
+  return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>ใบเสร็จรับเงิน ${b.code}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>@page{size:A4;margin:14mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:13px;margin:0}
+.hd{display:flex;gap:16px;align-items:flex-start;border-bottom:2px solid #1f5c40;padding-bottom:12px}.hd img{max-width:110px;max-height:90px;object-fit:contain}.org b{font-size:17px}.org div{color:#4b5563;font-size:12px;white-space:pre-line}
+.tt{display:flex;justify-content:space-between;align-items:flex-end;margin:16px 0 10px}.tt h1{margin:0;font-size:22px;color:#1f5c40}.tt h1 small{display:block;font-size:12px;color:#6b7280;font-weight:400}.meta{text-align:right;font-size:12px}
+.box{border:1px solid #d9e2dc;border-radius:8px;padding:10px 12px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:12.5px}.box span{color:#6b7280}
+table{width:100%;border-collapse:collapse}th,td{padding:7px 8px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#eef4f0}.n{text-align:right}tfoot td{font-weight:700;border-top:2px solid #1f5c40;font-size:14px}
+.words{background:#f6f8f6;border-radius:6px;padding:7px 10px;margin-top:8px}.note{margin-top:14px;color:#4b5563;font-size:12px;white-space:pre-line}.sign{display:flex;justify-content:flex-end;margin-top:46px}.sign div{text-align:center;width:240px;border-top:1px dotted #6b7280;padding-top:6px;color:#4b5563}
+.bar{margin:0 0 12px}.bar button{font:inherit;padding:6px 14px;border-radius:8px;border:0;background:#1f5c40;color:#fff;cursor:pointer}@media print{.bar{display:none}}@media screen{body{padding:18px;max-width:820px;margin:auto}}</style></head><body>
+<div class="bar"><button onclick="print()">🖨 พิมพ์ / บันทึกเป็น PDF</button></div>
+<div class="hd">${R.image?`<img src="${R.image}">`:''}<div class="org"><b>${esc(R.name||'ผาแง่ม Trail')}</b><div>${esc(R.address||'')}</div><div>${[R.taxId?'เลขประจำตัวผู้เสียภาษี '+esc(R.taxId):'',R.phone?'โทร '+esc(R.phone):'',R.email?esc(R.email):''].filter(Boolean).join(' · ')}</div></div></div>
+<div class="tt"><h1>ใบเสร็จรับเงิน<small>RECEIPT</small></h1><div class="meta">เลขที่ <b>RC-${b.code}</b><br>วันที่ ${paid}</div></div>
+<div class="box"><div><span>ได้รับเงินจาก</span> <b>${esc(b.name)}</b></div><div><span>โทร</span> ${esc(b.phone)}</div><div><span>รหัสการจอง</span> ${b.code}</div><div><span>วันเดินป่า</span> ${fmtDate(b.date)} เวลา ${b.time} น.</div><div><span>จำนวน</span> ${b.people} คน</div>${b.payChannel?`<div><span>ชำระผ่าน</span> ${esc(ch)}</div>`:''}</div>
+<table><thead><tr><th>#</th><th>รายการ</th><th class="n">จำนวน</th><th class="n">ราคาต่อหน่วย</th><th class="n">จำนวนเงิน</th></tr></thead><tbody>
+${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${baht(r[2])}</td><td class="n">${baht(r[1]*r[2])}</td></tr>`).join('')}</tbody>
+<tfoot><tr><td colspan="4" class="n">รวมทั้งสิ้น</td><td class="n">${baht(total)}</td></tr></tfoot></table>
+<div class="words">(${bahtText(total)})</div>${R.note?`<div class="note">${esc(R.note)}</div>`:''}
+<div class="sign"><div>ผู้รับเงิน<br>${esc(R.name||'')}</div></div>
+<script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),400))<\/script></body></html>`}
+function openReceipt(b,R){const w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');w.document.write(receiptDoc(b,R));w.document.close()}
 function pSettings(){const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village+ +sp.park;
   const f=(n,l,v,t='text')=>`<div class="field"><label>${l}</label><input name="${n}" type="${t}" value="${esc(v)}"></div>`;
   return `<div class="hd"><h2>ตั้งค่าราคาและระบบ</h2></div>
@@ -681,6 +715,16 @@ function pSettings(){const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village
    <p class="mut sm" style="margin:0">ขึ้นบรรทัดใหม่ได้ตามต้องการ ระบบแสดงตามที่พิมพ์</p></div>
   <p class="mut sm">ข้อมูลบัญชีรับเงินย้ายไปที่เมนู “ช่องทางรับชำระเงิน”</p>
   <div class="row"><button class="btn" type="submit">บันทึกการตั้งค่า</button></div></form>
+  ${(()=>{const r=s.receipt||{};return `<form class="card" data-form="receipt" style="margin-top:16px"><div class="hd"><h3>🧾 หัวใบเสร็จรับเงิน</h3><button type="button" class="btn ghost sm" data-act="rcptpreview">ดูตัวอย่างใบเสร็จ</button></div>
+   <p class="mut sm" style="margin-top:-6px">ข้อมูลนี้แสดงที่หัวใบเสร็จของการจองที่ชำระแล้ว (เจ้าหน้าที่พิมพ์จากรายการจอง · ลูกค้าดาวน์โหลดจากหน้ายืนยันการจอง)</p>
+   <div class="grid2"><div class="field"><label>ชื่อหน่วยงาน / ผู้รับเงิน</label><input name="name" value="${esc(r.name||'')}" placeholder="เช่น วิสาหกิจชุมชนท่องเที่ยวผาแง่ม"></div>
+    <div class="field"><label>เลขประจำตัวผู้เสียภาษี (ถ้ามี)</label><input name="taxId" value="${esc(r.taxId||'')}"></div>
+    <div class="field"><label>เบอร์โทร</label><input name="phone" value="${esc(r.phone||'')}"></div>
+    <div class="field"><label>อีเมล / เว็บไซต์</label><input name="email" value="${esc(r.email||'')}" placeholder="phangamtrail.com"></div></div>
+   <div class="field"><label>ที่อยู่</label><textarea name="address" rows="2">${esc(r.address||'')}</textarea></div>
+   <div class="field"><label>หมายเหตุท้ายใบเสร็จ (ถ้ามี)</label><textarea name="note" rows="2" placeholder="เช่น ขอบคุณที่ใช้บริการ · ชำระแล้วไม่คืนเงินทุกกรณี">${esc(r.note||'')}</textarea></div>
+   <div class="field"><label>รูปหัวใบเสร็จ (โลโก้/ตราหน่วยงาน)</label><div class="row" id="rcptbox" style="gap:12px;align-items:center;flex-wrap:wrap">${rcptBoxHTML()}</div></div>
+   <button class="btn" type="submit">บันทึกหัวใบเสร็จ</button></form>`})()}
   <div class="card" style="margin-top:16px"><div class="hd"><h3>ฤดูกาล — ช่วงปิดรับจอง</h3><button class="btn sm" data-act="seasonform">+ เพิ่มช่วงปิด</button></div>
    <p class="mut sm" style="margin-top:-6px">ช่วงที่ “เปิดใช้” ลูกค้าจะจองวันนั้นไม่ได้ · กำหนดได้ 2 แบบ: <b>วันที่ถึงวันที่</b> (ครั้งเดียว) หรือ <b>เดือนถึงเดือน</b> (ซ้ำทุกปี เช่น ปิดฤดูฝน มิ.ย.–ก.ย.)</p>
    ${(s.seasons||[]).length?`<div class="tbl-wrap"><table><tr><th>ชื่อ</th><th>ช่วง</th><th>สถานะ</th><th>การจองที่ค้างอยู่ในช่วงนี้</th><th></th></tr>
@@ -847,6 +891,12 @@ const ACT={
   veh:el=>{bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+(+el.dataset.d)));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
   lineunlink:async el=>{const g=DB.guides.find(x=>x.id===el.dataset.id);if(g&&await confirmBox('ยกเลิกการผูก LINE',`${esc(g.firstName+' '+g.lastName)} จะไม่ได้รับแจ้งเตือนทาง LINE จนกว่าจะผูกใหม่`))call('lineUnlink',{id:g.id})},
   logodel:async()=>{if(await confirmBox('ลบโลโก้','เว็บจะกลับไปใช้ไอคอนภูเขาแทน'))call('logoSave',{logo:''})},
+  receipt:el=>{const b=byId(el.dataset.id);openReceipt(b,DB.settings.receipt)},
+  custreceipt:()=>{const b=VB?.booking||checkResult?.booking;if(b&&b.status==='paid')openReceipt(b,PUB.settings.receipt)},
+  rcptpreview:()=>{const f=document.querySelector('form[data-form=receipt]'),fd=Object.fromEntries(new FormData(f));const R={...fd,image:rcptImg??(DB.settings.receipt||{}).image};
+    openReceipt({code:'PG0000',name:'ตัวอย่าง ลูกค้า',phone:'0812345678',date:addDays(today(),3),time:'08:00',people:3,pax:{ta:2,tc:1},entryRates:DB.settings.entryRates,groupFee:DB.settings.groupFee,entryTotal:DB.settings.entryRates.ta*2+DB.settings.entryRates.tc,vehicles:1,vehicleFee:DB.settings.vehicleFee??30,vehicleTotal:DB.settings.vehicleFee??30,payChannel:'promptpay',paidConfirmedAt:new Date().toISOString()},R)},
+  rcptimgdel:()=>{rcptImg='';setRcptBox()},
+  rcptuselogo:()=>{rcptImg=PUB.site.logo;setRcptBox()},
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
@@ -1011,6 +1061,7 @@ document.addEventListener('change',async e=>{
     if(kind2==='gallery'){const urls=[];toast(`กำลังอัปโหลด ${files.length} รูป…`);for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)urls.push(u)}}
       if(urls.length)await call('galleryAdd',{cat:cGalCat,urls});return}
     if(kind2==='stay'){toast('กำลังอัปโหลด…');for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)draftImgs.push(u)}}document.getElementById('draftimgs').innerHTML=draftGal();el.value='';return}
+    if(kind2==='rcpt'){const f=files[0],png=f.type==='image/png'||f.type==='image/webp';const d=await shrinkTo(f,500,.9,png?'image/png':'image/jpeg');const u=d&&await uploadImg(d);if(u){rcptImg=u;setRcptBox()}return}
     if(kind2==='logo'){const f=files[0],png=f.type==='image/png'||f.type==='image/webp';const d=await shrinkTo(f,400,.9,png?'image/png':'image/jpeg');const u=d&&await uploadImg(d);if(u)await call('logoSave',{logo:u});return}
     if(kind2==='hero'){const d=await shrinkTo(files[0],1600,.72);draftOne=d&&await uploadImg(d);if(draftOne)document.getElementById('up_hero').innerHTML=`<img src="${draftOne}" style="max-width:260px;border-radius:8px"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
     if(kind2==='org'){const d=await shrinkTo(files[0],400,.85);draftOne=d&&await uploadImg(d);if(draftOne)document.getElementById('up_org').innerHTML=`<img src="${draftOne}" style="width:64px;height:64px;border-radius:50%;object-fit:cover"> <span class="sm mut">ยังไม่บันทึก</span>`;return}
@@ -1058,6 +1109,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='guide'){if(await call('guideSave',{...fd,id:f.dataset.id||'',active:!!fd.active,createAcct:!!fd.createAcct}))closeModal();return}
   if(kind==='user'){if(await call('userSave',{...fd,id:f.dataset.id||'',active:!!fd.active}))closeModal();return}
   if(kind==='linelink'){call('lineLinkSave',{lineLinkBy:fd.lineLinkBy,lineOa:fd.lineOa});return}
+  if(kind==='receipt'){const p={...fd,image:rcptImg??(DB.settings.receipt||{}).image??''};if(await call('receiptSave',p)){rcptImg=null;setRcptBox()}return}
   if(kind==='settings'){call('settingsSave',fd);return}
   }finally{if(btn&&document.body.contains(btn))btn.disabled=false}
 });

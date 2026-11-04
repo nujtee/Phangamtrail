@@ -248,13 +248,13 @@ export function publicState(db) {
   const s = db.settings, ch = {};
   for (const [k, f] of Object.entries(PUBLIC_CH)) { if (s.channels[k]?.on) { ch[k] = {}; f.forEach(x => ch[k][x] = s.channels[k][x]) } else ch[k] = { on: false } }
   return {
-    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', vehicleFee: +(s.vehicleFee ?? 30), bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
+    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', receipt: s.receipt || {}, vehicleFee: +(s.vehicleFee ?? 30), bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
     site: db.site, guideCount: activeGuides(db).length, today: today(),
   };
 }
 export function bookingView(b) {
   if (!b) return null;
-  const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'vehicles', 'vehicleFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'name', 'createdAt'];
+  const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'name', 'createdAt'];
   const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); if (b.email) o.email = b.email.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2'); return o;
 }
 const safeUser = u => ({ id: u.id, username: u.username, name: u.name, role: u.role, guideId: u.guideId || null, active: u.active });
@@ -530,6 +530,11 @@ export const adminActions = {
     return { msg: Object.values(nc).some(x => x.on) ? 'บันทึกช่องทางรับชำระเงินแล้ว' : 'บันทึกแล้ว — แต่ยังไม่ได้ติ๊ก "เปิดให้ลูกค้าใช้" ลูกค้าจะยังชำระเงินไม่ได้' };
   },
   /* ----- เนื้อหาเว็บไซต์ ----- */
+  receiptSave(db, p) {
+    need(db.$actor, 'settings'); const img = str(p.image, 300); if (img && !/^\/img\//.test(img)) fail('รูปไม่ถูกต้อง');
+    db.settings.receipt = { name: str(p.name, 150), address: String(p.address || '').trim().slice(0, 400), taxId: str(p.taxId, 30), phone: str(p.phone, 60), email: str(p.email, 120), note: String(p.note || '').trim().slice(0, 400), image: img };
+    log(db, 'settings', 'แก้ไขหัวใบเสร็จ'); return { msg: 'บันทึกหัวใบเสร็จแล้ว' };
+  },
   logoSave(db, p) { need(db.$actor, 'content'); const u = str(p.logo, 300); if (u && !/^\/img\//.test(u)) fail('ไฟล์โลโก้ไม่ถูกต้อง'); db.site.logo = u; log(db, 'content', u ? 'อัปโหลด/เปลี่ยนโลโก้' : 'ลบโลโก้'); return { msg: u ? 'บันทึกโลโก้แล้ว' : 'ลบโลโก้แล้ว' } },
   homeSave(db, p) { need(db.$actor, 'content'); const h = db.site.home; Object.assign(h, { title: str(p.title, 120) || 'ผาแง่ม', subtitle: str(p.subtitle, 300), intro: String(p.intro || '').slice(0, 3000) }); if (p.hero !== undefined) h.hero = str(p.hero, 300); log(db, 'content', 'แก้ไขหน้าหลัก'); return { msg: 'บันทึกหน้าหลักแล้ว' } },
   aboutSave(db, p) { need(db.$actor, 'content'); Object.assign(db.site.about, { title: str(p.title, 120) || 'เกี่ยวกับเรา', body: String(p.body || '').slice(0, 10000) }); log(db, 'content', 'แก้ไขเนื้อหาเกี่ยวกับเรา'); return { msg: 'บันทึกแล้ว' } },
