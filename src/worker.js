@@ -55,10 +55,13 @@ export default {
     if (path.startsWith('/img/')) {
       const key = decodeURIComponent(path.slice(5));
       if (key.startsWith('slips/')) { const a = await actorOf(req, env); if (!a || a.role === 'guide') return new Response('forbidden', { status: 403 }) }
+      const pub = !key.startsWith('slips/'), cache = caches.default, ck = new Request(url.origin + path);
+      if (pub) { const hit = await cache.match(ck); if (hit) return hit } // แคชที่ edge ของ Cloudflare
       const obj = await env.IMAGES.get(key); if (!obj) return new Response('not found', { status: 404 });
       const h = new Headers(); obj.writeHttpMetadata(h); h.set('etag', obj.httpEtag);
-      if (key.startsWith('slips/')) h.set('cache-control', 'private, no-store');
-      return new Response(obj.body, { headers: h });
+      if (!pub) { h.set('cache-control', 'private, no-store'); return new Response(obj.body, { headers: h }) }
+      h.set('cache-control', 'public, max-age=31536000, immutable'); // ชื่อไฟล์เป็น UUID ไม่เปลี่ยน → แคชได้ยาว
+      const res = new Response(obj.body, { headers: h }); ctx.waitUntil(cache.put(ck, res.clone())); return res;
     }
 
     // LINE Messaging API webhook (ตรวจลายเซ็น)
