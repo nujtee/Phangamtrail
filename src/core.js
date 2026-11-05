@@ -155,9 +155,11 @@ function log(db, action, detail) {
   const a = db.$actor;
   db.$audit.push({ id: uid(), at: nowISO(), userId: a?.id || '-', userName: a?.name || 'ระบบ', action, detail });
 }
+const SITE_URL = 'https://phangamtrail.com';
 function notifyGuide(db, g, b, kind) {
-  const head = { paidcancel: 'ℹ️ ลูกค้ายกเลิก (คุณยังได้รับค่าไกด์ตามปกติ และคิวของคุณย้ายไปลำดับสุดท้าย)', new: '📅 งานนำเที่ยวใหม่', cancel: '❌ ยกเลิกงานนำเที่ยว', remind: '⏰ เตือนงานนำเที่ยวพรุ่งนี้', test: '🔔 ทดสอบการแจ้งเตือน' }[kind];
-  const msg = `[ผาแง่ม] ${head}\nรหัสจอง ${b.code}\nวันที่ ${fmtDate(b.date)} เวลา ${b.time} น.\nผู้จอง ${b.name} (${b.people} คน) โทร ${b.phone}`;
+  const head = { paidcancel: 'ℹ️ ลูกค้ายกเลิก (คุณยังได้รับค่าไกด์ตามปกติ และคิวของคุณย้ายไปลำดับสุดท้าย)', new: '📅 งานนำเที่ยวใหม่', cancel: '❌ ยกเลิกงานนำเที่ยว', remind: '⏰ เตือนงานนำเที่ยวพรุ่งนี้', test: '🔔 ทดสอบการแจ้งเตือน', job: '📋 แจ้งงานนำเที่ยวของคุณ' }[kind];
+  const link = kind === 'cancel' || kind === 'paidcancel' ? '' : `\n\nเข้าระบบไกด์ (ดูงาน/กดเริ่ม-สิ้นสุด/แจ้งไม่ว่าง):\n${SITE_URL}/#admin-mytrips`;
+  const msg = `[ผาแง่ม] ${head}\nรหัสจอง ${b.code}\nวันที่ ${fmtDate(b.date)} เวลา ${b.time} น.\nผู้จอง ${b.name} (${b.people} คน) โทร ${b.phone}${link}`;
   const base = { at: nowISO(), guideId: g.id, bookingId: b.id || '', message: msg, status: 'pending' };
   db.$notify.push({ ...base, id: uid(), channel: 'line', to: g.lineUserId || '', toLabel: g.line || '' });
   if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] ${head} ${b.code}` });
@@ -472,6 +474,15 @@ export const adminActions = {
     need(db.$actor, 'editGuides'); const L = [...db.guides].sort((a, b) => a.priority - b.priority), i = L.findIndex(g => g.id === p.id), j = i + (+p.d);
     if (i < 0 || j < 0 || j >= L.length) return {}; [L[i].priority, L[j].priority] = [L[j].priority, L[i].priority];
     log(db, 'guide', `ปรับลำดับ ${L[i].firstName} ↔ ${L[j].firstName}`); return {};
+  },
+  notifyJobs(db, p) {
+    need(db.$actor, 'assign'); const ids = new Set(Array.isArray(p.ids) ? p.ids : []);
+    const L = db.bookings.filter(b => ids.has(b.id) && b.status === 'paid' && b.guideId && b.date >= today() && !isDone(b));
+    if (!L.length) fail('ไม่มีงานที่แจ้งได้');
+    const noCh = new Set();
+    L.forEach(b => { const g = gObj(db, b.guideId); if (!g) return; notifyGuide(db, g, b, 'job'); if (!g.lineUserId && !g.email) noCh.add(g.firstName) });
+    log(db, 'notify', `แจ้งงานไกด์ ${L.length} งาน: ${L.map(b => `${b.code}→${gName(db, b.guideId)}`).join(', ')}`);
+    return { msg: `ส่งแจ้งเตือน ${L.length} งานแล้ว${noCh.size ? ` · ⚠ ${[...noCh].join(', ')} ยังไม่ผูก LINE และไม่มีอีเมล` : ''}` };
   },
   guideTest(db, p) { need(db.$actor, 'editGuides'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'); notifyGuide(db, g, { code: 'TEST', date: today(), time: '06:00', name: 'ทดสอบระบบ', people: 0, phone: '-' }, 'test'); return { msg: 'ส่งแจ้งเตือนทดสอบแล้ว ดูผลที่เมนูการแจ้งเตือน' } },
   async userSave(db, p, ctx) {

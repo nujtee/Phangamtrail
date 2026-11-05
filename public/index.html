@@ -567,8 +567,8 @@ function pGuides(){
     <td>${g.active?badge(['เปิดใช้งาน','b-ok']):badge(['ปิดใช้งาน','b-gray'])}</td>
     <td>${ed?`<button class="btn ghost sm" data-act="guideform" data-id="${g.id}">แก้ไข</button> <button class="btn ghost sm" data-act="gtoggle" data-id="${g.id}">${g.active?'ปิด':'เปิด'}</button> <button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>`:''}${can('markUnavail')&&g.active?` <button class="btn sm red" data-act="unavailform" data-id="${g.id}">แจ้งไม่ว่าง</button>`:''}</td></tr>`).join('')}</table></div></div>
   ${unavailSection()}
-  <div class="card"><h3>งานที่มอบหมายแล้ว (กำลังจะมาถึง)</h3>${up.length?`<div class="tbl-wrap"><table><tr><th>วัน/เวลา</th><th>รหัส</th><th>ผู้จอง</th><th class="num">คน</th><th>ไกด์</th><th>ชำระ</th><th>สถานะ</th></tr>
-   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${esc(gName(DB,b.guideId))}</td><td>${stB(b)}</td><td>${trB(b)}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`;
+  <div class="card"><h3>งานที่มอบหมายแล้ว (กำลังจะมาถึง)</h3>${up.length?`<div class="tbl-wrap"><table><tr><th>วัน/เวลา</th><th>รหัส</th><th>ผู้จอง</th><th class="num">คน</th><th>ไกด์</th><th>ชำระ</th><th>สถานะ</th><th style="text-align:right">${can('assign')?`<button class="btn sm" data-act="notifyall">🔔 แจ้งทุกคน</button>`:'แจ้งเตือน'}</th></tr>
+   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${esc(gName(DB,b.guideId))}${(g=>g?`<div class="sm mut">${g.lineUserId?'LINE ✓':'LINE ✗'} · ${g.email?'อีเมล ✓':'อีเมล ✗'}</div>`:'')(DB.guides.find(x=>x.id===b.guideId))}</td><td>${stB(b)}</td><td>${trB(b)}</td><td style="text-align:right">${can('assign')&&b.status==='paid'&&b.guideId?`<button class="btn ghost sm" data-act="notifyone" data-id="${b.id}">🔔 แจ้ง</button>`:''}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`;
 }
 function unavailSection(){
   const L=[...DB.unavail].sort((a,b)=>b.date.localeCompare(a.date)),dec=[];
@@ -909,6 +909,9 @@ const ACT={
   rcptimgdel:()=>{rcptImg='';setRcptBox()},
   rcptuselogo:()=>{rcptImg=PUB.site.logo;setRcptBox()},
   linkqr:el=>lineLinkModal(el.dataset.id),
+  notifyone:el=>call('notifyJobs',{ids:[el.dataset.id]}),
+  notifyall:async()=>{const L=DB.bookings.filter(b=>b.status==='paid'&&b.guideId&&b.date>=today()&&!['completed','noshow','paidcancel'].includes(b.trip));if(!L.length)return toast('ไม่มีงานที่แจ้งได้');
+    const G=[...new Set(L.map(b=>gName(DB,b.guideId)))];if(await confirmBox('แจ้งเตือนไกด์ทุกคน',`ส่ง LINE + อีเมล แจ้งงาน <b>${L.length} งาน</b> ถึงไกด์ ${G.length} คน (${esc(G.join(', '))}) พร้อมลิงก์เข้าระบบไกด์`,'ส่งแจ้งเตือน'))call('notifyJobs',{ids:L.map(b=>b.id)})},
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
