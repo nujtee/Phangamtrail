@@ -259,7 +259,7 @@ export function bookingView(b) {
   const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'name', 'createdAt'];
   const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); if (b.email) o.email = b.email.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2'); return o;
 }
-const safeUser = u => ({ id: u.id, no: u.no || null, username: u.username, name: u.name, role: u.role, guideId: u.guideId || null, active: u.active });
+const safeUser = u => ({ id: u.id, no: u.no || null, username: u.username, name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, guideId: u.guideId || null, active: u.active });
 export function adminState(db, actor) {
   const base = { settings: db.settings, site: db.site, rotSeq: db.rotSeq, lastGuideId: db.lastGuideId, me: safeUser(actor), today: today() };
   if (actor.role === 'guide') {
@@ -488,12 +488,15 @@ export const adminActions = {
   async userSave(db, p, ctx) {
     need(db.$actor, 'users'); const username = str(p.username, 40), name = str(p.name, 80), pw = String(p.password || '');
     if (!username || !name) fail('กรุณากรอกข้อมูลให้ครบ'); if (!ROLES[p.role]) fail('ตำแหน่งไม่ถูกต้อง');
+    const email = str(p.email, 120), phone = str(p.phone, 20);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) fail('อีเมลไม่ถูกต้อง');
+    if (phone && !/^[0-9+\-\s()]{8,20}$/.test(phone)) fail('เบอร์โทรศัพท์ไม่ถูกต้อง');
     let u = p.id && db.users.find(x => x.id === p.id);
     if (db.users.some(x => x.username === username && x !== u)) fail('ชื่อผู้ใช้นี้มีแล้ว');
     if (!u && pw.length < 8) fail('รหัสผ่านต้องมีอย่างน้อย 8 ตัว'); if (u && pw && pw.length < 8) fail('รหัสผ่านต้องมีอย่างน้อย 8 ตัว');
     if (u && u.id === db.$actor.id && (p.role !== 'superadmin' || !p.active)) fail('ไม่สามารถลดสิทธิ์/ระงับบัญชีตัวเองได้');
     const isNew = !u; if (isNew) { u = { id: 'u' + uid() }; db.users.push(u) }
-    Object.assign(u, { username, name, role: p.role, guideId: p.role === 'guide' ? p.guideId || null : null, active: !!p.active }); if (pw) u.pw = await ctx.hash(pw);
+    Object.assign(u, { username, name, email, phone, role: p.role, guideId: p.role === 'guide' ? p.guideId || null : null, active: !!p.active }); if (pw) u.pw = await ctx.hash(pw);
     log(db, 'user', `${isNew ? 'เพิ่ม' : 'แก้ไข'}ผู้ใช้ ${u.username} (${ROLES[u.role].label})`); return { msg: 'บันทึกแล้ว' };
   },
   async changePassword(db, p, ctx) {
