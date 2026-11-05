@@ -654,8 +654,8 @@ function pNotifications(){
 
 function pUsers(){
   return `<div class="hd"><h2>จัดการผู้ใช้</h2><button class="btn" data-act="userform">+ เพิ่มผู้ใช้</button></div>
-  <div class="card"><div class="tbl-wrap"><table><tr><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>ตำแหน่ง</th><th>ผูกกับไกด์</th><th>สถานะ</th><th></th></tr>
-  ${DB.users.map(u=>`<tr><td><b>${esc(u.username)}</b></td><td>${esc(u.name)}</td><td>${ROLES[u.role].label}</td><td>${u.guideId?esc(gName(DB,u.guideId)):'-'}</td><td>${u.active?badge(['ใช้งาน','b-ok']):badge(['ระงับ','b-gray'])}</td>
+  <div class="card"><div class="tbl-wrap"><table><tr><th>ID</th><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>ตำแหน่ง</th><th>ผูกกับไกด์</th><th>สถานะ</th><th></th></tr>
+  ${[...DB.users].sort((a,b)=>(a.no||1e9)-(b.no||1e9)).map(u=>`<tr><td class="mut">${u.no?'U'+String(u.no).padStart(3,'0'):'-'}</td><td><b>${esc(u.username)}</b></td><td>${esc(u.name)}</td><td>${ROLES[u.role].label}</td><td>${u.guideId?esc(gName(DB,u.guideId)):'-'}</td><td>${u.active?badge(['ใช้งาน','b-ok']):badge(['ระงับ','b-gray'])}</td>
    <td><button class="btn ghost sm" data-act="userform" data-id="${u.id}">แก้ไข</button></td></tr>`).join('')}</table></div></div>
   <div class="card"><h3>สิทธิ์ตามตำแหน่ง</h3><div class="tbl-wrap"><table><tr><th>ตำแหน่ง</th><th>เมนูที่เข้าถึงได้</th></tr>${Object.values(ROLES).map(r=>`<tr><td><b>${r.label}</b></td><td class="sm">${r.pages.map(p=>PAGES[p].replace(/^\S+\s/,'')).join(' · ')}</td></tr>`).join('')}</table></div></div>`;
 }

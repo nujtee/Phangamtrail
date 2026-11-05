@@ -50,12 +50,14 @@ export class Engine extends DurableObject {
     db.notifications = this.sql.exec(`SELECT json FROM notif ORDER BY n DESC LIMIT ${KEEP}`).toArray().map(r => JSON.parse(r.json));
     this.db = db;
     if (db.settings.vehicleFee === undefined) { db.settings.vehicleFee = 30; this.persist() } // ค่ารถเข้าอุทยาน (ค่าเริ่มต้น)
+    if (db.users.some(u => !u.no)) this.persist();
     if (!db.settings.slotV2) { db.settings.slotStep = 15; db.settings.slotV2 = true; this.persist() } // ปรับรอบเป็นทุก 15 นาที (ครั้งเดียว)
     if (!db.users.length && this.env.ADMIN_PASSWORD) { db.users.push({ id: 'u' + uid(), username: this.env.ADMIN_USERNAME || 'admin', pw: await hashPw(this.env.ADMIN_PASSWORD), name: 'ผู้ดูแลระบบ', role: 'superadmin', active: true }); this.persist() }
     return db;
   }
   persist() {
     const db = this.db, c = this.cache;
+    { let m = Math.max(0, ...db.users.map(u => +u.no || 0)); db.users.forEach(u => { if (!u.no) u.no = ++m }) } // รหัสผู้ใช้ (ID) เรียงตามลำดับที่สร้าง
     const counters = Object.fromEntries(COUNTERS.map(k => [k, db[k] ?? null]));
     for (const [k, v] of [['settings', db.settings], ['site', db.site], ['counters', counters]]) {
       const s = JSON.stringify(v); if (c.meta[k] !== s) { this.sql.exec('INSERT OR REPLACE INTO meta(k,json) VALUES(?,?)', k, s); c.meta[k] = s }

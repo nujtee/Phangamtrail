@@ -259,7 +259,7 @@ export function bookingView(b) {
   const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'name', 'createdAt'];
   const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); if (b.email) o.email = b.email.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2'); return o;
 }
-const safeUser = u => ({ id: u.id, username: u.username, name: u.name, role: u.role, guideId: u.guideId || null, active: u.active });
+const safeUser = u => ({ id: u.id, no: u.no || null, username: u.username, name: u.name, role: u.role, guideId: u.guideId || null, active: u.active });
 export function adminState(db, actor) {
   const base = { settings: db.settings, site: db.site, rotSeq: db.rotSeq, lastGuideId: db.lastGuideId, me: safeUser(actor), today: today() };
   if (actor.role === 'guide') {
