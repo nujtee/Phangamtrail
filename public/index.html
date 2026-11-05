@@ -534,9 +534,7 @@ function lineLinkCard(){const s=DB.settings,by=s.lineLinkBy||'both',G=[...DB.gui
    ${DB.lineReady===false?`<p class="sm" style="background:var(--warnbg);color:#6d4a0c;border-radius:10px;padding:8px 12px;margin-top:0">⚠ ยังไม่ได้ตั้งค่า LINE OA ในระบบ (LINE_CHANNEL_TOKEN / LINE_CHANNEL_SECRET) — ไกด์จะยังผูกไม่ได้จนกว่าจะตั้งค่า</p>`:''}
    <div class="grid2" style="align-items:start">
     <div>${ed?`<form data-form="linelink">
-      <label>ไกด์ใช้อะไรผูกบัญชี</label>
-      ${[['phone','เบอร์โทรศัพท์','เช่น 0861944842'],['name','ชื่อ + นามสกุล','เช่น สุริยา เราเท่า'],['both','ได้ทั้งสองแบบ','พิมพ์เบอร์โทร หรือ ชื่อ นามสกุล ก็ได้']].map(([k,l,d])=>`<label style="display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--ink)"><input type="radio" name="lineLinkBy" value="${k}" style="width:auto" ${by===k?'checked':''}> <b>${l}</b> <span class="sm mut">${d}</span></label>`).join('')}
-      <div class="field" style="margin-top:10px"><label>LINE OA ID ของชุมชน (ขึ้นต้นด้วย @ เช่น @123abcde — ดูได้ที่ LINE OA Manager → ตั้งค่าบัญชี → Basic ID)</label><input name="lineOa" value="${esc(oa)}" placeholder="@123abcde">${oa&&!oa.startsWith('@')&&!/^https?:/i.test(oa)?'<div class="sm" style="color:var(--red);margin-top:4px">⚠ LINE OA ID ต้องขึ้นต้นด้วย @ — QR ผูก LINE รายคนจะใช้ไม่ได้ถ้าไม่ใช่ ID ที่ถูกต้อง</div>':''}</div>
+      <div class="field" style="margin-top:0"><label>LINE OA ID ของชุมชน (ขึ้นต้นด้วย @ เช่น @123abcde — ดูได้ที่ LINE OA Manager → ตั้งค่าบัญชี → Basic ID)</label><input name="lineOa" value="${esc(oa)}" placeholder="@123abcde">${oa&&!oa.startsWith('@')&&!/^https?:/i.test(oa)?'<div class="sm" style="color:var(--red);margin-top:4px">⚠ LINE OA ID ต้องขึ้นต้นด้วย @ — QR ผูก LINE รายคนจะใช้ไม่ได้ถ้าไม่ใช่ ID ที่ถูกต้อง</div>':''}</div>
       <button class="btn sm" type="submit">บันทึก</button></form>`:`<p class="sm">วิธีผูก: พิมพ์ <b>${how}</b></p>`}
      <div style="background:var(--g3);border-radius:10px;padding:10px 12px;margin-top:12px" class="sm"><b>ขั้นตอนสำหรับไกด์</b>
       <ol style="margin:6px 0 0;padding-left:18px"><li>ง่ายสุด: กดปุ่ม <b>📱 ผูก LINE</b> ท้ายชื่อไกด์ในตารางด้านล่าง แล้วให้ไกด์สแกน QR และกดส่งข้อความ</li><li>หรือ เพิ่มเพื่อน LINE OA ${oa?`<b>${esc(oa)}</b>`:''} (สแกน QR ข้างๆ) แล้วพิมพ์ <b>${how}</b> ที่ลงทะเบียนไว้ในแชท</li><li>ระบบตอบ “ผูกบัญชีสำเร็จ ✅” แล้วจะได้รับแจ้งเตือนงานทาง LINE</li></ol></div></div>
@@ -1122,7 +1120,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='reschedule'){if(await call('reschedule',{id:f.dataset.id,date:fd.date,time:fd.time}))closeModal();return}
   if(kind==='guide'){if(await call('guideSave',{...fd,id:f.dataset.id||'',active:!!fd.active,createAcct:!!fd.createAcct}))closeModal();return}
   if(kind==='user'){if(await call('userSave',{...fd,id:f.dataset.id||'',active:!!fd.active}))closeModal();return}
-  if(kind==='linelink'){call('lineLinkSave',{lineLinkBy:fd.lineLinkBy,lineOa:fd.lineOa});return}
+  if(kind==='linelink'){call('lineLinkSave',{lineLinkBy:'both',lineOa:fd.lineOa});return}
   if(kind==='receipt'){const p={...fd,image:rcptImg??(DB.settings.receipt||{}).image??''};if(await call('receiptSave',p)){rcptImg=null;setRcptBox()}return}
   if(kind==='settings'){call('settingsSave',fd);return}
   }finally{if(btn&&document.body.contains(btn))btn.disabled=false}
