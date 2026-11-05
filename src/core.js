@@ -458,8 +458,8 @@ export const adminActions = {
     if (!str(p.firstName) || !str(p.lastName) || !str(p.phone)) fail('กรุณากรอกชื่อ นามสกุล และเบอร์โทรศัพท์');
     let g = p.id && gObj(db, p.id); const isNew = !g;
     const acc = g && db.users.find(u => u.guideId === g.id && u.role === 'guide'), uname = str(p.acctUser, 40) || str(p.phone).replace(/\D/g, ''), pw = String(p.acctPass || '').trim();
-    if (!acc && p.createAcct) { if (pw.length < 6) fail('รหัสผ่านบัญชีไกด์ต้องมีอย่างน้อย 6 ตัว'); if (db.users.some(u => u.username === uname)) fail(`ชื่อผู้ใช้ "${uname}" มีคนใช้แล้ว`) }
-    if (acc && pw && pw.length < 6) fail('รหัสผ่านต้องมีอย่างน้อย 6 ตัว');
+    if (!acc && p.createAcct) { if (pw.length < 8) fail('รหัสผ่านบัญชีไกด์ต้องมีอย่างน้อย 8 ตัว'); if (db.users.some(u => u.username === uname)) fail(`ชื่อผู้ใช้ "${uname}" มีคนใช้แล้ว`) }
+    if (acc && pw && pw.length < 8) fail('รหัสผ่านต้องมีอย่างน้อย 8 ตัว');
     if (isNew) { g = { id: 'g' + uid(), lineUserId: '' }; db.guides.push(g) }
     Object.assign(g, { firstName: str(p.firstName, 60), lastName: str(p.lastName, 60), bankName: str(p.bankName, 60), accountNo: str(p.accountNo, 40), email: str(p.email, 120), phone: str(p.phone, 20), line: str(p.line, 60), priority: +p.priority || db.guides.length, active: !!p.active });
     if ('lineUserId' in p && can(db.$actor, 'markUnavail')) g.lineUserId = str(p.lineUserId, 64);
