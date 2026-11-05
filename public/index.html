@@ -1037,7 +1037,10 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
     navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
-document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')ACT.mcancel()});
+/* ปิดหน้าต่างเมื่อคลิกพื้นหลัง — เฉพาะหน้าต่างที่ไม่มีฟอร์ม และต้องกดเริ่ม+ปล่อยบนพื้นหลังจริง (กันหน้าต่างกรอกข้อมูลปิดเองระหว่างพิมพ์/ลากเลือกข้อความ) */
+let mdownBg=false;const MD=document.getElementById('modal');
+MD.addEventListener('mousedown',e=>{mdownBg=e.target===MD});MD.addEventListener('touchstart',e=>{mdownBg=e.target===MD},{passive:true});
+MD.addEventListener('click',e=>{if(e.target===MD&&mdownBg&&!MD.querySelector('form'))ACT.mcancel();mdownBg=false});
 document.addEventListener('change',e=>{if(e.target.id==='acceptRules')bf.acceptRules=e.target.checked});
 document.addEventListener('input',e=>{const k=e.target.dataset.bf;if(!k)return;bf[k]=e.target.value;if(k==='date'){bf.time=null;document.getElementById('slots').innerHTML=slotsHTML()}});
 async function refreshVB(){if(!VB)return;const r=await post('/api/public/lookup',{code:VB.booking.code,phone:VB.phone});if(r.ok){VB.booking=r.booking;if(checkResult)checkResult.booking=r.booking;render()}}
