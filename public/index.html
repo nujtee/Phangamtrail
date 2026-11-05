@@ -441,7 +441,7 @@ function renderAdmin(sub){
   const body={dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
    ${pages.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`).join('')}
-   <a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>`;
+   <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>`;
 }
 const live=()=>DB.bookings.filter(b=>b.status!=='cancelled');
 const revenueOf=list=>list.filter(b=>b.status==='paid').reduce((a,b)=>a+b.total,0);
@@ -912,6 +912,7 @@ const ACT={
   notifyone:el=>call('notifyJobs',{ids:[el.dataset.id]}),
   notifyall:async()=>{const L=DB.bookings.filter(b=>b.status==='paid'&&b.guideId&&b.date>=today()&&!['completed','noshow','paidcancel'].includes(b.trip));if(!L.length)return toast('ไม่มีงานที่แจ้งได้');
     const G=[...new Set(L.map(b=>gName(DB,b.guideId)))];if(await confirmBox('แจ้งเตือนไกด์ทุกคน',`ส่ง LINE + อีเมล แจ้งงาน <b>${L.length} งาน</b> ถึงไกด์ ${G.length} คน (${esc(G.join(', '))}) พร้อมลิงก์เข้าระบบไกด์`,'ส่งแจ้งเตือน'))call('notifyJobs',{ids:L.map(b=>b.id)})},
+  reloaddata:async(el,e)=>{if(DIRTY&&!await confirmBox('โหลดข้อมูลล่าสุด','มีข้อมูลที่กรอกไว้แต่ยังไม่บันทึก ถ้าโหลดใหม่ข้อมูลนั้นจะหาย','โหลดใหม่'))return;DIRTY=false;await loadAdmin();await loadPub();render();toast('อัปเดตข้อมูลล่าสุดแล้ว')},
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
@@ -1141,7 +1142,7 @@ window.addEventListener('hashchange',async()=>{const h=location.hash.slice(1);if
   const [m,st]=await authP;AUTH.hasUsers=st.hasUsers!==false;
   if(m.me)await loadAdmin();
   render();
-  setInterval(async()=>{const ae=document.activeElement;if(DB&&location.hash.startsWith('#admin')&&!document.querySelector('#modal.show')&&!DIRTY&&!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))){await loadAdmin();render()}},60000);
+  // ไม่มีการโหลดหน้าใหม่อัตโนมัติ — ข้อมูลอัปเดตเมื่อกดบันทึก/ทำรายการ หรือกด “🔄 โหลดข้อมูลล่าสุด”
 })();
 </script>
 </body>
