@@ -514,6 +514,19 @@ function pBookings(){
 }
 
 function qrSvg(t,px=170){try{const c=qrcode(0,'M');c.addData(t);c.make();return c.createSvgTag({cellSize:4,margin:2}).replace('<svg ',`<svg style="width:${px}px;height:${px}px" `)}catch(e){return ''}}
+let linkPoll=null;
+function lineLinkText(g){return `ผูก LINE: ${g.firstName} ${g.lastName} ${String(g.phone||'').replace(/\D/g,'')}`}
+function lineLinkModal(gid){const g=DB.guides.find(x=>x.id===gid);if(!g)return;const oa=(DB.settings.lineOa||'').trim();
+  if(!oa.startsWith('@')){openModal(`<h3>ผูก LINE · ${esc(g.firstName+' '+g.lastName)}</h3><p>ยังไม่ได้ตั้งค่า <b>LINE OA ID</b> (ต้องขึ้นต้นด้วย @) — ใส่ในช่อง “LINE OA ID ของชุมชน” แล้วกดบันทึกก่อน</p><div class="mact"><button class="btn" data-act="mcancel">ปิด</button></div>`);return}
+  const url=`https://line.me/R/oaMessage/${encodeURIComponent(oa)}/?${encodeURIComponent(lineLinkText(g))}`;
+  openModal(`<h3>📱 ผูก LINE · ${esc(g.firstName+' '+g.lastName)}</h3>
+   <div style="text-align:center">${qrSvg(url,230)}</div>
+   <ol class="sm" style="padding-left:18px;margin:8px 0"><li>ให้ไกด์ <b>${esc(g.firstName)}</b> สแกน QR นี้ด้วยแอป LINE (หรือกล้องมือถือ)</li><li>LINE จะเปิดแชทกับ OA <b>${esc(oa)}</b> พร้อมข้อความ “${esc(lineLinkText(g))}” — กด <b>ส่ง</b> (ถ้ายังไม่ได้เป็นเพื่อน ให้กดเพิ่มเพื่อนก่อน)</li><li>ระบบผูกให้อัตโนมัติ สถานะด้านล่างจะเปลี่ยนเป็น “ผูก LINE เรียบร้อย”</li></ol>
+   <div id="linkst" class="price" style="text-align:center;margin:8px 0">⏳ รอไกด์สแกนและส่งข้อความ…</div>
+   <div class="row" style="gap:6px;justify-content:center;flex-wrap:wrap"><button class="btn ghost sm" data-act="copy" data-v="${esc(url)}">คัดลอกลิงก์ส่งให้ไกด์</button><button class="btn sm" data-act="mcancel">ปิด</button></div>`);
+  clearInterval(linkPoll);let n=0;linkPoll=setInterval(async()=>{const m=document.getElementById('linkst');if(!m||++n>200){clearInterval(linkPoll);return}
+    const r=await api('/api/admin/state');if(!r.ok)return;const x=r.guides.find(y=>y.id===gid);if(x&&x.lineUserId){clearInterval(linkPoll);DB=r;m.style.background='#e7f3ec';m.style.color='#1d6b3a';m.innerHTML='<b>✅ ผูก LINE เรียบร้อย</b>';
+      setTimeout(()=>{if(document.getElementById('linkst')){closeModal();render()}},1800)}},3000)}
 function lineLinkCard(){const s=DB.settings,by=s.lineLinkBy||'both',G=[...DB.guides].filter(g=>g.active!==false).sort((a,b)=>a.priority-b.priority),ok=G.filter(g=>g.lineUserId).length,ed=can('markUnavail');
   const oa=(s.lineOa||'').trim(),link=!oa?'':/^https?:\/\//i.test(oa)?oa:`https://line.me/R/ti/p/${encodeURIComponent(oa.startsWith('@')?oa:'@'+oa)}`;
   const how={phone:'เบอร์โทรศัพท์',name:'ชื่อ นามสกุล',both:'เบอร์โทรศัพท์ หรือ ชื่อ นามสกุล'}[by];
@@ -523,14 +536,14 @@ function lineLinkCard(){const s=DB.settings,by=s.lineLinkBy||'both',G=[...DB.gui
     <div>${ed?`<form data-form="linelink">
       <label>ไกด์ใช้อะไรผูกบัญชี</label>
       ${[['phone','เบอร์โทรศัพท์','เช่น 0861944842'],['name','ชื่อ + นามสกุล','เช่น สุริยา เราเท่า'],['both','ได้ทั้งสองแบบ','พิมพ์เบอร์โทร หรือ ชื่อ นามสกุล ก็ได้']].map(([k,l,d])=>`<label style="display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--ink)"><input type="radio" name="lineLinkBy" value="${k}" style="width:auto" ${by===k?'checked':''}> <b>${l}</b> <span class="sm mut">${d}</span></label>`).join('')}
-      <div class="field" style="margin-top:10px"><label>LINE OA ของชุมชน (เช่น @phangam หรือลิงก์เพิ่มเพื่อน https://lin.ee/…)</label><input name="lineOa" value="${esc(oa)}" placeholder="@phangam"></div>
+      <div class="field" style="margin-top:10px"><label>LINE OA ID ของชุมชน (ขึ้นต้นด้วย @ เช่น @123abcde — ดูได้ที่ LINE OA Manager → ตั้งค่าบัญชี → Basic ID)</label><input name="lineOa" value="${esc(oa)}" placeholder="@123abcde">${oa&&!oa.startsWith('@')&&!/^https?:/i.test(oa)?'<div class="sm" style="color:var(--red);margin-top:4px">⚠ LINE OA ID ต้องขึ้นต้นด้วย @ — QR ผูก LINE รายคนจะใช้ไม่ได้ถ้าไม่ใช่ ID ที่ถูกต้อง</div>':''}</div>
       <button class="btn sm" type="submit">บันทึก</button></form>`:`<p class="sm">วิธีผูก: พิมพ์ <b>${how}</b></p>`}
      <div style="background:var(--g3);border-radius:10px;padding:10px 12px;margin-top:12px" class="sm"><b>ขั้นตอนสำหรับไกด์</b>
-      <ol style="margin:6px 0 0;padding-left:18px"><li>เพิ่มเพื่อน LINE OA ${oa?`<b>${esc(oa)}</b>`:''} (สแกน QR ข้างๆ)</li><li>พิมพ์ <b>${how}</b> ที่ลงทะเบียนไว้ในแชท</li><li>ระบบตอบ “ผูกบัญชีสำเร็จ ✅” แล้วจะได้รับแจ้งเตือนงานทาง LINE</li></ol></div></div>
+      <ol style="margin:6px 0 0;padding-left:18px"><li>ง่ายสุด: กดปุ่ม <b>📱 ผูก LINE</b> ท้ายชื่อไกด์ในตารางด้านล่าง แล้วให้ไกด์สแกน QR และกดส่งข้อความ</li><li>หรือ เพิ่มเพื่อน LINE OA ${oa?`<b>${esc(oa)}</b>`:''} (สแกน QR ข้างๆ) แล้วพิมพ์ <b>${how}</b> ที่ลงทะเบียนไว้ในแชท</li><li>ระบบตอบ “ผูกบัญชีสำเร็จ ✅” แล้วจะได้รับแจ้งเตือนงานทาง LINE</li></ol></div></div>
     <div style="text-align:center">${link?`${qrSvg(link)}<div class="sm"><a href="${esc(link)}" target="_blank" rel="noopener">${esc(link)}</a></div><button class="btn ghost sm" style="margin-top:6px" data-act="copy" data-v="${esc(link)}">คัดลอกลิงก์ส่งให้ไกด์</button>`:'<p class="sm mut">ใส่ LINE OA ID เพื่อแสดง QR ให้ไกด์สแกน</p>'}</div></div>
    <div class="tbl-wrap" style="margin-top:12px"><table><tr><th>ไกด์</th><th>เบอร์</th><th>สถานะ LINE</th><th></th></tr>
-    ${G.map(g=>`<tr><td>${esc(g.firstName+' '+g.lastName)}</td><td class="sm">${esc(g.phone)}</td><td>${g.lineUserId?'<span class="badge b-ok">✓ ผูกแล้ว</span>':'<span class="badge b-warn">ยังไม่ผูก</span>'}</td>
-     <td style="text-align:right">${g.lineUserId?`<button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>${ed?` <button class="btn ghost sm" data-act="lineunlink" data-id="${g.id}">ยกเลิกการผูก</button>`:''}`:''}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มีไกด์</td></tr>'}</table></div></div>`}
+    ${G.map(g=>`<tr><td>${esc(g.firstName+' '+g.lastName)}</td><td class="sm">${esc(g.phone)}</td><td>${g.lineUserId?'<span class="badge b-ok">✓ ผูก LINE เรียบร้อย</span>':'<span class="badge b-warn">ยังไม่ผูก</span>'}</td>
+     <td style="text-align:right">${!g.lineUserId&&ed?`<button class="btn sm" data-act="linkqr" data-id="${g.id}">📱 ผูก LINE</button>`:''}${g.lineUserId?`<button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>${ed?` <button class="btn ghost sm" data-act="lineunlink" data-id="${g.id}">ยกเลิกการผูก</button>`:''}`:''}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มีไกด์</td></tr>'}</table></div></div>`}
 function pGuides(){
   const ag=activeGuides(DB),dG=dayGuides(DB,qDate),dB=dayBookings(DB,qDate);
   const un=DB.bookings.filter(b=>b.status==='paid'&&b.qn!=null&&b.trip==='unassigned'&&b.date>=today());
@@ -897,6 +910,7 @@ const ACT={
     openReceipt({code:'PG0000',name:'ตัวอย่าง ลูกค้า',phone:'0812345678',date:addDays(today(),3),time:'08:00',people:3,pax:{ta:2,tc:1},entryRates:DB.settings.entryRates,groupFee:DB.settings.groupFee,entryTotal:DB.settings.entryRates.ta*2+DB.settings.entryRates.tc,vehicles:1,vehicleFee:DB.settings.vehicleFee??30,vehicleTotal:DB.settings.vehicleFee??30,payChannel:'promptpay',paidConfirmedAt:new Date().toISOString()},R)},
   rcptimgdel:()=>{rcptImg='';setRcptBox()},
   rcptuselogo:()=>{rcptImg=PUB.site.logo;setRcptBox()},
+  linkqr:el=>lineLinkModal(el.dataset.id),
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},

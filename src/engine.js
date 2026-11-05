@@ -175,6 +175,11 @@ export class Engine extends DurableObject {
         const text = ev.message.text.trim(), digits = text.replace(/\D/g, '');
         const norm = t => String(t || '').toLowerCase().replace(/^(นาย|นางสาว|นาง|น\.ส\.|mr\.?|mrs\.?|ms\.?|miss)\s*/i, '').replace(/[\s.]+/g, '');
         let g = null, err = '';
+        const qr = /^ผูก\s*LINE/i.test(text); // ข้อความจาก QR ผูก LINE รายคน: "ผูก LINE: ชื่อ นามสกุล เบอร์"
+        if (qr) {
+          g = db.guides.find(x => x.active !== false && (x.phone || '').replace(/\D/g, '') === digits) || null;
+          if (!g) err = 'ไม่พบไกด์ตามข้อมูลใน QR (อาจถูกแก้ไขเบอร์โทรแล้ว) กรุณาขอ QR ใหม่จากผู้จัดการไกด์';
+        } else
         if (by !== 'name' && digits.length >= 9 && digits.length >= text.replace(/\s/g, '').length - 2) {
           g = db.guides.find(x => x.active !== false && (x.phone || '').replace(/\D/g, '') === digits) || null;
           if (!g) err = 'ไม่พบเบอร์นี้ในรายชื่อไกด์';
