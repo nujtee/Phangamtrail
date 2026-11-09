@@ -2,7 +2,8 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1f5c40"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="ผาแง่ม ไกด์"><meta name="mobile-web-app-capable" content="yes">
 <title>ผาแง่ม · จองเดินป่า</title>
 <meta name="description" content="จองรอบเดินป่าผาแง่มพร้อมไกด์ชุมชนท้องถิ่น">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E⛰️%3C/text%3E%3C/svg%3E">
@@ -113,6 +114,16 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .kv dt{color:var(--mut)}.kv dd{margin:0;font-weight:500}
 /* admin */
 .admin{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
+.bnav{display:none}
+@media(max-width:860px){body.mob .side{display:none}body.mob main{padding-bottom:84px}
+ body.mob .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around}
+ .bnav a{flex:1;text-align:center;text-decoration:none;color:var(--muted,#6b7280);font-size:11.5px;padding:4px 2px;border-radius:10px}.bnav a b{display:block;font-size:21px;line-height:1.2}.bnav a.on{color:var(--g);font-weight:700;background:var(--g3)}}
+body.app .topnav a:not(#navAdmin),body.app .topnav .navsub a[data-nav=check]{display:none}
+.job{border-left:5px solid var(--g)}.job.started{border-left-color:#d97706}.job.done{border-left-color:#9ca3af;opacity:.85}
+.job .big{font-size:26px;font-weight:700;color:var(--g)}.job .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.job .acts .btn{flex:1;white-space:nowrap;min-width:130px;padding:12px;font-size:16px}
+.callrow{display:flex;gap:8px;margin-top:8px}.callrow a{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600}
+.ovr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.ovr div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.ovr b{display:block;font-size:22px}
+.photo-prev{width:100%;max-height:320px;object-fit:cover;border-radius:12px;margin:8px 0}
 .side{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;position:sticky;top:64px}
 .side .who{padding:8px 10px 12px;border-bottom:1px solid var(--line);margin-bottom:6px}
 .side .who b{display:block}
@@ -206,14 +217,14 @@ function promptpayPayload(id,amount){
 
 /* ========== roles & pages ========== */
 const ROLES={
-  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','notifications','users','settings','audit']},
-  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','notifications','settings','audit']},
-  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','accounting','payouts','payments','audit']},
-  guidemgr:{label:'ผู้จัดการไกด์',pages:['dashboard','calendar','bookings','guides','notifications','audit']},
-  staff:{label:'เจ้าหน้าที่ประสานงาน',pages:['dashboard','calendar','content','bookings','guides','notifications']},
-  guide:{label:'ไกด์',pages:['mytrips']}
+  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','notifications','users','settings','audit','me']},
+  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','notifications','settings','audit','me']},
+  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','accounting','payouts','payments','audit','me']},
+  guidemgr:{label:'ผู้จัดการไกด์',pages:['today','dashboard','calendar','bookings','guides','notifications','audit','me']},
+  staff:{label:'เจ้าหน้าที่ประสานงาน',pages:['dashboard','calendar','content','bookings','guides','notifications','me']},
+  guide:{label:'ไกด์',pages:['today','mytrips','earn','me']}
 };
-const PAGES={content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
+const PAGES={today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
 const PERM={
   confirmPay:['superadmin','admin','finance'],
   assign:['superadmin','admin','guidemgr','staff'],
@@ -435,13 +446,75 @@ function renderLogin(){
   <button class="btn lg" type="submit">เข้าสู่ระบบ</button>
   ${AUTH.hasUsers?'':'<p class="sm" style="color:var(--red);margin-top:12px">ระบบยังไม่มีผู้ดูแล — ตั้งค่า ADMIN_PASSWORD ใน Cloudflare แล้วโหลดหน้านี้ใหม่</p>'}</form>`;
 }
+/* ===== แอปไกด์ (PWA) ===== */
+const photoLink=b=>b.startPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-src="${esc(b.startPhoto)}">📷 รูปกลุ่ม</button>`:'';
+function jobCard(b,asGuide){const g=gObj(DB,b.guideId),cls=b.trip==='started'?'started':isDone(b)?'done':'';const tel=String(b.phone||'').replace(/[^\d+]/g,'');
+  return `<div class="card job ${cls}"><div class="hd"><div><div class="big">${b.time} น.</div><div class="sm mut">${fmtDate(b.date)} · ${b.code}</div></div>${trB(b)}</div>
+   <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน<div class="sm mut">${paxText(b.pax||{})}${b.vehicles?` · รถ ${b.vehicles} คัน`:''}</div></dd>${asGuide?'':`<dt>ไกด์</dt><dd>${g?esc(g.firstName+' '+g.lastName):'<b style="color:var(--red)">ยังไม่มีไกด์</b>'}</dd>`}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
+   <div class="callrow">${tel?`<a href="tel:${tel}">📞 โทรลูกค้า</a>`:''}${b.line?`<a href="https://line.me/ti/p/~${encodeURIComponent(b.line)}" target="_blank" rel="noopener">💬 LINE ลูกค้า</a>`:''}${!asGuide&&g?.phone?`<a href="tel:${esc(g.phone)}">📞 โทรไกด์</a>`:''}</div>
+   <div class="acts">${tripButtons(b,asGuide)}</div></div>`}
+function pToday(){const u=me(),t=today(),tm=addDays(t,1);
+  if(u.role==='guide'){const g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์ — ติดต่อผู้จัดการไกด์</div>`;
+    const L=DB.bookings.filter(b=>b.guideId===g.id&&b.status!=='cancelled'),T=L.filter(b=>b.date===t).sort((a,b)=>a.time.localeCompare(b.time)),N=L.filter(b=>b.date>t&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    return `<div class="hd"><h2>สวัสดี ${esc(g.firstName)} 👋</h2><span class="sm mut">${fmtDate(t)}</span></div>${pushNudge()}
+     <h3 style="margin:6px 0">งานวันนี้</h3>${T.map(b=>jobCard(b,true)).join('')||'<div class="card empty">วันนี้ไม่มีงาน 🌿</div>'}
+     <h3 style="margin:14px 0 6px">งานถัดไป</h3>${N.slice(0,3).map(b=>jobCard(b,true)).join('')||'<div class="card empty">ยังไม่มีงานที่จะมาถึง</div>'}`}
+  const L=DB.bookings.filter(b=>b.status==='paid'&&(b.date===t||b.date===tm)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)),T=L.filter(b=>b.date===t);
+  const c=f=>T.filter(f).length,noG=L.filter(b=>!b.guideId&&!isDone(b));
+  return `<div class="hd"><h2>ภาพรวมงานวันนี้</h2><span class="sm mut">${fmtDate(t)}</span></div>${pushNudge()}
+   <div class="ovr"><div><b>${T.length}</b><span class="sm">กลุ่มวันนี้</span></div><div><b>${c(b=>b.trip==='assigned')}</b><span class="sm">รอเริ่ม</span></div><div><b style="color:#d97706">${c(b=>b.trip==='started')}</b><span class="sm">กำลังเดิน</span></div><div><b style="color:#6b7280">${c(b=>isDone(b))}</b><span class="sm">จบแล้ว</span></div></div>
+   ${noG.length?`<div class="card" style="border-color:var(--red);background:#fdf0ef"><b style="color:var(--red)">⚠️ มีงานที่ยังไม่มีไกด์ ${noG.length} งาน</b><div class="sm">${noG.map(b=>`${b.code} · ${fmtDateS(b.date)} ${b.time}`).join(' · ')} — ไปที่ “ไกด์” เพื่อมอบหมาย</div></div>`:''}
+   <h3 style="margin:6px 0">วันนี้</h3>${T.map(b=>jobCard(b,false)).join('')||'<div class="card empty">วันนี้ไม่มีกลุ่มเดินป่า</div>'}
+   <h3 style="margin:14px 0 6px">พรุ่งนี้</h3>${L.filter(b=>b.date===tm).map(b=>jobCard(b,false)).join('')||'<div class="card empty">พรุ่งนี้ยังไม่มีกลุ่ม</div>'}`}
+function pEarn(){const u=me(),g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์</div>`;
+  const D=DB.bookings.filter(b=>b.guideId===g.id&&b.status==='paid'&&isDone(b)).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const owed=D.filter(b=>!b.payout?.paid).reduce((a,b)=>a+b.split.guide,0),paid=D.filter(b=>b.payout?.paid).reduce((a,b)=>a+b.split.guide,0),m=today().slice(0,7),mon=D.filter(b=>b.date.startsWith(m)).reduce((a,b)=>a+b.split.guide,0);
+  return `<h2>รายได้ของฉัน</h2><div class="ovr" style="grid-template-columns:repeat(3,1fr)"><div><b style="color:var(--g)">${baht(owed)}</b><span class="sm">รอรับ</span></div><div><b>${baht(mon)}</b><span class="sm">เดือนนี้</span></div><div><b>${baht(paid)}</b><span class="sm">รับแล้วทั้งหมด</span></div></div>
+   ${g.accountNo?'':'<div class="card sm" style="background:var(--warnbg)">⚠ ยังไม่มีเลขบัญชีรับเงิน — แจ้งผู้จัดการไกด์ให้เพิ่มก่อนรับค่าไกด์</div>'}
+   <div class="card"><h3>ประวัติงาน</h3>${D.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>สถานะ</th></tr>${D.slice(0,50).map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}${b.trip!=='completed'?'<div class="sm mut">'+({noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||'')+'</div>':''}</td><td class="num">${baht(b.split.guide)}</td><td>${b.payout?.paid?badge(['รับแล้ว','b-ok']):badge(['รอรับ','b-warn'])}</td></tr>`).join('')}</table></div>`:'<p class="mut">ยังไม่มีงานที่เสร็จ</p>'}</div>`}
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let installEvt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(location.hash.includes('admin-me'))render()});
+let PUSH={sup:'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window,on:false};
+async function pushRefresh(){if(!PUSH.sup)return;try{const r=await navigator.serviceWorker.ready,sub=await r.pushManager.getSubscription();PUSH.on=!!sub&&Notification.permission==='granted'}catch(_){}}
+function pushNudge(){if(PUSH.on)return '';return `<div class="card sm" style="background:var(--g3);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>🔔 เปิดแจ้งเตือนในเครื่องนี้ จะได้รู้ทันทีเมื่อมีงานใหม่หรืองานเปลี่ยน</span><a class="btn sm" href="#admin-me" style="text-decoration:none">ตั้งค่า</a></div>`}
+function pMe(){const u=me(),inst=isStandalone();
+  const instBox=inst?'<p>✅ ติดตั้งเป็นแอปบนเครื่องนี้แล้ว</p>':isIOS?`<ol class="sm" style="padding-left:18px;margin:6px 0"><li>เปิดหน้านี้ใน <b>Safari</b></li><li>แตะปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรขึ้น)</li><li>เลือก <b>เพิ่มไปยังหน้าจอโฮม</b> → <b>เพิ่ม</b></li><li>เปิดแอป “ผาแง่ม ไกด์” จากหน้าจอโฮม แล้วกลับมาหน้านี้เพื่อเปิดแจ้งเตือน</li></ol>`
+    :installEvt?`<button class="btn" data-act="pwainstall">⬇ ติดตั้งแอป “ผาแง่ม ไกด์”</button>`:`<ol class="sm" style="padding-left:18px;margin:6px 0"><li>เปิดหน้านี้ใน <b>Chrome</b></li><li>แตะเมนู <b>⋮</b> มุมขวาบน</li><li>เลือก <b>ติดตั้งแอป</b> หรือ <b>เพิ่มลงในหน้าจอหลัก</b></li></ol>`;
+  const pushBox=!PUSH.sup?(isIOS&&!inst?'<p class="sm">บน iPhone ต้องติดตั้งแอปลงหน้าจอโฮมก่อน (ข้อด้านบน) จึงจะเปิดแจ้งเตือนได้</p>':'<p class="sm">เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน — ใช้ Chrome (Android) หรือ Safari (iPhone, iOS 16.4 ขึ้นไป)</p>')
+    :Notification.permission==='denied'?'<p class="sm" style="color:var(--red)">ถูกปิดการแจ้งเตือนไว้ — เปิดได้ที่ การตั้งค่าเบราว์เซอร์/แอป → การแจ้งเตือน → อนุญาต phangamtrail.com</p>'
+    :PUSH.on?`<p>✅ เปิดแจ้งเตือนในเครื่องนี้แล้ว</p><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn ghost sm" data-act="pushtest">ส่งแจ้งเตือนทดสอบ</button><button class="btn ghost sm" data-act="pushoff">ปิดแจ้งเตือนเครื่องนี้</button></div>`
+    :`<button class="btn" data-act="pushon">🔔 เปิดแจ้งเตือนในเครื่องนี้</button>`;
+  return `<h2>แอปและแจ้งเตือน</h2>
+   <div class="card"><h3>1. ติดตั้งแอปลงมือถือ</h3>${instBox}</div>
+   <div class="card"><h3>2. แจ้งเตือนในเครื่องนี้</h3><p class="sm mut" style="margin-top:-4px">${u.role==='guide'?'งานใหม่ · งานถูกเปลี่ยน/ยกเลิก · เตือนคืนก่อนเดินป่า':'ไกด์แจ้งไม่ว่าง · มีงานที่ยังไม่มีไกด์ · ไกด์ยังไม่กดเริ่มเมื่อเลยเวลา 15 นาที'} (ส่งคู่กับ LINE/อีเมลเหมือนเดิม)</p>${pushBox}</div>
+   <div class="card"><h3>3. บัญชี</h3><p class="sm">${esc(u.name)} · ${ROLES[u.role].label}</p><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn ghost sm" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</button><button class="btn ghost sm" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</button><button class="btn ghost sm" data-act="logout" style="color:var(--red)">ออกจากระบบ</button></div></div>`}
+const u8=b=>{const p='='.repeat((4-b.length%4)%4),r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,c=>c.charCodeAt(0))};
+async function pushOn(){try{const perm=await Notification.requestPermission();if(perm!=='granted'){render();return toast('ไม่ได้รับอนุญาตให้แจ้งเตือน')}
+  const k=await api('/api/push/key');const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(k.key)});
+  const r=await post('/api/push/subscribe',{endpoint:sub.endpoint});if(!r.ok)return toast(r.error||'เปิดแจ้งเตือนไม่สำเร็จ');PUSH.on=true;toast(r.msg);render()}catch(e){toast('เปิดแจ้งเตือนไม่สำเร็จ: '+(e.message||e))}}
+async function pushOff(){try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub){await post('/api/push/unsubscribe',{endpoint:sub.endpoint});await sub.unsubscribe()}PUSH.on=false;toast('ปิดแจ้งเตือนเครื่องนี้แล้ว');render()}catch(e){toast('ไม่สำเร็จ')}}
+/* ถ่ายรูปกลุ่มก่อนเริ่มเดินทาง */
+let tripPhoto=null;
+function tripStartModal(b){const req=me().role==='guide';tripPhoto=null;
+  openModal(`<h3>▶ เริ่มการเดินทาง</h3><p class="sm">${b.code} · ${b.people} คน · ${fmtDate(b.date)} ${b.time} น.</p>
+   <div class="field"><label>📷 รูปกลุ่มก่อนเดิน ${req?'<b style="color:var(--red)">*</b>':'(ไม่บังคับสำหรับเจ้าหน้าที่)'}</label>
+    <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0;padding:14px">📷 ถ่ายรูป / เลือกรูป<input type="file" accept="image/*" capture="environment" id="tripcam" style="display:none"></label></div>
+   <div id="tripprev" class="sm mut">${req?'ต้องถ่ายรูปผู้เดินป่าทั้งกลุ่มก่อนกดเริ่ม':''}</div>
+   <div class="mact"><button class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" data-act="tripgo" data-id="${b.id}" ${req?'disabled':''} id="tripgo">▶ ยืนยันเริ่มเดินทาง</button></div>`)}
+document.addEventListener('change',async e=>{if(e.target.id!=='tripcam')return;const f=e.target.files[0];if(!f)return;const d=await shrinkTo(f,1600,.8);tripPhoto=d;
+  document.getElementById('tripprev').innerHTML=`<img class="photo-prev" src="${d}"><div class="sm">ถ้ารูปไม่ชัด แตะ “ถ่ายรูป” ใหม่ได้</div>`;const g=document.getElementById('tripgo');if(g)g.disabled=false});
+async function uploadTripPhoto(dataUrl){const blob=await (await fetch(dataUrl)).blob();
+  try{const r=await fetch('/api/admin/trip-photo',{method:'POST',headers:{'content-type':'image/jpeg'},body:blob,credentials:'same-origin'});const j=await r.json();if(!r.ok)throw new Error(j.error);return j.url}
+  catch(e){return await new Promise(ok=>{const x=new XMLHttpRequest();x.open('POST','/api/admin/trip-photo');x.withCredentials=true;x.setRequestHeader('content-type','image/jpeg');x.onload=()=>{try{const j=JSON.parse(x.responseText);if(x.status<300)return ok(j.url);toast(j.error||'อัปโหลดรูปไม่สำเร็จ')}catch(_){toast('อัปโหลดรูปไม่สำเร็จ')}ok(null)};x.onerror=()=>{toast('อัปโหลดรูปไม่สำเร็จ — ตรวจสอบสัญญาณอินเทอร์เน็ต');ok(null)};x.send(blob)})}}
 function renderAdmin(sub){
   const u=me();if(!u)return renderLogin();
   const pages=ROLES[u.role].pages;if(sub&&pages.includes(sub))page=sub;if(!pages.includes(page))page=pages[0];
-  const body={dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
+  const body={today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
    ${pages.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`).join('')}
-   <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>`;
+   <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>
+   <nav class="bnav">${(u.role==='guide'?[['today','📍','วันนี้'],['mytrips','🥾','งานของฉัน'],['earn','💵','รายได้'],['me','📱','ฉัน']]:[['today','📍','วันนี้'],['bookings','📋','การจอง'],['guides','🧭','ไกด์'],['me','📱','ฉัน']]).filter(([p])=>pages.includes(p)).map(([p,i,l])=>`<a href="#admin-${p}" class="${p===page?'on':''}"><b>${i}</b>${l}</a>`).join('')}</nav>`;
 }
 const live=()=>DB.bookings.filter(b=>b.status!=='cancelled');
 const revenueOf=list=>list.filter(b=>b.status==='paid').reduce((a,b)=>a+b.total,0);
@@ -480,7 +553,7 @@ function pDashboard(){
 function tripButtons(b,asGuide){
   if(b.status==='cancelled'||!b.guideId)return '';
   if(!(asGuide||can('tripAdmin')))return '';
-  if(b.trip==='assigned')return (asGuide?`<button class="btn sm red" data-act="decline" data-id="${b.id}">✕ ไม่ว่าง</button> `:'')+`<button class="btn sm" data-act="tripstart" data-id="${b.id}" ${b.status!=='paid'?'disabled title="ต้องชำระเงินก่อน"':''}>▶ ยืนยันเริ่มการเดินทาง</button>`
+  if(b.trip==='assigned')return (asGuide?`<button class="btn sm red" data-act="decline" data-id="${b.id}">✕ ไม่ว่าง</button> `:'')+`<button class="btn sm" data-act="tripstart" data-id="${b.id}" ${b.status!=='paid'?'disabled title="ต้องชำระเงินก่อน"':''}>▶ เริ่มเดินทาง</button>`
     +(b.status==='paid'&&b.date<=today()?` <button class="btn sm ghost" data-act="noshow" data-id="${b.id}">ลูกค้าไม่มา</button>`:'');
   if(b.trip==='started')return `<button class="btn sm warn" data-act="tripend" data-id="${b.id}">■ สิ้นสุดการเดินทาง</button>`;
   return '';
@@ -508,7 +581,7 @@ function pBookings(){
      ${b.status==='pending'&&can('confirmPay')?`<div style="margin-top:4px"><button class="btn sm" data-act="confirmpay" data-id="${b.id}">ยืนยันรับเงิน</button></div>`:''}
      ${b.status==='paid'?`<div class="sm mut">${b.paidConfirmedBy==='ระบบอัตโนมัติ'?'⚡ ':''}โดย ${esc(b.paidConfirmedBy||'-')}</div><button class="btn ghost sm" style="margin-top:4px" data-act="receipt" data-id="${b.id}">🧾 ใบเสร็จ</button>`:''}</td>
    <td>${b.status==='pending'?'<span class="sm mut">มอบหมายหลังชำระเงิน</span>':b.status!=='cancelled'&&can('assign')&&!isLocked({...b,manual:false})?`<select data-chg="reassign" data-id="${b.id}" style="min-width:140px"><option value="">— อัตโนมัติตามคิว —</option>${ag.map(g=>`<option value="${g.id}" ${g.id===b.guideId?'selected':''}>${g.priority}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}</select>`:esc(b.guideId?gName(DB,b.guideId):'-')}</td>
-   <td>${trB(b)}<div style="margin-top:4px">${tripButtons(b,false)}</div>${(b.declined||[]).map(d=>`<div class="sm" style="color:var(--red)">✕ ${esc(gName(DB,d.guideId))} ไม่ว่าง: ${esc(d.reason)}</div>`).join('')}</td>
+   <td>${trB(b)}${photoLink(b)}<div style="margin-top:4px">${tripButtons(b,false)}</div>${(b.declined||[]).map(d=>`<div class="sm" style="color:var(--red)">✕ ${esc(gName(DB,d.guideId))} ไม่ว่าง: ${esc(d.reason)}</div>`).join('')}</td>
    <td>${b.status==='pending'&&can('cancel')?`<button class="btn ghost sm" data-act="cancelbk" data-id="${b.id}">ยกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('cancel')?`<button class="btn ghost sm" data-act="reschedule" data-id="${b.id}">เลื่อนวัน</button> <button class="btn ghost sm" data-act="paidcancel" data-id="${b.id}">ลูกค้ายกเลิก</button>`:''}${b.cancelReason?`<div class="sm mut">${esc(b.cancelReason)}</div>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่พบรายการ</td></tr>`}
   </table></div></div>`;
 }
@@ -596,7 +669,7 @@ function pMyTrips(){
   const act=L.filter(b=>!isDone(b)),done=L.filter(b=>isDone(b)).reverse().slice(0,10);
   const card=b=>`<div class="card"><div class="hd"><h3>${fmtDate(b.date)} · ${b.time} น.</h3>${trB(b)}</div>
    <dl class="kv"><dt>รหัส</dt><dd>${b.code}</dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd><dt>จำนวน</dt><dd>${b.people} คน</dd><dt>การชำระ</dt><dd>${stB(b)}</dd>${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}
-   ${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
+   ${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
    <div style="margin-top:10px">${tripButtons(b,true)}</div></div>`;
   const owed=done.filter(b=>!b.payout.paid).reduce((a,b)=>a+b.split.guide,0);
   return `<div class="hd"><h2>งานของฉัน</h2><span class="badge b-blue">ค่าไกด์รอรับ ${baht(owed)}</span></div>
@@ -649,7 +722,7 @@ function pNotifications(){
   const L=DB.notifications.filter(n=>ntF==='all'||n.channel===ntF).slice(0,80);
   return `<div class="hd"><h2>การแจ้งเตือน</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
   <div class="card"><p class="mut sm" style="margin-top:0">ส่งผ่าน LINE OA และอีเมลทันทีที่มีการมอบหมาย/เปลี่ยนแปลงงาน · เตือนอีกครั้ง 18:00 คืนก่อนเดินป่า · สถานะ “ยังไม่ผูก” = ไกด์ยังไม่ได้พิมพ์เบอร์ใน LINE OA</p>
-  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):badge(['Email','b-blue'])}<b>${esc(n.guideId?gName(DB,n.guideId):'ลูกค้า: '+(n.custName||'-'))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
+  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):badge(['Email','b-blue'])}<b>${esc(n.guideId?gName(DB,n.guideId):n.custName?'ลูกค้า: '+n.custName:(n.toLabel||'-'))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
 }
 
 function pUsers(){
@@ -880,7 +953,7 @@ function pAudit(){const L=DB.audit.filter(a=>auF==='all'||a.action===auF).slice(
   <div class="card"><div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr>${L.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td>${esc(a.userName)}</td><td>${badge([AUL[a.action]||a.action,'b-gray'])}</td><td class="sm">${esc(a.detail)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มี</td></tr>'}</table></div></div>`}
 
 /* ========== render / routing ========== */
-function render(){{const na=document.getElementById('navAdmin');if(na)na.textContent=DB?'หลังบ้าน':'Login';const bi=document.getElementById('brandIcon'),lg=PUB?.site?.logo||'';if(bi&&bi.dataset.v!==lg){bi.dataset.v=lg;bi.innerHTML=lg?`<img class="logo" src="${lg}" alt="โลโก้">`:'⛰️';let fi=document.querySelector('link[rel=icon]');if(fi&&lg)fi.href=lg}}
+function render(){{document.body.classList.toggle('mob',!!(DB&&me()&&['guide','guidemgr'].includes(me().role)));const na=document.getElementById('navAdmin');if(na)na.textContent=DB?'หลังบ้าน':'Login';const bi=document.getElementById('brandIcon'),lg=PUB?.site?.logo||'';if(bi&&bi.dataset.v!==lg){bi.dataset.v=lg;bi.innerHTML=lg?`<img class="logo" src="${lg}" alt="โลโก้">`:'⛰️';let fi=document.querySelector('link[rel=icon]');if(fi&&lg)fi.href=lg}}
   const h=location.hash.slice(1)||'home',app=document.getElementById('app');
   if(!booted||!PUB){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
   if(h.startsWith('admin')&&DB===null&&AUTH.checking){app.innerHTML='<div class="empty">กำลังโหลด…</div>';return}
@@ -983,7 +1056,13 @@ const ACT={
     <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึกการเลื่อนวัน</button></div></form>`)},
   slip:el=>{const b=byId(el.dataset.id);openModal(`<h3>หลักฐานการชำระ ${b.code}</h3>${slipNote(b)}<img class="slipimg" src="${b.slip}"><div class="mact"><a class="btn ghost" href="${b.slip}" target="_blank" rel="noopener" style="text-decoration:none">เปิดรูปเต็ม</a><button class="btn ghost" data-act="mcancel">ปิด</button></div>`)},
   cancelbk:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการจอง?',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}`,'ยกเลิกการจอง','red'))return;call('cancelBooking',{id:b.id})},
-  tripstart:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันเริ่มการเดินทาง',`${b.code} · ${b.people} คน · ${fmtDate(b.date)} ${b.time}`))return;call('tripStart',{id:b.id})},
+  tripstart:el=>tripStartModal(byId(el.dataset.id)),
+  tripgo:async el=>{if(busy)return;busy=true;el.disabled=true;el.textContent='กำลังบันทึก…';try{let photo='';if(tripPhoto){photo=await uploadTripPhoto(tripPhoto);if(!photo){el.disabled=false;el.textContent='▶ ยืนยันเริ่มเดินทาง';return}}
+    if(await call('tripStart',{id:el.dataset.id,photo}))closeModal();else{el.disabled=false;el.textContent='▶ ยืนยันเริ่มเดินทาง'}}finally{busy=false}},
+  viewphoto:el=>openModal(`<h3>📷 รูปกลุ่มก่อนเดิน</h3><img src="${el.dataset.src}" style="width:100%;border-radius:12px"><div class="mact"><button class="btn" data-act="mcancel">ปิด</button></div>`),
+  pwainstall:async()=>{if(!installEvt)return;installEvt.prompt();await installEvt.userChoice.catch(()=>{});installEvt=null;render()},
+  pushon:()=>pushOn(),pushoff:()=>pushOff(),
+  pushtest:async()=>{const r=await post('/api/push/test',{});toast(r.msg||r.error||'ส่งแล้ว')},
   tripend:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันสิ้นสุดการเดินทาง',`${b.code} · เริ่มเมื่อ ${fmtDT(b.startedAt)}<br>รายการจะถูกส่งไปหน้าเบิกจ่ายค่าไกด์`,'สิ้นสุดการเดินทาง','warn'))return;call('tripEnd',{id:b.id})},
   paygd:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
     const r=await confirmBox('ยืนยันชำระเงินให้ไกด์',`<dl class="kv"><dt>ไกด์</dt><dd>${esc(g.firstName+' '+g.lastName)}</dd><dt>บัญชี</dt><dd>${esc(g.bankName)} ${esc(g.accountNo)}</dd><dt>โทร</dt><dd>${esc(g.phone)}</dd><dt>งาน</dt><dd>${b.code} · ${fmtDateS(b.date)} ${b.time}</dd><dt>ยอด</dt><dd><b>${baht(b.split.guide)}</b></dd></dl>
@@ -1139,6 +1218,8 @@ window.addEventListener('hashchange',async()=>{const h=location.hash.slice(1);if
 /* เริ่มต้น: โหลดข้อมูลสาธารณะ + ตรวจสถานะเข้าสู่ระบบ */
 (async()=>{
   render();
+  if(/[?&]app=1/.test(location.search)||matchMedia('(display-mode: standalone)').matches||navigator.standalone)document.body.classList.add('app');
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(()=>pushRefresh()).then(()=>{if(PUSH.on&&DB)render()}).catch(()=>{});
   const authP=Promise.all([api('/api/auth/me'),api('/api/auth/status')]);
   let okPub=false;for(let i=0;i<3&&!okPub;i++){if(i)await new Promise(r=>setTimeout(r,1500*i));okPub=await loadPub()}
   if(!okPub){document.getElementById('app').innerHTML='<div class="card empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง<div class="sm mut" style="margin-top:6px">'+esc(PUBERR)+'</div><div style="margin-top:10px"><button class="btn" onclick="location.reload()">ลองใหม่</button></div></div>';return}

@@ -1,0 +1,17 @@
+{
+  "name": "ผาแง่ม ไกด์",
+  "short_name": "ผาแง่ม ไกด์",
+  "description": "แอปสำหรับไกด์และผู้จัดการไกด์ผาแง่ม — งานวันนี้ เริ่ม/สิ้นสุดการเดินทาง แจ้งเตือนงาน",
+  "lang": "th",
+  "start_url": "/?app=1#admin-today",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f5f1",
+  "theme_color": "#1f5c40",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

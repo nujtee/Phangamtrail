@@ -1,6 +1,6 @@
 // Durable Object: ทุกคำสั่งถูกประมวลผลทีละคำสั่ง (ไม่มีการจองชนกัน) และบันทึกลง SQLite ของ Durable Object
 import { DurableObject } from 'cloudflare:workers';
-import { seedState, publicState, adminState, publicActions, adminActions, expirePending, sendReminders, UserError, uid, nowISO, ROLES } from './core.js';
+import { seedState, publicState, adminState, publicActions, adminActions, expirePending, sendReminders, lateStartAlerts, UserError, uid, nowISO, ROLES } from './core.js';
 
 const COLLS = ['guides', 'users', 'bookings', 'unavail'];
 const COUNTERS = ['rotSeq', 'lastGuideId', 'seq', 'lastReminder'];
@@ -95,6 +95,8 @@ export class Engine extends DurableObject {
           if (!env.LINE_CHANNEL_TOKEN) n.status = 'ยังไม่ได้ตั้งค่า LINE OA';
           else if (!n.to) n.status = 'ไกด์ยังไม่ได้ผูก LINE กับ OA';
           else { const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.LINE_CHANNEL_TOKEN}` }, body: JSON.stringify({ to: n.to, messages: [{ type: 'text', text: n.message }] }) }); n.status = r.ok ? 'ส่งแล้ว' : `ส่งไม่สำเร็จ (${r.status})` }
+        } else if (n.channel === 'push') {
+          n.status = await this.pushDeliver(n);
         } else if (n.channel === 'email') {
           if (!env.RESEND_API_KEY || !env.MAIL_FROM) n.status = 'ยังไม่ได้ตั้งค่าอีเมล';
           else { const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify({ from: env.MAIL_FROM, to: [n.to], subject: n.subject || '[ผาแง่ม] แจ้งเตือน', text: n.message }) }); n.status = r.ok ? 'ส่งแล้ว' : `ส่งไม่สำเร็จ (${r.status})` }
@@ -102,6 +104,39 @@ export class Engine extends DurableObject {
       } catch (e) { n.status = 'ส่งไม่สำเร็จ (' + (e.message || 'error') + ')' }
       this.saveNotif(n, false);
     }
+  }
+
+  /* ----- แจ้งเตือนในแอป (Web Push แบบไม่มี payload + กล่องข้อความ) ----- */
+  async vapid() {
+    let v = await this.ctx.storage.get('vapid');
+    if (!v) {
+      const k = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+      v = { pub: b64u(await crypto.subtle.exportKey('raw', k.publicKey)), jwk: await crypto.subtle.exportKey('jwk', k.privateKey) };
+      await this.ctx.storage.put('vapid', v);
+    }
+    return v;
+  }
+  async pushDeliver(n) {
+    const db = await this.load(), t = String(n.to || '');
+    const users = t.startsWith('guide:') ? db.users.filter(u => u.active && u.guideId === t.slice(6))
+      : t.startsWith('roles:') ? db.users.filter(u => u.active && t.slice(6).split(',').includes(u.role))
+      : t.startsWith('user:') ? db.users.filter(u => u.active && u.id === t.slice(5)) : [];
+    const subs = (await this.ctx.storage.get('pushsubs')) || [], mine = subs.filter(x => users.some(u => u.id === x.userId));
+    if (!mine.length) return users.length ? 'ยังไม่ได้เปิดแจ้งเตือนในแอป' : 'ไม่มีผู้รับ';
+    const item = { id: uid(), title: n.title || 'ผาแง่ม', body: n.body || n.message || '', url: n.url || '/#admin', at: nowISO() };
+    for (const u of users) { const k = 'inbox:' + u.id, box = (await this.ctx.storage.get(k)) || []; box.push(item); await this.ctx.storage.put(k, box.slice(-20)) }
+    let ok = 0; const dead = [];
+    for (const sub of mine) { const st = await this.webPush(sub.endpoint).catch(() => 0); if (st >= 200 && st < 300) ok++; else if (st === 404 || st === 410) dead.push(sub.endpoint) }
+    if (dead.length) await this.ctx.storage.put('pushsubs', subs.filter(x => !dead.includes(x.endpoint)));
+    return ok ? `ส่งแล้ว (${ok} เครื่อง)` : 'ส่งไม่สำเร็จ';
+  }
+  async webPush(endpoint) {
+    const v = await this.vapid(), aud = new URL(endpoint).origin;
+    const h = b64u(JSON.stringify({ typ: 'JWT', alg: 'ES256' })), p = b64u(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://phangamtrail.com' }));
+    const key = await crypto.subtle.importKey('jwk', v.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    const sig = b64u(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(h + '.' + p)));
+    const r = await fetch(endpoint, { method: 'POST', headers: { TTL: '86400', Urgency: 'high', Authorization: `vapid t=${h}.${p}.${sig}, k=${v.pub}`, 'Content-Length': '0' } });
+    return r.status;
   }
 
   /* ----- เซสชัน ----- */
@@ -139,6 +174,22 @@ export class Engine extends DurableObject {
         return json({ ok: true }, 200, { 'set-cookie': this.sessionCookie(token, SESSION_DAYS * 86400) });
       }
       if (path === '/api/auth/logout') { const t = cookieOf(req, 'pg_sess'); if (t) this.sql.exec('DELETE FROM sessions WHERE token=?', t); return json({ ok: true }, 200, { 'set-cookie': this.sessionCookie('', 0) }) }
+      if (path === '/api/push/key') return json({ key: (await this.vapid()).pub });
+      if (path.startsWith('/api/push/')) {
+        const a = await this.actorOf(req); if (!a) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
+        const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+        if (path === '/api/push/subscribe') {
+          const ep = String(body.endpoint || ''); if (!/^https:\/\//.test(ep) || ep.length > 1000) return json({ error: 'ข้อมูลไม่ถูกต้อง' }, 400);
+          const subs = ((await this.ctx.storage.get('pushsubs')) || []).filter(x => x.endpoint !== ep);
+          subs.push({ userId: a.id, endpoint: ep, ua: String(req.headers.get('user-agent') || '').slice(0, 120), at: nowISO() }); await this.ctx.storage.put('pushsubs', subs.slice(-500));
+          return json({ ok: true, msg: 'เปิดแจ้งเตือนในเครื่องนี้แล้ว' });
+        }
+        if (path === '/api/push/unsubscribe') { const subs = ((await this.ctx.storage.get('pushsubs')) || []).filter(x => x.endpoint !== body.endpoint); await this.ctx.storage.put('pushsubs', subs); return json({ ok: true }) }
+        if (path === '/api/push/status') { const subs = ((await this.ctx.storage.get('pushsubs')) || []).filter(x => x.userId === a.id); return json({ count: subs.length, endpoints: subs.map(x => x.endpoint) }) }
+        if (path === '/api/push/inbox') { const k = 'inbox:' + a.id, box = (await this.ctx.storage.get(k)) || []; await this.ctx.storage.delete(k); return json({ items: box }) }
+        if (path === '/api/push/test') return json({ msg: await this.pushDeliver({ to: 'user:' + a.id, title: '🔔 ทดสอบแจ้งเตือน', body: 'แอปผาแง่มรับแจ้งเตือนในเครื่องนี้ได้แล้ว ✅', url: '/#admin-me' }) });
+        return json({ error: 'not found' }, 404);
+      }
       if (path === '/api/auth/me') { const a = await this.actorOf(req); return json({ me: a, pages: a ? ROLES[a.role].pages : [] }) }
       if (path === '/api/auth/status') { const db = await this.load(); return json({ hasUsers: db.users.length > 0 }) }
 
@@ -154,7 +205,7 @@ export class Engine extends DurableObject {
         const actor = await this.actorOf(req); return json({ actor });
       }
       if (path === '/internal/tick') {
-        const out = await this.run({ id: '-', name: 'ระบบ', role: 'system' }, db => ({ expired: expirePending(db), reminded: sendReminders(db) }));
+        const out = await this.run({ id: '-', name: 'ระบบ', role: 'system' }, db => ({ expired: expirePending(db), reminded: sendReminders(db), late: lateStartAlerts(db) }));
         return json(out);
       }
       if (path === '/internal/line') return this.lineEvents(await req.json());
@@ -201,3 +252,5 @@ export class Engine extends DurableObject {
     return json({ ok: true });
   }
 }
+
+function b64u(x) { const b = typeof x === 'string' ? new TextEncoder().encode(x) : new Uint8Array(x); let s = ''; b.forEach(c => s += String.fromCharCode(c)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }

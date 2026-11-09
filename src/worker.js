@@ -31,6 +31,16 @@ export default {
       return json({ url: '/img/' + key });
     }
 
+    // ไกด์ถ่ายรูปกลุ่มก่อนเริ่มเดินทาง (ดูได้เฉพาะผู้ที่ล็อกอิน)
+    if (path === '/api/admin/trip-photo' && req.method === 'POST') {
+      const actor = await actorOf(req, env); if (!actor) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
+      if (![...PERM.tripAdmin, 'guide'].includes(actor.role)) return json({ error: 'ไม่มีสิทธิ์' }, 403);
+      const type = req.headers.get('content-type') || '', ext = IMG_TYPES[type.split(';')[0]];
+      if (!ext) return json({ error: 'รองรับเฉพาะไฟล์รูป' }, 400);
+      const body = await req.arrayBuffer(); if (body.byteLength > MAX_IMG) return json({ error: 'ไฟล์ใหญ่เกิน 5 MB' }, 400);
+      const key = `trips/${crypto.randomUUID()}.${ext}`; await env.IMAGES.put(key, body, { httpMetadata: { contentType: type } });
+      return json({ url: '/img/' + key });
+    }
     if (path === '/api/public/slip') return json({ error: 'not found' }, 404); // ใช้ผ่าน slip-upload เท่านั้น
     // ลูกค้าแนบสลิป (ตรวจรหัสจอง + เบอร์โทรที่ engine)
     if (path === '/api/public/slip-upload' && req.method === 'POST') {
@@ -55,7 +65,8 @@ export default {
     if (path.startsWith('/img/')) {
       const key = decodeURIComponent(path.slice(5));
       if (key.startsWith('slips/')) { const a = await actorOf(req, env); if (!a || a.role === 'guide') return new Response('forbidden', { status: 403 }) }
-      const pub = !key.startsWith('slips/'), cache = caches.default, ck = new Request(url.origin + path);
+      if (key.startsWith('trips/')) { const a = await actorOf(req, env); if (!a) return new Response('forbidden', { status: 403 }) }
+      const pub = !key.startsWith('slips/') && !key.startsWith('trips/'), cache = caches.default, ck = new Request(url.origin + path);
       if (pub) { const hit = await cache.match(ck); if (hit) return hit } // แคชที่ edge ของ Cloudflare
       const obj = await env.IMAGES.get(key); if (!obj) return new Response('not found', { status: 404 });
       const h = new Headers(); obj.writeHttpMetadata(h); h.set('etag', obj.httpEtag);

@@ -163,6 +163,19 @@ function notifyGuide(db, g, b, kind) {
   const base = { at: nowISO(), guideId: g.id, bookingId: b.id || '', message: msg, status: 'pending' };
   db.$notify.push({ ...base, id: uid(), channel: 'line', to: g.lineUserId || '', toLabel: g.line || '' });
   if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] ${head} ${b.code}` });
+  db.$notify.push({ ...base, id: uid(), channel: 'push', to: 'guide:' + g.id, toLabel: 'แอป', title: head.replace(/\s*\(.*\)$/, ''), body: `${b.code} · ${fmtDateS(b.date)} ${b.time} น. · ${b.name} (${b.people} คน)`, url: '/#admin-today' });
+}
+/* แจ้งเตือนในแอปถึงผู้จัดการไกด์/ผู้ดูแลระบบ */
+const MGR_ROLES = ['guidemgr', 'admin', 'superadmin'];
+function notifyManagers(db, title, body, bookingId) {
+  db.$notify.push({ id: uid(), at: nowISO(), guideId: null, bookingId: bookingId || '', channel: 'push', to: 'roles:' + MGR_ROLES.join(','), toLabel: 'ผู้จัดการไกด์ (แอป)', title, body, url: '/#admin-today', message: `${title}\n${body}`, status: 'pending' });
+}
+export function lateStartAlerts(db) {
+  const d = bkk(), t = today(), nowMin = d.getUTCHours() * 60 + d.getUTCMinutes(); let n = 0;
+  db.bookings.filter(b => b.date === t && b.status === 'paid' && b.trip === 'assigned' && !b.lateAlert && toMin(b.time) + 15 <= nowMin).forEach(b => {
+    b.lateAlert = true; n++; notifyManagers(db, '⏰ ไกด์ยังไม่กดเริ่มเดินทาง', `${b.code} รอบ ${b.time} น. · ไกด์ ${gName(db, b.guideId)} · ${b.name} (${b.people} คน)`, b.id);
+  });
+  return n;
 }
 
 function notifyCustomer(db, b, kind) {
@@ -210,9 +223,12 @@ function markGuideUnavailable(db, gid, date, reason, bookingId) {
   if (bookingId) { const b = byId(db, bookingId); b.declined = b.declined || []; b.declined.push({ guideId: gid, reason, byName: u.name, at: nowISO() }); b.manual = false }
   else { db.unavail.push({ id: uid(), guideId: gid, date, reason, byName: u.name, byRole: u.role, at: nowISO() }); db.bookings.filter(b => b.date === date && b.guideId === gid && b.manual).forEach(b => b.manual = false) }
   moveToLast(db, gid);
+  if (u.role === 'guide') notifyManagers(db, '🙅 ไกด์แจ้งไม่ว่าง', `${g.firstName} ${g.lastName} · ${fmtDateS(date)}${bookingId ? ' งาน ' + byId(db, bookingId).code : ' ทั้งวัน'} — ${reason}`, bookingId);
   log(db, u.role === 'guide' ? 'decline' : 'unavail', `${g.firstName} ${g.lastName} ไม่ว่าง ${bookingId ? 'งาน ' + byId(db, bookingId).code : 'ทั้งวัน'} ${fmtDate(date)} — เหตุผล: ${reason} · ย้ายไปลำดับสุดท้าย (${g.priority})`);
   const aff = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null && b.date === date && !isLocked(b) && (bookingId ? b.id === bookingId : b.guideId === gid));
-  return aff.length ? rerunFrom(db, aff.map(qKey).sort()[0]) : [];
+  const res = aff.length ? rerunFrom(db, aff.map(qKey).sort()[0]) : [];
+  res.filter(c => !c.nw).forEach(c => notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${c.b.code} · ${fmtDateS(c.b.date)} ${c.b.time} น. · ${c.b.people} คน`, c.b.id));
+  return res;
 }
 
 /* ===== ชำระเงิน ===== */
@@ -224,6 +240,7 @@ function confirmPayment(db, b, how) {
   b.status = 'paid'; b.paidConfirmedBy = db.$actor?.name || 'ระบบอัตโนมัติ'; b.paidConfirmedAt = nowISO();
   const g = assignOnPay(db, b);
   notifyCustomer(db, b, 'confirmed');
+  if (!g) notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${b.code} · ${fmtDateS(b.date)} ${b.time} น. · ${b.people} คน`, b.id);
   log(db, 'confirm_payment', `${how} ${b.code} ${baht(b.paidAmount || b.total)}${b.payFee ? ` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})` : ''} → ${g ? 'ไกด์ ' + gName(db, g.id) : '(ยังไม่มีไกด์ว่าง)'}`);
   return g;
 }
@@ -389,6 +406,9 @@ export const adminActions = {
   tripStart(db, p) {
     const b = byId(db, p.id); if (!(can(db.$actor, 'tripAdmin') || ownTrip(db, b))) need(db.$actor, 'tripAdmin');
     if (b.status !== 'paid' || b.trip !== 'assigned') fail('เริ่มเดินทางได้เฉพาะงานที่ชำระแล้วและได้รับมอบหมาย');
+    const photo = str(p.photo, 200); if (photo && !/^\/img\/trips\//.test(photo)) fail('รูปไม่ถูกต้อง');
+    if (db.$actor.role === 'guide' && !photo) fail('กรุณาถ่ายรูปกลุ่มก่อนเริ่มเดินทาง');
+    if (photo) b.startPhoto = photo;
     b.trip = 'started'; b.startedAt = nowISO(); b.startedBy = db.$actor.name; log(db, 'trip_start', `เริ่มเดินทาง ${b.code} (ไกด์ ${gName(db, b.guideId)})`);
     return { msg: 'บันทึกเวลาเริ่มเดินทางแล้ว' };
   },
