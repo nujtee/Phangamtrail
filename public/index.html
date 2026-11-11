@@ -147,6 +147,7 @@ body.app .topnav a:not(#navAdmin),body.app .topnav .navsub a[data-nav=check]{dis
 .cal .dc .p{font-size:11.5px;color:var(--mut)}
 @media(max-width:600px){.cal{gap:2px}.cal .dc{min-height:54px;padding:3px}.cal .dc .p{display:none}.cal .dc .g{font-size:10.5px;padding:0 3px;white-space:nowrap}}
 .tabs button.on{background:#fff;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tabs a{color:var(--ink);border-radius:8px;font-size:14px;white-space:nowrap}.tabs a.on{background:#fff;font-weight:600;color:var(--g);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .hd h2,.hd h3{margin:0}
 .queue{display:flex;gap:8px;flex-wrap:wrap}
@@ -510,9 +511,11 @@ async function uploadTripPhoto(dataUrl){const blob=await (await fetch(dataUrl)).
 function renderAdmin(sub){
   const u=me();if(!u)return renderLogin();
   const pages=ROLES[u.role].pages;if(sub&&pages.includes(sub))page=sub;if(!pages.includes(page))page=pages[0];
-  const body={today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
+  const ACC=['accounting','payouts','payments'],accIn=ACC.filter(p=>pages.includes(p));
+  const accBar=ACC.includes(page)&&accIn.length>1?`<div class="tabs" style="margin-bottom:14px;display:inline-flex">${accIn.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="text-decoration:none;padding:7px 14px">${PAGES[p]}</a>`).join('')}</div>`:'';
+  const body=accBar+{today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
-   ${pages.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`).join('')}
+   ${pages.filter(p=>!ACC.includes(p)||p===accIn[0]).map(p=>ACC.includes(p)&&accIn.length>1?`<a href="#admin-${p}" class="${ACC.includes(page)?'on':''}">💰 บัญชี</a>`:`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`).join('')}
    <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>
    <nav class="bnav">${(u.role==='guide'?[['today','📍','วันนี้'],['mytrips','🥾','งานของฉัน'],['earn','💵','รายได้'],['me','📱','ฉัน']]:[['today','📍','วันนี้'],['bookings','📋','การจอง'],['guides','🧭','ไกด์'],['me','📱','ฉัน']]).filter(([p])=>pages.includes(p)).map(([p,i,l])=>`<a href="#admin-${p}" class="${p===page?'on':''}"><b>${i}</b>${l}</a>`).join('')}</nav>`;
 }
