@@ -515,11 +515,14 @@ async function uploadTripPhoto(dataUrl){const blob=await (await fetch(dataUrl)).
 function renderAdmin(sub){
   const u=me();if(!u)return renderLogin();
   const pages=ROLES[u.role].pages;if(sub&&pages.includes(sub))page=sub;if(!pages.includes(page))page=pages[0];
-  const ACC=['accounting','payouts','payments'],accIn=ACC.filter(p=>pages.includes(p));
-  const accBar=ACC.includes(page)&&accIn.length>1?`<div class="tabs" style="margin-bottom:14px;display:inline-flex">${accIn.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="text-decoration:none;padding:7px 14px">${PAGES[p]}</a>`).join('')}</div>`:'';
+  /* เมนูรวมกลุ่ม: แสดงรายการเดียวในเมนูซ้าย + แท็บย่อยด้านบนหน้า */
+  const GROUPS=[{label:'💰 บัญชี',pages:['accounting','payouts','payments']},{label:'⚙️ ตั้งค่า',pages:['settings','content']}]
+    .map(g=>({...g,inn:g.pages.filter(p=>pages.includes(p))})).filter(g=>g.inn.length>1);
+  const grpOf=p=>GROUPS.find(g=>g.inn.includes(p)),cur=grpOf(page);
+  const accBar=cur?`<div class="tabs" style="margin-bottom:14px;display:inline-flex;max-width:100%;overflow-x:auto">${cur.inn.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="text-decoration:none;padding:7px 14px">${PAGES[p]}</a>`).join('')}</div>`:'';
   const body=accBar+{today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
-   ${pages.filter(p=>!ACC.includes(p)||p===accIn[0]).map(p=>ACC.includes(p)&&accIn.length>1?`<a href="#admin-${p}" class="${ACC.includes(page)?'on':''}">💰 บัญชี</a>`:`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`).join('')}
+   ${pages.filter(p=>{const g=grpOf(p);return !g||p===g.inn[0]}).map(p=>{const g=grpOf(p);return g?`<a href="#admin-${g.inn[0]}" class="${g===cur?'on':''}">${g.label}</a>`:`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`}).join('')}
    <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>
    <nav class="bnav">${(u.role==='guide'?[['today','📍','วันนี้'],['mytrips','🥾','งานของฉัน'],['earn','💵','รายได้'],['me','📱','ฉัน']]:[['today','📍','วันนี้'],['bookings','📋','การจอง'],['guides','🧭','ไกด์'],['me','📱','ฉัน']]).filter(([p])=>pages.includes(p)).map(([p,i,l])=>`<a href="#admin-${p}" class="${p===page?'on':''}"><b>${i}</b>${l}</a>`).join('')}</nav>`;
 }
