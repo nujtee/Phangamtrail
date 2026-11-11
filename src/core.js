@@ -20,9 +20,9 @@ export const uid = () => crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 
 /* ===== บทบาทและสิทธิ์ ===== */
 export const ROLES = {
-  superadmin: { label: 'ผู้ดูแลระบบสูงสุด', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'accounting', 'payouts', 'payments', 'notifications', 'users', 'settings', 'audit'] },
-  admin: { label: 'ผู้ดูแลระบบ', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'accounting', 'payouts', 'payments', 'notifications', 'settings', 'audit'] },
-  finance: { label: 'เจ้าหน้าที่บัญชี/การเงิน', pages: ['dashboard', 'calendar', 'bookings', 'accounting', 'payouts', 'payments', 'audit'] },
+  superadmin: { label: 'ผู้ดูแลระบบสูงสุด', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'accounting', 'payouts', 'payments', 'village', 'notifications', 'users', 'settings', 'audit'] },
+  admin: { label: 'ผู้ดูแลระบบ', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'accounting', 'payouts', 'payments', 'village', 'notifications', 'settings', 'audit'] },
+  finance: { label: 'เจ้าหน้าที่บัญชี/การเงิน', pages: ['dashboard', 'calendar', 'bookings', 'accounting', 'payouts', 'payments', 'village', 'audit'] },
   guidemgr: { label: 'ผู้จัดการไกด์', pages: ['dashboard', 'calendar', 'bookings', 'guides', 'notifications', 'audit'] },
   staff: { label: 'เจ้าหน้าที่ประสานงาน', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'notifications'] },
   guide: { label: 'ไกด์', pages: ['mytrips'] },
@@ -59,7 +59,7 @@ export function seedState() {
       groupFee: 1100, entryRates: { ta: 30, tc: 30, fa: 30, fc: 30 }, maxGroup: 6, payDeadlineMin: 30,
       maxPeoplePerDay: 0, maxGroupsPerSlot: 0, maxGroupsPerGuideDay: 1, minLead: { v: 12, u: 'h' }, seasons: [],
       slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60, rules: '', vehicleFee: 30, lineLinkBy: 'both', lineOa: '',
-      split: { guide: 700, village: 100, park: 300 },
+      split: { guide: 700, village: 100, park: 300 }, villageAcct: { bankName: '', accountName: '', accountNo: '' },
       channels: {
         bank: { on: false, mode: 'manual', bankName: '', accountName: '', accountNo: '' },
         promptpay: { on: false, mode: 'manual', id: '', name: '' },
@@ -281,7 +281,7 @@ export function adminState(db, actor) {
   const base = { settings: db.settings, site: db.site, rotSeq: db.rotSeq, lastGuideId: db.lastGuideId, me: safeUser(actor), today: today(), notifSeenAt: db.users.find(u => u.id === actor.id)?.notifSeenAt || '' };
   if (actor.role === 'guide') {
     return {
-      ...base, settings: { ...db.settings, channels: {} }, site: undefined,
+      ...base, settings: { ...db.settings, channels: {}, villageAcct: {} }, site: undefined,
       guides: db.guides.filter(g => g.id === actor.guideId), users: [], unavail: db.unavail.filter(u => u.guideId === actor.guideId),
       bookings: db.bookings.filter(b => b.guideId === actor.guideId && b.status !== 'cancelled'), audit: [],
       notifications: db.notifications.filter(n => n.guideId === actor.guideId && n.channel === 'push').slice(0, 100).map(n => ({ id: n.id, at: n.at, title: n.title, body: n.body, message: n.message, kind: n.kind || '', from: n.fromName || '', url: n.url || '' })),
@@ -429,6 +429,31 @@ export const adminActions = {
     const ref = str(p.ref, 80); b.payout = { paid: true, paidAt: nowISO(), paidBy: db.$actor.id, paidByName: db.$actor.name, ref };
     log(db, 'payout_confirm', `ยืนยันจ่ายค่าไกด์ ${g.firstName} ${g.lastName} ${baht(b.split.guide)} (${b.code}) บัญชี ${g.accountNo}${ref ? ' อ้างอิง ' + ref : ''}`);
     return { msg: 'บันทึกการจ่ายเงินแล้ว' };
+  },
+  /* ----- บัญชีหมู่บ้าน (รับส่วนกลางหมู่บ้าน) ----- */
+  villageAcctSave(db, p) {
+    need(db.$actor, 'payments');
+    const v = { bankName: str(p.bankName, 80), accountName: str(p.accountName, 120), accountNo: str(p.accountNo, 40) };
+    if (v.accountNo && !/^[0-9][0-9\- ]{5,29}$/.test(v.accountNo)) fail('เลขที่บัญชีต้องเป็นตัวเลข (ใส่ - หรือเว้นวรรคได้)');
+    if (v.accountNo && (!v.accountName || !v.bankName)) fail('กรุณากรอกชื่อธนาคารและชื่อบัญชีให้ครบ');
+    db.settings.villageAcct = v; log(db, 'settings', `แก้ไขบัญชีหมู่บ้าน: ${[v.bankName, v.accountName, v.accountNo].filter(Boolean).join(' ') || '(ล้างข้อมูล)'}`);
+    return { msg: 'บันทึกบัญชีหมู่บ้านแล้ว' };
+  },
+  payVillage(db, p) {
+    need(db.$actor, 'payout'); const v = db.settings.villageAcct || {};
+    if (!v.accountNo) fail('ยังไม่ได้ตั้งค่าบัญชีหมู่บ้าน — ไปที่ บัญชี → บัญชีหมู่บ้าน');
+    const want = Array.isArray(p.ids) ? new Set(p.ids) : null;
+    const L = db.bookings.filter(b => b.status === 'paid' && isDone(b) && !b.vpay?.paid && +b.split?.village > 0 && (!want || want.has(b.id)));
+    if (!L.length) fail('ไม่มียอดค้างโอนให้หมู่บ้าน');
+    const ref = str(p.ref, 80), tot = L.reduce((a, b) => a + +b.split.village, 0), vp = { paid: true, paidAt: nowISO(), paidBy: db.$actor.id, paidByName: db.$actor.name, ref, batch: uid() };
+    L.forEach(b => { b.vpay = { ...vp } });
+    const codes = L.map(b => b.code); log(db, 'payout_village', `ยืนยันโอนส่วนกลางหมู่บ้าน ${baht(tot)} (${L.length} กลุ่ม: ${codes.slice(0, 30).join(', ')}${codes.length > 30 ? ' …' : ''}) บัญชี ${v.bankName} ${v.accountNo}${ref ? ' อ้างอิง ' + ref : ''}`);
+    return { msg: `บันทึกการโอนให้หมู่บ้าน ${baht(tot)} แล้ว` };
+  },
+  payVillageUndo(db, p) {
+    need(db.$actor, 'payoutUndo'); const L = db.bookings.filter(b => b.vpay?.paid && b.vpay.batch === p.batch); if (!L.length) fail('ไม่พบรายการ');
+    log(db, 'payout_undo', `ยกเลิกยืนยันโอนส่วนกลางหมู่บ้าน ${baht(L.reduce((a, b) => a + +b.split.village, 0))} (${L.length} กลุ่ม · เดิมยืนยันโดย ${L[0].vpay.paidByName})`);
+    L.forEach(b => { delete b.vpay }); return { msg: 'ยกเลิกการยืนยันแล้ว' };
   },
   payUndo(db, p) {
     need(db.$actor, 'payoutUndo'); const b = byId(db, p.id); if (!b.payout?.paid) fail('รายการนี้ยังไม่ได้จ่าย');
