@@ -234,7 +234,7 @@ export class Engine extends DurableObject {
       if (path === '/internal/line') return this.lineEvents(await req.json());
       return json({ error: 'not found' }, 404);
     } catch (e) {
-      if (e instanceof UserError) return json({ error: e.message }, e.status || 400);
+      if (e instanceof UserError) return json({ error: e.message, ...(e.extra || {}) }, e.status || 400);
       console.error(e); return json({ error: 'เกิดข้อผิดพลาดในระบบ' }, 500);
     }
   }

@@ -43,7 +43,7 @@ export const PERM = {
 };
 const can = (actor, p) => !!actor && PERM[p].includes(actor.role);
 
-export class UserError extends Error { constructor(m, status = 400) { super(m); this.status = status } }
+export class UserError extends Error { constructor(m, status = 400, extra = null) { super(m); this.status = status; this.extra = extra } }
 const fail = m => { throw new UserError(m) };
 const need = (actor, p) => { if (!can(actor, p)) throw new UserError('ไม่มีสิทธิ์ทำรายการนี้', 403) };
 
@@ -355,6 +355,17 @@ export const publicActions = {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) fail('กรุณากรอกอีเมลให้ถูกต้อง');
     if ((s.rules || '').trim() && !p.acceptRules) fail('กรุณาอ่านและยอมรับกฎระเบียบก่อนจอง');
     if (!slotList(db).includes(p.time)) fail('กรุณาเลือกเวลาออกเดินทาง');
+    // กันส่งซ้ำ (กดซ้ำ/เน็ตหลุดแล้วส่งใหม่): คำขอเดิม (nonce เดิม) → คืนการจองเดิม ไม่สร้างใหม่
+    const nonce = String(p.nonce || '').replace(/[^\w-]/g, '').slice(0, 40);
+    if (nonce) { const prev = db.bookings.find(b => b.nonce === nonce && b.phone === phone); if (prev) return { booking: bookingView(prev), repeat: true } }
+    // กันจองซ้ำ: เบอร์หรืออีเมลเดียวกันมีการจองที่ยังใช้งานอยู่ในวันเดียวกัน → ถามยืนยันก่อน (จองหลายกลุ่มได้ถ้ายืนยัน)
+    const em = email.toLowerCase(), live = b => b.status === 'pending' || (b.status === 'paid' && b.trip !== 'paidcancel');
+    const same = db.bookings.filter(b => live(b) && b.date === p.date && (b.phone === phone || (b.email || '').toLowerCase() === em));
+    if (same.length && !p.allowDup) {
+      const x = same.find(b => b.time === p.time) || same[0], mine = x.phone === phone && (x.email || '').toLowerCase() === em, sameTime = x.time === p.time;
+      throw new UserError(sameTime ? `เบอร์โทร/อีเมลนี้มีการจองรอบ ${fmtDate(p.date)} ${p.time} น. อยู่แล้ว` : `เบอร์โทร/อีเมลนี้มีการจองวันที่ ${fmtDate(p.date)} อยู่แล้ว (รอบ ${x.time} น.)`, 409,
+        { dup: { sameTime, time: x.time, people: x.people, status: x.status === 'paid' ? 'paid' : x.slip ? 'review' : 'pending', count: same.length, ...(mine ? { code: x.code } : {}) } });
+    }
     const av = availability(db, p.date, people);
     if (av.closed) fail(`วันนี้ปิดรับจอง: ${av.closed.name}`);
     if (av.tooFar) fail(`จองล่วงหน้าได้ไม่เกิน ${s.bookAheadDays} วัน`);
@@ -369,11 +380,11 @@ export const publicActions = {
       name, phone, email, rulesAccepted: !!(s.rules || '').trim(), line: String(p.line || '').trim().slice(0, 60), note: String(p.note || '').trim().slice(0, 500),
       groupFee: +s.groupFee, entryTotal, vehicles, vehicleFee, vehicleTotal, total: +s.groupFee + entryTotal + vehicleTotal, split: { ...s.split },
       status: 'pending', slip: null, paidConfirmedBy: null, paidConfirmedAt: null, guideId: null, trip: 'unassigned', startedAt: null, endedAt: null,
-      payout: { paid: false }, createdAt: created, expiresAt: new Date(Date.parse(created) + (+s.payDeadlineMin || 30) * 60e3).toISOString(),
+      nonce: nonce || null, payout: { paid: false }, createdAt: created, expiresAt: new Date(Date.parse(created) + (+s.payDeadlineMin || 30) * 60e3).toISOString(),
     };
     db.bookings.push(b);
     db.$actor = { id: '-', name: 'ลูกค้า (' + name + ')', role: 'public' };
-    log(db, 'booking', `จองใหม่ ${b.code} ${fmtDate(b.date)} ${b.time} · ${people} คน · ${baht(b.total)}`);
+    log(db, 'booking', `จองใหม่ ${b.code} ${fmtDate(b.date)} ${b.time} · ${people} คน · ${baht(b.total)}${same.length ? ` (ยืนยันจองเพิ่ม — เบอร์/อีเมลนี้มีการจองวันเดียวกันอยู่แล้ว ${same.length} รายการ)` : ''}`);
     return { booking: bookingView(b) };
   },
   lookup(db, p) {
