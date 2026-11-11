@@ -127,15 +127,16 @@ body.app .topnav a:not(#navAdmin),body.app .topnav .navsub a[data-nav=check]{dis
 .fpills button:hover{border-color:var(--g2)}
 .fpills button .n{background:#eef1ec;color:var(--mut);border-radius:999px;padding:0 8px;font-size:12px;font-weight:700;line-height:21px;min-width:22px;text-align:center}
 .fpills button.on{background:var(--g);border-color:var(--g);color:#fff}.fpills button.on .n{background:rgba(255,255,255,.2);color:#fff}
-.frow{display:grid;grid-template-columns:minmax(300px,1.25fr) minmax(190px,1fr) minmax(200px,.85fr);gap:10px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fctl{display:flex;align-items:center;gap:8px;height:44px;margin:0;border:1px solid #cfd8d1;border-radius:12px;background:#fafbf9;padding:0 12px;color:var(--ink);font-weight:400;cursor:text;min-width:0;transition:border-color .15s,box-shadow .15s,background .15s}
 .fctl:focus-within{border-color:var(--g2);background:#fff;box-shadow:0 0 0 3px rgba(47,125,82,.14)}
 .fctl .ic{flex:none;font-size:15px;opacity:.75}.fctl .fl{flex:none;font-size:13px;color:var(--mut)}.fctl .sep{flex:none;color:var(--mut)}
 .fctl input,.fctl select{flex:1;min-width:0;width:auto;height:42px;border:0;padding:0;background:transparent;box-shadow:none;outline:none;font-size:15px;color:var(--ink)}
 .fctl input[type=date]{-webkit-appearance:none;appearance:none;min-height:0;text-align:left}.fctl input[type=date]::-webkit-date-and-time-value{text-align:left}
 .fctl input[type=search]::-webkit-search-decoration{-webkit-appearance:none}.fctl select{cursor:pointer}
-@media(max-width:900px){.frow{grid-template-columns:1fr 1fr}.frow .fctl:first-child{grid-column:1/-1}}
-@media(max-width:560px){.frow{grid-template-columns:1fr}}
+@media(max-width:430px){.frow{grid-template-columns:1fr}}
+.fdate{position:relative;cursor:pointer}.fdate .cal{flex:none;color:var(--g2);pointer-events:none}
+.fdate input[type=date]{position:relative;cursor:pointer}.fdate input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:auto;height:auto;opacity:0;cursor:pointer}
 .job{border-left:5px solid var(--g)}.job.started{border-left-color:#d97706}.job.done{border-left-color:#9ca3af;opacity:.85}
 .job .big{font-size:26px;font-weight:700;color:var(--g)}.job .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.job .acts .btn{flex:1;white-space:nowrap;min-width:130px;padding:12px;font-size:16px}
 .callrow{display:flex;gap:8px;margin-top:8px}.callrow a{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600}
@@ -209,6 +210,7 @@ const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d)};
 const today=()=>ymd(new Date());
+const bkkYmd=iso=>iso?new Date(Date.parse(iso)+7*3600e3).toISOString().slice(0,10):'';
 const baht=n=>'฿'+Number(n||0).toLocaleString('th-TH');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,10);
@@ -458,7 +460,7 @@ function renderCheck(){
 }
 
 /* ========== ADMIN ========== */
-let calM=today().slice(0,7),calR={preset:'month',from:'',to:''},calSel='',qDate=addDays(today(),1),page='dashboard',dashTab='day',bkF={status:'all',q:'',from:'',to:'',sort:'code_desc'},acc={preset:'month',from:'',to:''},payTab='unpaid',ntF='all',auF='all';
+let calM=today().slice(0,7),calR={preset:'month',from:'',to:''},calSel='',qDate=addDays(today(),1),page='dashboard',dashTab='day',bkF={status:'all',q:'',from:addDays(today(),-15),to:today(),sort:'code_desc'},acc={preset:'month',from:'',to:''},payTab='unpaid',ntF='all',auF='all';
 function renderLogin(){
   return `<form class="card login" data-form="login"><h2>เข้าสู่ระบบหลังบ้าน</h2>
   <div class="field"><label>ชื่อผู้ใช้</label><input name="username" autocomplete="username" autocapitalize="off"></div>
@@ -531,6 +533,7 @@ function tripPhotoModal(b,kind){const req=me().role==='guide',st=kind==='start';
     <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0;padding:14px">📷 ถ่ายรูป / เลือกรูป<input type="file" accept="image/*" capture="environment" id="tripcam" style="display:none"></label></div>
    <div id="tripprev" class="sm mut"></div>
    <div class="mact"><button class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" data-act="tripgo" data-kind="${kind}" data-id="${b.id}" id="tripgo">${st?'▶ ยืนยันเริ่มเดินทาง':'■ ยืนยันสิ้นสุดการเดินทาง'}</button></div>`)}
+document.addEventListener('click',e=>{const l=e.target.closest&&e.target.closest('.fdate');if(!l)return;const i=l.querySelector('input');if(i&&e.target!==i&&i.showPicker)try{i.showPicker()}catch(_){}});
 document.addEventListener('search',e=>{if(e.target.dataset.chg==='bkq'&&e.target.value!==bkF.q){bkF.q=e.target.value;render()}});
 document.addEventListener('change',e=>{if(e.target.id==='gmall'){const l=document.getElementById('gmlist');if(l)l.style.display=e.target.checked?'none':'block'}});
 document.addEventListener('change',async e=>{if(e.target.id!=='tripcam')return;const f=e.target.files[0];if(!f)return;const pv=document.getElementById('tripprev');
@@ -598,12 +601,12 @@ function tripButtons(b,asGuide){
 }
 function pBookings(){
   let L=[...DB.bookings];
-  if(bkF.from)L=L.filter(b=>b.date>=bkF.from);if(bkF.to)L=L.filter(b=>b.date<=bkF.to);
+  const bd=b=>bkkYmd(b.createdAt);if(bkF.from)L=L.filter(b=>bd(b)>=bkF.from);if(bkF.to)L=L.filter(b=>bd(b)<=bkF.to);
   if(bkF.q){const q=bkF.q.toLowerCase().replace(/\s+/g,'');L=L.filter(b=>(b.code+b.name+b.phone).toLowerCase().replace(/\s+/g,'').includes(q))}
   const STF={all:()=>true,pending:b=>b.status==='pending'&&!b.slip,review:b=>b.status==='pending'&&!!b.slip,paid:b=>b.status==='paid',cancelled:b=>b.status==='cancelled'&&!isExp(b),expired:isExp};
   const cnt=Object.fromEntries(Object.entries(STF).map(([k,f])=>[k,L.filter(f).length]));
   L=L.filter(STF[bkF.status]||STF.all);
-  const anyF=bkF.status!=='all'||bkF.from||bkF.to||bkF.q;
+  const anyF=bkF.status!=='all'||bkF.from!==addDays(today(),-15)||bkF.to!==today()||bkF.q;
   const cn=b=>+String(b.code).replace(/\D/g,'')||0,dt=b=>b.date+b.time;
   const SORTS={code_desc:(a,b)=>cn(b)-cn(a),code_asc:(a,b)=>cn(a)-cn(b),date_desc:(a,b)=>dt(b).localeCompare(dt(a))||cn(b)-cn(a),date_asc:(a,b)=>dt(a).localeCompare(dt(b))||cn(a)-cn(b)};
   L.sort(SORTS[bkF.sort]||SORTS.code_desc);
@@ -612,12 +615,13 @@ function pBookings(){
   <div class="card fbar">
    <div class="fpills">${[['all','ทั้งหมด'],['pending','รอชำระเงิน'],['review','รอตรวจสลิป'],['paid','ชำระแล้ว'],['cancelled','ยกเลิก'],['expired','หมดเวลาชำระ']].map(([k,l])=>`<button type="button" data-act="bkst" data-k="${k}" class="${bkF.status===k?'on':''}">${l}<span class="n">${cnt[k]}</span></button>`).join('')}</div>
    <div class="frow">
-    <label class="fctl" title="ช่วงวันเดินป่า"><span class="ic">📅</span><span class="fl">วันเดิน</span><input type="date" value="${bkF.from}" data-chg="bkfrom" aria-label="ตั้งแต่วันที่"><span class="sep">–</span><input type="date" value="${bkF.to}" data-chg="bkto" aria-label="ถึงวันที่"></label>
+    <label class="fctl fdate" title="วันที่จอง"><span class="fl">จองตั้งแต่</span><input type="date" value="${bkF.from}" max="${bkF.to||''}" data-chg="bkfrom" aria-label="จองตั้งแต่วันที่"><svg class="cal" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg></label>
+    <label class="fctl fdate" title="วันที่จอง"><span class="fl">ถึงวันที่</span><input type="date" value="${bkF.to}" min="${bkF.from||''}" data-chg="bkto" aria-label="ถึงวันที่"><svg class="cal" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg></label>
     <label class="fctl"><span class="ic">🔍</span><input type="search" value="${esc(bkF.q)}" data-chg="bkq" placeholder="ค้นหา รหัส ชื่อ เบอร์โทร" enterkeyhint="search" aria-label="ค้นหา"></label>
     <label class="fctl"><span class="ic">⇅</span><select data-chg="bksort" aria-label="เรียงตาม">${[['code_desc','รหัสจอง ใหม่ → เก่า'],['code_asc','รหัสจอง เก่า → ใหม่'],['date_desc','วันเดินป่า ล่าสุด → เก่า'],['date_asc','วันเดินป่า ใกล้สุด → ไกล']].map(([k,l])=>`<option value="${k}" ${bkF.sort===k?'selected':''}>${l}</option>`).join('')}</select></label>
    </div></div>
   <div class="card"><div class="tbl-wrap"><table><tr><th>รหัส</th><th>วัน/เวลา</th><th>ผู้จอง</th><th class="num">คน</th><th class="num">ยอด</th><th>การชำระเงิน</th><th>ไกด์</th><th>การเดินทาง</th><th></th></tr>
-  ${L.map(b=>`<tr><td><b>${b.code}</b></td><td style="white-space:nowrap">${fmtDateS(b.date)}<br><span class="mut sm">${b.time} น.</span></td>
+  ${L.map(b=>`<tr><td><b>${b.code}</b><div class="sm mut" style="white-space:nowrap">จอง ${fmtDateS(bkkYmd(b.createdAt))}</div></td><td style="white-space:nowrap">${fmtDateS(b.date)}<br><span class="mut sm">${b.time} น.</span></td>
    <td>${esc(b.name)}<div class="sm mut">${esc(b.phone)}</div></td><td class="num">${b.people}<div class="sm mut" style="white-space:normal;min-width:90px">${paxText(b.pax||{})}</div></td><td class="num">${baht(b.total)}</td>
    <td>${stB(b)}${b.slip?` <button class="btn ghost sm" data-act="slip" data-id="${b.id}">สลิป</button>${slipTag(b)}${b.payChannel?`<div class="sm mut">ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}${b.payFee?` · รับ ${baht(b.paidAmount)} (ค่าธรรมเนียม ${baht(b.payFee)})`:''}</div>`:''}`:''}
      ${b.status==='pending'&&can('confirmPay')?`<div style="margin-top:4px"><button class="btn sm" data-act="confirmpay" data-id="${b.id}">ยืนยันรับเงิน</button></div>`:''}
@@ -1139,7 +1143,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   accp:el=>{acc.preset=el.dataset.k;render()},
   ptab:el=>{payTab=el.dataset.k;render()},
   bkst:el=>{bkF.status=el.dataset.k;render()},
-  bkclear:()=>{Object.assign(bkF,{status:'all',q:'',from:'',to:''});render()},
+  bkclear:()=>{Object.assign(bkF,{status:'all',q:'',from:addDays(today(),-15),to:today()});render()},
   ntf:el=>{ntF=el.dataset.k;render()},
   confirmpay:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันรับเงิน',`${b.code} · ${esc(b.name)}<br>ยอด <b>${baht(b.paidAmount||b.total)}</b>${b.payFee?` <span class="sm mut">(รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})</span>`:''}${b.payChannel?`<br>ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}`:''}${b.slip&&!b.slipQr?'<br><span style="color:var(--warn)">⚠ อ่าน QR บนสลิปไม่ได้ — ตรวจยอดเงินเข้าบัญชีจริงก่อนยืนยัน</span>':''}${b.slip?'':'<br><span style="color:var(--warn)">⚠ ลูกค้ายังไม่ได้แนบหลักฐาน — ตรวจยอดเงินเข้าบัญชีก่อนยืนยัน</span>'}`))return;call('confirmPay',{id:b.id})},
   noshow:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันลูกค้าไม่มา',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ไกด์ ${esc(gName(DB,b.guideId))} ยังได้ค่าไกด์ <b>${baht(b.split.guide)}</b> และจะถูกย้ายไปต่อท้ายคิว`,'ยืนยันลูกค้าไม่มา','warn'))return;call('noshow',{id:b.id})},
