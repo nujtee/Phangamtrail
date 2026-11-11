@@ -33,6 +33,11 @@ export class Engine extends DurableObject {
   }
 
   /* ----- โหลด / บันทึก ----- */
+  /* การจองที่เลยเวลาชำระ (ยังไม่แนบสลิป) → ยกเลิกเป็น "หมดเวลาชำระเงิน" และคืนรอบให้ว่าง */
+  async expireDue() {
+    const db = await this.load(), now = nowISO();
+    if (db.bookings.some(b => b.status === 'pending' && !b.slip && b.expiresAt && b.expiresAt < now)) await this.run({ id: '-', name: 'ระบบ', role: 'system' }, d => expirePending(d));
+  }
   stateFor(db, actor) {
     const st = { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET) };
     if (actor.role === 'guide' && actor.guideId) { // กล่องแจ้งเตือนของไกด์: ดึงจากฐานข้อมูลโดยตรง (ย้อนหลังได้ไกลกว่า log ในหน่วยความจำ)
@@ -158,6 +163,7 @@ export class Engine extends DurableObject {
   async fetch(req) {
     const url = new URL(req.url), path = url.pathname;
     try {
+      if (path.startsWith('/api/public/') || path.startsWith('/api/admin/')) await this.expireDue(); // หมดเวลาชำระ → คืนรอบทันที ไม่ต้องรอ cron
       if (path === '/api/public/state') { const db = await this.load(); return json(publicState(db)) }
       if (path.startsWith('/api/public/')) {
         const name = path.slice(12), fn = publicActions[name]; if (!fn || req.method !== 'POST') return json({ error: 'not found' }, 404);

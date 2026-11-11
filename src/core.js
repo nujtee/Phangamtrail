@@ -248,8 +248,8 @@ export function expirePending(db) {
   const now = nowISO(); let n = 0;
   db.bookings.forEach(b => {
     if (b.status === 'pending' && !b.slip && b.expiresAt && b.expiresAt < now) {
-      b.status = 'cancelled'; b.cancelReason = 'หมดเวลาชำระเงิน'; n++;
-      log(db, 'cancel', `ยกเลิกอัตโนมัติ ${b.code} — ไม่ชำระภายใน ${db.settings.payDeadlineMin} นาที`);
+      b.status = 'cancelled'; b.cancelReason = 'หมดเวลาชำระเงิน'; b.expired = true; b.cancelledAt = now; n++;
+      log(db, 'cancel', `หมดเวลาชำระเงิน ${b.code} (${fmtDateS(b.date)} ${b.time} น.) — ไม่ชำระภายใน ${db.settings.payDeadlineMin} นาที · คืนรอบให้ว่างแล้ว`);
     }
   });
   return n;
@@ -273,7 +273,7 @@ export function publicState(db) {
 }
 export function bookingView(b) {
   if (!b) return null;
-  const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'name', 'createdAt'];
+  const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'expired', 'name', 'createdAt'];
   const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); if (b.email) o.email = b.email.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2'); return o;
 }
 const safeUser = u => ({ id: u.id, no: u.no || null, username: u.username, name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, guideId: u.guideId || null, active: u.active });
@@ -337,6 +337,7 @@ export const publicActions = {
   slip(db, p) { // p: {code, phone, channel, url} — url ได้จากการอัปโหลดเข้า R2 แล้ว
     const code = String(p.code || '').trim().toUpperCase(), phone = String(p.phone || '').replace(/\D/g, '');
     const b = db.bookings.find(x => (x.id === p.id || x.code === code) && x.phone === phone) || fail('ไม่พบการจอง');
+    if (b.status === 'cancelled' && (b.expired || b.cancelReason === 'หมดเวลาชำระเงิน')) fail('หมดเวลาชำระเงินแล้ว — ระบบคืนรอบนี้ให้ว่างแล้ว กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)');
     if (b.status !== 'pending') fail('รายการนี้ไม่อยู่ในสถานะรอชำระ');
     const ch = db.settings.channels[p.channel]; if (!ch?.on) fail('ช่องทางชำระเงินไม่ถูกต้อง');
     const qr = String(p.qr || '').trim().slice(0, 512), hash = String(p.hash || '').slice(0, 64);

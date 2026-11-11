@@ -53,6 +53,14 @@ export default {
       const buf = await file.arrayBuffer();
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(x => x.toString(16).padStart(2, '0')).join('');
       const qr = String(fd.get('qr') || '').trim().slice(0, 512);
+      { // ตรวจสถานะการจองก่อนเก็บไฟล์/ตรวจสลิป (เช่น หมดเวลาชำระเงินแล้ว)
+        const pre = await engine(env).fetch(new Request('https://do/api/public/lookup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone') }) }));
+        const pj = await pre.json().catch(() => ({}));
+        if (pj.error) return json({ error: pj.error }, 400);
+        const bk = pj.booking || {};
+        if (bk.status === 'cancelled' && (bk.expired || bk.cancelReason === 'หมดเวลาชำระเงิน')) return json({ error: 'หมดเวลาชำระเงินแล้ว — ระบบคืนรอบนี้ให้ว่างแล้ว กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)', expired: true }, 400);
+        if (bk.status !== 'pending') return json({ error: 'รายการนี้ไม่อยู่ในสถานะรอชำระ' }, 400);
+      }
       await env.IMAGES.put(key, buf, { httpMetadata: { contentType: file.type } });
       let verify = null;
       if (qr && env.SLIPOK_API_KEY && env.SLIPOK_BRANCH_ID) verify = await slipokVerify(env, qr);

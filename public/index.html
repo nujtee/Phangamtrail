@@ -295,7 +295,8 @@ const byId=id=>DB.bookings.find(b=>b.id===id);
 const ST={pending:['รอชำระเงิน','b-warn'],paid:['ชำระแล้ว','b-ok'],cancelled:['ยกเลิก','b-red']};
 const TR={noshow:['ลูกค้าไม่มา','b-gray'],paidcancel:['ลูกค้ายกเลิก (ไม่คืนเงิน)','b-gray'],unassigned:['รอมอบหมาย','b-red'],assigned:['มอบหมายแล้ว','b-blue'],started:['กำลังเดินทาง','b-warn'],completed:['สิ้นสุดการเดินทาง','b-ok']};
 const badge=([t,c])=>`<span class="badge ${c}">${t}</span>`;
-const stB=b=>badge(ST[b.status]);
+const isExp=b=>b.status==='cancelled'&&(b.expired||b.cancelReason==='หมดเวลาชำระเงิน');
+const stB=b=>badge(isExp(b)?['หมดเวลาชำระเงิน','b-gray']:b.status==='pending'&&b.slip?['รอตรวจสลิป','b-blue']:ST[b.status]);
 const trB=b=>b.status==='cancelled'?badge(['-','b-gray']):b.status==='pending'?badge(['รอชำระเงิน','b-gray']):badge(TR[b.trip]);
 
 /* ========== modal ========== */
@@ -413,7 +414,7 @@ function renderDone(b,fromBooking){
 function renderPayment(b,fromBooking){
   const s=PUB.settings;
   if(b.status==='paid'||(b.status==='pending'&&b.slip&&!(VB&&VB.reslip)))return renderDone(b,fromBooking);
-  const head=b.status==='paid'?`<div class="badge b-ok" style="font-size:14px">✓ ชำระเงินแล้ว — การจองได้รับการยืนยัน</div>`:b.status==='cancelled'?`<div class="badge b-red" style="font-size:14px">การจองนี้ถูกยกเลิก${b.cancelReason?' — '+esc(b.cancelReason):''}</div>`:
+  const head=b.status==='paid'?`<div class="badge b-ok" style="font-size:14px">✓ ชำระเงินแล้ว — การจองได้รับการยืนยัน</div>`:isExp(b)?`<div class="badge b-gray" style="font-size:15px">⏰ หมดเวลาชำระเงิน</div><p class="sm mut" style="margin:10px 0 0">ไม่ได้ชำระเงินภายใน ${s.payDeadlineMin} นาที ระบบจึงยกเลิกการจองนี้ และคืนรอบ ${fmtDate(b.date)} เวลา ${b.time} น. ให้ว่างแล้ว<br>หากยังต้องการเดินป่า กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)</p><div style="margin-top:12px"><button class="btn" data-act="gobook">จองรอบใหม่</button></div>`:b.status==='cancelled'?`<div class="badge b-red" style="font-size:14px">การจองนี้ถูกยกเลิก${b.cancelReason?' — '+esc(b.cancelReason):''}</div>`:
    `<h2 style="margin:0">${fromBooking?'จองสำเร็จ! ':''}กรุณาโอนเงินเพื่อยืนยันการจอง</h2><p class="mut sm" style="margin:4px 0 0">เลือกช่องทางที่สะดวก แล้วแนบหลักฐานการชำระ</p>
    ${b.slip?'':`<div class="badge b-warn" style="font-size:14px;margin-top:8px">⏱ โอนภายใน ${new Date(b.expiresAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น. · เหลือ <span data-countdown="${b.expiresAt}">--:--</span></div>`}`;
   return `<div class="card paybox">${head}
@@ -581,7 +582,7 @@ function tripButtons(b,asGuide){
 }
 function pBookings(){
   let L=[...DB.bookings];
-  if(bkF.status!=='all')L=L.filter(b=>b.status===bkF.status);
+  if(bkF.status==='expired')L=L.filter(isExp);else if(bkF.status==='cancelled')L=L.filter(b=>b.status==='cancelled'&&!isExp(b));else if(bkF.status!=='all')L=L.filter(b=>b.status===bkF.status);
   if(bkF.from)L=L.filter(b=>b.date>=bkF.from);if(bkF.to)L=L.filter(b=>b.date<=bkF.to);
   if(bkF.q){const q=bkF.q.toLowerCase();L=L.filter(b=>(b.code+b.name+b.phone).toLowerCase().includes(q))}
   const cn=b=>+String(b.code).replace(/\D/g,'')||0,dt=b=>b.date+b.time;
@@ -590,7 +591,7 @@ function pBookings(){
   const ag=activeGuides(DB);
   return `<div class="hd"><h2>รายการจอง</h2><span class="mut sm">${L.length} รายการ</span></div>
   <div class="card"><div class="grid4">
-   <div><label>สถานะชำระ</label><select data-chg="bkstatus">${[['all','ทั้งหมด'],['pending','รอชำระเงิน'],['paid','ชำระแล้ว'],['cancelled','ยกเลิก']].map(([k,l])=>`<option value="${k}" ${bkF.status===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div><label>สถานะชำระ</label><select data-chg="bkstatus">${[['all','ทั้งหมด'],['pending','รอชำระเงิน'],['paid','ชำระแล้ว'],['cancelled','ยกเลิก'],['expired','หมดเวลาชำระเงิน']].map(([k,l])=>`<option value="${k}" ${bkF.status===k?'selected':''}>${l}</option>`).join('')}</select></div>
    <div><label>ตั้งแต่วันที่</label><input type="date" value="${bkF.from}" data-chg="bkfrom"></div>
    <div><label>ถึงวันที่</label><input type="date" value="${bkF.to}" data-chg="bkto"></div>
    <div><label>ค้นหา (รหัส/ชื่อ/โทร)</label><input value="${esc(bkF.q)}" data-chg="bkq" placeholder="พิมพ์แล้วกด Enter"></div></div>
@@ -1008,8 +1009,9 @@ function render(){{document.body.classList.toggle('mob',!!(DB&&me()&&['guide','g
   if(q){try{const c=qrcode(0,'M');c.addData(q.dataset.payload);c.make();q.innerHTML=c.createSvgTag({cellSize:5,margin:2});const sv=q.querySelector('svg');sv.style.width='220px';sv.style.height='220px';sv.style.display='block'}catch(e){q.textContent=q.dataset.payload}}
 }
 
+let cdLast=0;
 setInterval(()=>{const els=document.querySelectorAll('[data-countdown]');els.forEach(el=>{const ms=new Date(el.dataset.countdown)-Date.now();
-  if(ms<=0){if(!el._done){el._done=1;refreshVB()}return}el.textContent=`${Math.floor(ms/60000)}:${pad(Math.floor(ms/1000)%60)}`})},1000);
+  if(ms<=0){el.textContent='0:00';if(Date.now()-cdLast>8000){cdLast=Date.now();refreshVB()}return}el.textContent=`${Math.floor(ms/60000)}:${pad(Math.floor(ms/1000)%60)}`})},1000);
 
 
 /* ========== events ========== */
@@ -1095,13 +1097,14 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
     try{const data=await shrinkTo(f,1400,.8);if(!data){toast('อ่านไฟล์รูปไม่ได้');return}
       const qr=await slipQR(f).catch(()=>'');
       const blob=await (await fetch(data)).blob(),fd=new FormData();fd.append('file',new File([blob],'slip.jpg',{type:'image/jpeg'}));fd.append('qr',qr||'');fd.append('code',VB.booking.code);fd.append('phone',VB.phone);fd.append('channel',payCh);
-      const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return}
+      const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');if(r.expired){slipDraft=null;refreshVB()}return}
       VB.booking=r.booking;VB.reslip=false;if(checkResult)checkResult.booking=r.booking;toast(r.verified?'ตรวจสลิปผ่าน — จองสำเร็จ':'ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ');URL.revokeObjectURL(slipDraft.url);slipDraft=null;render();scrollTo(0,0)}finally{busy=false}},
   reslip:()=>{if(VB){VB.reslip=true;render()}},
   refreshbk:async()=>{if(!VB)return toast('กด “ค้นหา” อีกครั้งเพื่ออัปเดตสถานะ');await refreshVB();toast('อัปเดตสถานะแล้ว')},
   slipchange:()=>{if(slipDraft)URL.revokeObjectURL(slipDraft.url);slipDraft=null;setSlipBox();const i=document.querySelector('[data-slip]');if(i)i.click()},
   savebk:async()=>{const b=VB?.booking||checkResult?.booking;if(!b)return;try{await saveBookingImage(b)}catch(e){toast('บันทึกไม่สำเร็จ')}},
   newbook:()=>{slipDraft=null;VB=null;avKey='';render();scrollTo(0,0)},
+  gobook:()=>{slipDraft=null;VB=null;checkResult=null;avKey='';if(location.hash!=='#book')location.hash='book';else render();scrollTo(0,0)},
   copy:el=>{navigator.clipboard?.writeText(el.dataset.v).then(()=>toast('คัดลอกแล้ว'),()=>toast('คัดลอกไม่ได้ — กรุณาคัดลอกเอง'))},
   mcancel:()=>{const m=document.getElementById('modal');m._res&&m._res(false);m._res=null;closeModal()},
   mok:()=>{const m=document.getElementById('modal');const r=m._res;const ref=m.querySelector('[name=ref]')?.value||'';m._res=null;closeModal();r&&r(ref||true)},
