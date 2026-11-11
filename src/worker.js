@@ -60,7 +60,8 @@ export default {
       }
       await env.IMAGES.put(key, buf, { httpMetadata: { contentType: file.type } });
       let verify = null;
-      if (qr && env.SLIPOK_API_KEY && env.SLIPOK_BRANCH_ID) verify = await slipokVerify(env, qr);
+      if (qr && env.EASYSLIP_API_KEY) verify = await easyslipVerify(env, qr); // ตรวจกับธนาคารผ่าน EasySlip (ถ้าตั้งค่า)
+      else if (qr && env.SLIPOK_API_KEY && env.SLIPOK_BRANCH_ID) verify = await slipokVerify(env, qr);
       const r = await engine(env).fetch(new Request('https://do/api/public/slip', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone'), channel: fd.get('channel'), url: '/img/' + key, hash, qr, verify }) }));
       if (!r.ok) ctx.waitUntil(env.IMAGES.delete(key));
       return r;
@@ -120,7 +121,21 @@ export default {
   },
 };
 
-/* ตรวจสลิปกับ SlipOK (ใช้เมื่อช่องทางตั้งเป็น "ออโต้" และตั้งค่า SLIPOK_API_KEY + SLIPOK_BRANCH_ID) */
+/* ตรวจสลิปกับ EasySlip (secret EASYSLIP_API_KEY) — https://document.easyslip.com/en/v1/verify/bank/payload */
+const ES_MSG = { invalid_payload: 'QR ไม่ใช่สลิปที่ธนาคารรู้จัก', slip_not_found: 'ไม่พบรายการนี้ที่ธนาคาร (อาจเป็นสลิปปลอม)', slip_pending: 'ธนาคารยังไม่ส่งข้อมูล (โอนไม่ถึง 5 นาที) — ตรวจอีกครั้งภายหลัง', unauthorized: 'คีย์ EasySlip ไม่ถูกต้อง', quota_exceeded: 'โควตา EasySlip หมด', duplicate_slip: 'EasySlip แจ้งว่าสลิปนี้เคยถูกตรวจแล้ว (อาจใช้ซ้ำกับที่อื่น)' };
+async function easyslipVerify(env, qr) {
+  try {
+    const r = await fetch(`${env.EASYSLIP_URL || 'https://api.easyslip.com'}/v1/verify?payload=${encodeURIComponent(qr)}&checkDuplicate=true`, { headers: { authorization: `Bearer ${env.EASYSLIP_API_KEY}` } });
+    const j = await r.json().catch(() => ({})), d = j.data || null, m = j.message || '';
+    const pick = x => ({ amount: +(x.amount?.amount ?? x.amount) || 0, ref: x.transRef || '', time: x.date || null,
+      recv: [x.receiver?.account?.bank?.account, x.receiver?.account?.proxy?.account].filter(Boolean).map(String),
+      recvName: x.receiver?.account?.name?.th || x.receiver?.account?.name?.en || '', bank: x.sender?.bank?.short || '' });
+    if (r.ok && j.status === 200 && d) return { ok: true, provider: 'EasySlip', ...pick(d), msg: 'ตรวจกับธนาคารผ่าน' };
+    if (m === 'duplicate_slip' && d) return { ok: true, dup: true, provider: 'EasySlip', ...pick(d), msg: ES_MSG.duplicate_slip };
+    return { ok: false, provider: 'EasySlip', notFound: m === 'slip_not_found', amount: 0, ref: '', msg: ES_MSG[m] || `ตรวจไม่ผ่าน (${m || r.status})` };
+  } catch (e) { return { ok: false, provider: 'EasySlip', amount: 0, ref: '', msg: 'ติดต่อ EasySlip ไม่ได้' } }
+}
+/* ตรวจสลิปกับ SlipOK (ตั้งค่า SLIPOK_API_KEY + SLIPOK_BRANCH_ID) */
 async function slipokVerify(env, qr) {
   try {
     const r = await fetch(`https://api.slipok.com/api/line/apikey/${env.SLIPOK_BRANCH_ID}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-authorization': env.SLIPOK_API_KEY }, body: JSON.stringify({ data: qr, log: true }) });
@@ -128,7 +143,7 @@ async function slipokVerify(env, qr) {
     const d = j.data || {};
     const time = d.transTimestamp || (/^\d{8}$/.test(d.transDate || '') && d.transTime ? `${d.transDate.slice(0, 4)}-${d.transDate.slice(4, 6)}-${d.transDate.slice(6, 8)}T${d.transTime}+07:00` : null);
     const recv = [d.receiver?.proxy?.value, d.receiver?.account?.value].filter(Boolean).map(String);
-    if (r.ok && j.success && d.success !== false) return { ok: true, amount: +d.amount || 0, ref: d.transRef || '', msg: 'ตรวจกับธนาคารผ่าน', time, recv };
+    if (r.ok && j.success && d.success !== false) return { ok: true, provider: 'SlipOK', amount: +d.amount || 0, ref: d.transRef || '', msg: 'ตรวจกับธนาคารผ่าน', time, recv };
     return { ok: false, amount: +d.amount || 0, ref: d.transRef || '', msg: j.message || `ตรวจสลิปไม่ผ่าน (${j.code || r.status})` };
   } catch (e) { return { ok: false, amount: 0, ref: '', msg: 'ติดต่อระบบตรวจสลิปไม่ได้' } }
 }

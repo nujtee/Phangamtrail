@@ -39,7 +39,7 @@ export class Engine extends DurableObject {
     if (db.bookings.some(b => b.status === 'pending' && !b.slip && b.expiresAt && b.expiresAt < now)) await this.run({ id: '-', name: 'ระบบ', role: 'system' }, d => expirePending(d));
   }
   stateFor(db, actor) {
-    const st = { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET), slipok: !!(this.env.SLIPOK_API_KEY && this.env.SLIPOK_BRANCH_ID) };
+    const st = { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET), slipProvider: this.env.EASYSLIP_API_KEY ? 'EasySlip' : (this.env.SLIPOK_API_KEY && this.env.SLIPOK_BRANCH_ID) ? 'SlipOK' : '' };
     if (actor.role === 'guide' && actor.guideId) { // กล่องแจ้งเตือนของไกด์: ดึงจากฐานข้อมูลโดยตรง (ย้อนหลังได้ไกลกว่า log ในหน่วยความจำ)
       try { st.notifications = this.sql.exec(`SELECT json FROM notif WHERE json_extract(json,'$.to') = ? ORDER BY n DESC LIMIT 100`, 'guide:' + actor.guideId).toArray().map(r => JSON.parse(r.json)).map(n => ({ id: n.id, at: n.at, title: n.title, body: n.body, message: n.message, kind: n.kind || '', from: n.fromName || '', url: n.url || '' })) } catch (e) { }
     }

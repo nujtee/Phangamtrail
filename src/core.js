@@ -282,12 +282,19 @@ export function parseSlipQr(raw) {
 }
 const SLIP_QR_CH = ['bank', 'promptpay']; // ช่องทางที่ต้องเป็นสลิปธนาคารที่มี QR
 const slipRefOf = x => x.slipRef || parseSlipQr(x.slipQr)?.ref || '';
-const digitRuns = v => String(v || '').match(/\d{3,}/g) || [];
-/* บัญชีผู้รับในสลิป (จากระบบตรวจสลิป) ตรงกับบัญชีของเราไหม: true/false, null = ไม่มีข้อมูล */
+/* บัญชีผู้รับในสลิป (ปิดบางหลัก เช่น xxx-x-x4197-x, 12xxxx3456, 08xxxxxx42) ตรงกับบัญชีของเราไหม: true/false, null = ไม่มีข้อมูล */
+function maskFits(mask, num) {
+  const m = String(mask || '').replace(/[^0-9xX*]/g, '').replace(/[X*]/g, 'x'); if (!/\d/.test(m)) return null;
+  if (m.length === num.length) return [...m].every((c, i) => c === 'x' || c === num[i]);
+  const lead = m.match(/^\d+/)?.[0] || '', tail = m.match(/\d+$/)?.[0] || '', mids = (m.match(/\d+/g) || []).filter(x => x !== lead && x !== tail && x.length >= 3);
+  if (lead && !num.startsWith(lead)) return false; if (tail && !num.endsWith(tail)) return false;
+  return mids.every(x => num.includes(x));
+}
 function recvMatch(db, vals) {
-  const runs = (vals || []).map(digitRuns).filter(r => r.length); if (!runs.length) return null;
-  const c = db.settings.channels, ours = [c.bank?.accountNo, c.promptpay?.id, c.truemoney?.phone].map(x => String(x || '').replace(/\D/g, '')).filter(Boolean);
-  return runs.some(r => ours.some(o => r.every(x => o.includes(x))));
+  const c = db.settings.channels, ours = [];
+  [c.bank?.accountNo, c.promptpay?.id, c.truemoney?.phone].map(x => String(x || '').replace(/\D/g, '')).filter(Boolean).forEach(n => { ours.push(n); if (/^0\d{9}$/.test(n)) ours.push('66' + n.slice(1), '0066' + n.slice(1)) });
+  const res = (vals || []).map(v => ours.map(n => maskFits(v, n))).filter(r => r.some(x => x !== null));
+  if (!res.length) return null; return res.some(r => r.some(x => x === true));
 }
 const NOT_SLIP = 'รูปนี้ไม่ใช่สลิปโอนเงิน (ไม่พบ QR ตรวจสอบสลิปของธนาคาร) — กรุณาแนบสลิปที่บันทึกจากแอปธนาคาร แบบเต็มใบ ไม่ครอป ให้เห็น QR มุมสลิปชัดเจน';
 function slipValidate(db, p) {
@@ -387,8 +394,8 @@ export const publicActions = {
     // ออโต้: ตรวจสลิปกับผู้ให้บริการ (SlipOK) ผ่าน → ยืนยันทันที / ไม่ผ่านหรือยังไม่เชื่อม → รอเจ้าหน้าที่
     const v = p.verify || null, need = b.paidAmount || b.total;
     const tOld = v?.ok && v.time && Date.parse(v.time) < Date.parse(b.createdAt) - 10 * 60e3, rOk = v?.ok ? recvMatch(db, v.recv) : null;
-    b.slipVerify = v ? { ok: !!v.ok, amount: +v.amount || 0, ref: String(v.ref || '').slice(0, 80), msg: String(v.msg || '').slice(0, 200), at: nowISO(), time: v.time || null, recvOk: rOk, recv: (v.recv || []).filter(Boolean).join(' / ').slice(0, 80), old: !!tOld } : null;
-    if (ch.mode === 'auto' && v?.ok && +v.amount >= need && rOk !== false && !tOld) {
+    b.slipVerify = v ? { ok: !!v.ok, provider: String(v.provider || 'SlipOK').slice(0, 20), amount: +v.amount || 0, ref: String(v.ref || '').slice(0, 80), msg: String(v.msg || '').slice(0, 200), at: nowISO(), time: v.time || null, recvOk: rOk, recv: (v.recv || []).filter(Boolean).join(' / ').slice(0, 80), recvName: String(v.recvName || '').slice(0, 80), old: !!tOld, dup: !!v.dup, notFound: !!v.notFound } : null;
+    if (ch.mode === 'auto' && v?.ok && !v.dup && +v.amount >= need && rOk !== false && !tOld) {
       db.$actor = { id: 'auto', name: 'ระบบอัตโนมัติ (ตรวจสลิป)', role: 'system' };
       confirmPayment(db, b, 'ยืนยันอัตโนมัติ (สลิปผ่านการตรวจ)');
       return { booking: bookingView(b), verified: true };
