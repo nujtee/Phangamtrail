@@ -643,7 +643,7 @@ function pGuides(){
   ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
    ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
   ${lineLinkCard()}
-  <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th></th></tr>
+  <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th style="text-align:right">${can('editGuides')?'<button class="btn sm" data-act="gnotifyall">🔔 ทดสอบแจ้งเตือนทั้งหมด</button>':''}</th></tr>
    ${[...DB.guides].sort((a,b)=>a.priority-b.priority).map(g=>`<tr><td><b>${g.priority}</b>${ed?`<div><button class="btn ghost sm" data-act="gup" data-id="${g.id}">▲</button><button class="btn ghost sm" data-act="gdown" data-id="${g.id}">▼</button></div>`:''}</td>
     <td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td><td>${g.accountNo?`${esc(g.bankName)}<div class="sm">${esc(g.accountNo)}</div>`:'<span class="sm" style="color:var(--red)">ยังไม่มีเลขบัญชี</span>'}</td>
     <td class="sm">📞 ${esc(g.phone)}<br>✉️ ${esc(g.email)}<br>LINE: ${esc(g.line)}${g.lineUserId?' ✓เชื่อม OA':''}<br>${(a=>a?`🔑 บัญชี: ${esc(a.username)}`:'<span style="color:var(--red)">🔑 ยังไม่มีบัญชีเข้าระบบ</span>')(DB.users.find(u=>u.guideId===g.id&&u.role==='guide'))}</td>
@@ -1109,6 +1109,8 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   gtoggle:el=>call('guideToggle',{id:el.dataset.id}),
   gup:el=>call('guideMove',{id:el.dataset.id,d:-1}),gdown:el=>call('guideMove',{id:el.dataset.id,d:1}),
   gnotify:el=>call('guideTest',{id:el.dataset.id}),
+  gnotifyall:async()=>{const G=DB.guides.filter(g=>g.active!==false);if(!G.length)return toast('ยังไม่มีไกด์ที่เปิดใช้งาน');
+    if(await confirmBox('ทดสอบแจ้งเตือนไกด์ทั้งหมด',`ส่งข้อความทดสอบถึงไกด์ที่เปิดใช้งาน <b>${G.length} คน</b> ทาง <b>LINE · อีเมล · แอป</b><div class="sm mut" style="margin-top:6px">LINE ผูกแล้ว ${G.filter(g=>g.lineUserId).length}/${G.length} · มีอีเมล ${G.filter(g=>g.email).length}/${G.length}</div>`,'ส่งทดสอบ'))call('guideTestAll',{})},
   autoall:()=>call('autoAll'),
   decline:el=>{const b=byId(el.dataset.id);openModal(`<h3>แจ้งไม่ว่างรับงาน</h3><p>${b.code} · ${fmtDate(b.date)} ${b.time} น. · ${b.people} คน</p>
     <form data-form="decline" data-id="${b.id}"><div class="field"><label>เหตุผล *</label><select name="preset"><option>ติดธุระส่วนตัว</option><option>เจ็บป่วย</option><option>ติดงานอื่น</option><option>เดินทางไม่สะดวก</option><option value="">อื่น ๆ (ระบุด้านล่าง)</option></select></div>

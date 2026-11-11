@@ -122,7 +122,7 @@ export class Engine extends DurableObject {
       : t.startsWith('roles:') ? db.users.filter(u => u.active && t.slice(6).split(',').includes(u.role))
       : t.startsWith('user:') ? db.users.filter(u => u.active && u.id === t.slice(5)) : [];
     const subs = (await this.ctx.storage.get('pushsubs')) || [], mine = subs.filter(x => users.some(u => u.id === x.userId));
-    if (!mine.length) return users.length ? 'ยังไม่ได้เปิดแจ้งเตือนในแอป' : 'ไม่มีผู้รับ';
+    if (!mine.length) return users.length ? 'ยังไม่ได้เปิดแจ้งเตือนในแอป' : t.startsWith('guide:') ? 'ไกด์ยังไม่มีบัญชีเข้าแอป' : 'ไม่มีผู้รับ';
     const item = { id: uid(), title: n.title || 'ผาแง่ม', body: n.body || n.message || '', url: n.url || '/#admin', at: nowISO() };
     for (const u of users) { const k = 'inbox:' + u.id, box = (await this.ctx.storage.get(k)) || []; box.push(item); await this.ctx.storage.put(k, box.slice(-20)) }
     let ok = 0; const dead = [];

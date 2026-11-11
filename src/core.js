@@ -507,6 +507,13 @@ export const adminActions = {
     log(db, 'notify', `แจ้งงานไกด์ ${L.length} งาน: ${L.map(b => `${b.code}→${gName(db, b.guideId)}`).join(', ')}`);
     return { msg: `ส่งแจ้งเตือน ${L.length} งานแล้ว${noCh.size ? ` · ⚠ ${[...noCh].join(', ')} ยังไม่ผูก LINE และไม่มีอีเมล` : ''}` };
   },
+  guideTestAll(db) {
+    need(db.$actor, 'editGuides'); const G = db.guides.filter(g => g.active !== false); if (!G.length) fail('ยังไม่มีไกด์ที่เปิดใช้งาน');
+    G.forEach(g => notifyGuide(db, g, { code: 'TEST', date: today(), time: '06:00', name: 'ทดสอบระบบ', people: 0, phone: '-' }, 'test'));
+    log(db, 'notify', `ทดสอบแจ้งเตือนไกด์ทั้งหมด ${G.length} คน (LINE · อีเมล · แอป)`);
+    const ln = G.filter(g => g.lineUserId).length, em = G.filter(g => g.email).length;
+    return { msg: `ส่งทดสอบถึงไกด์ ${G.length} คนแล้ว · LINE ผูกแล้ว ${ln}/${G.length} · มีอีเมล ${em}/${G.length} · ดูผลที่เมนูการแจ้งเตือน` };
+  },
   guideTest(db, p) { need(db.$actor, 'editGuides'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'); notifyGuide(db, g, { code: 'TEST', date: today(), time: '06:00', name: 'ทดสอบระบบ', people: 0, phone: '-' }, 'test'); return { msg: 'ส่งแจ้งเตือนทดสอบแล้ว ดูผลที่เมนูการแจ้งเตือน' } },
   async userSave(db, p, ctx) {
     need(db.$actor, 'users'); const username = str(p.username, 40), name = str(p.name, 80), pw = String(p.password || '');
