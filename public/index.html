@@ -700,12 +700,14 @@ function pAccounting(){
    <tfoot><tr><td colspan="3">รวม</td><td class="num">${sum(b=>b.people)}</td><td class="num">${baht(G)}</td><td class="num">${baht(V)}</td><td class="num">${baht(P)}</td><td class="num">${baht(E)}</td><td class="num">${baht(VH)}</td><td class="num">${baht(G+V+P+E+VH)}</td></tr></tfoot></table></div></div>`;
 }
 
+function payData(){const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid'),L=done.filter(b=>payTab==='unpaid'?!b.payout.paid:b.payout.paid).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  return {L,lab:payTab==='unpaid'?{text:'รายการรอจ่าย',file:'unpaid'}:{text:'รายการจ่ายแล้ว',file:'paid'}}}
 function pPayouts(){
   const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid');
   const L=done.filter(b=>payTab==='unpaid'?!b.payout.paid:b.payout.paid).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const owe={};done.filter(b=>!b.payout.paid).forEach(b=>owe[b.guideId]=(owe[b.guideId]||0)+b.split.guide);
   const logs=DB.audit.filter(a=>a.action.startsWith('payout'));
-  return `<div class="hd"><h2>เบิกจ่ายค่าไกด์</h2></div>
+  return `<div class="hd"><h2>เบิกจ่ายค่าไกด์</h2><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="paypdf">📄 ส่งออก PDF</button><button class="btn ghost sm" data-act="paycsv">⬇ ดาวน์โหลด CSV</button></div></div>
   <div class="card"><h3>ยอดค้างจ่ายรายไกด์</h3><div class="queue">${Object.keys(owe).map(id=>`<div class="qitem"><b>${esc(gName(DB,id))}</b> <span class="badge b-warn">${baht(owe[id])}</span></div>`).join('')||'<span class="mut">ไม่มียอดค้างจ่าย 🎉</span>'}</div>
    <p class="mut sm" style="margin-bottom:0">รายการจะแสดงที่นี่เมื่อไกด์กด “เริ่มการเดินทาง” และ “สิ้นสุดการเดินทาง” ครบแล้ว หรือเมื่อลูกค้าไม่มา/ยกเลิกหลังชำระเงิน (ไกด์ที่ได้รับมอบหมายยังได้ค่าไกด์ตามจำนวนในระบบ และถูกย้ายไปต่อท้ายคิว)</p></div>
   <div class="card"><div class="hd"><div class="tabs"><button data-act="ptab" data-k="unpaid" class="${payTab==='unpaid'?'on':''}">รอจ่าย (${done.filter(b=>!b.payout.paid).length})</button><button data-act="ptab" data-k="paid" class="${payTab==='paid'?'on':''}">จ่ายแล้ว (${done.filter(b=>b.payout.paid).length})</button></div></div>
@@ -720,9 +722,9 @@ function pPayouts(){
 
 function pNotifications(){
   const L=DB.notifications.filter(n=>ntF==='all'||n.channel===ntF).slice(0,80);
-  return `<div class="hd"><h2>การแจ้งเตือน</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
+  return `<div class="hd"><h2>การแจ้งเตือน</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล'],['push','แอป']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
   <div class="card"><p class="mut sm" style="margin-top:0">ส่งผ่าน LINE OA และอีเมลทันทีที่มีการมอบหมาย/เปลี่ยนแปลงงาน · เตือนอีกครั้ง 18:00 คืนก่อนเดินป่า · สถานะ “ยังไม่ผูก” = ไกด์ยังไม่ได้พิมพ์เบอร์ใน LINE OA</p>
-  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):badge(['Email','b-blue'])}<b>${esc(n.guideId?gName(DB,n.guideId):n.custName?'ลูกค้า: '+n.custName:(n.toLabel||'-'))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
+  ${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid #eef1ec"><div class="row" style="gap:8px">${n.channel==='line'?badge(['LINE','b-ok']):n.channel==='push'?badge(['แอป','b-gray']):badge(['Email','b-blue'])}<b>${esc(n.guideId?gName(DB,n.guideId):n.custName?'ลูกค้า: '+n.custName:(n.toLabel||'-'))}</b><span class="mut sm">→ ${esc(n.toLabel||n.to)} · ${fmtDT(n.at)}</span>${n.status?badge([n.status,n.status==='ส่งแล้ว'?'b-ok':n.status==='pending'?'b-gray':'b-warn']):''}</div><div class="msg">${esc(n.message)}</div></div>`).join('')||'<div class="empty">ยังไม่มี</div>'}</div>`;
 }
 
 function pUsers(){
@@ -988,6 +990,28 @@ const ACT={
   notifyall:async()=>{const L=DB.bookings.filter(b=>b.status==='paid'&&b.guideId&&b.date>=today()&&!['completed','noshow','paidcancel'].includes(b.trip));if(!L.length)return toast('ไม่มีงานที่แจ้งได้');
     const G=[...new Set(L.map(b=>gName(DB,b.guideId)))];if(await confirmBox('แจ้งเตือนไกด์ทุกคน',`ส่ง LINE + อีเมล แจ้งงาน <b>${L.length} งาน</b> ถึงไกด์ ${G.length} คน (${esc(G.join(', '))}) พร้อมลิงก์เข้าระบบไกด์`,'ส่งแจ้งเตือน'))call('notifyJobs',{ids:L.map(b=>b.id)})},
   reloaddata:async(el,e)=>{if(DIRTY&&!await confirmBox('โหลดข้อมูลล่าสุด','มีข้อมูลที่กรอกไว้แต่ยังไม่บันทึก ถ้าโหลดใหม่ข้อมูลนั้นจะหาย','โหลดใหม่'))return;DIRTY=false;await loadAdmin();await loadPub();render();toast('อัปเดตข้อมูลล่าสุดแล้ว')},
+  paycsv:()=>{const {L,lab}=payData();const head=['วันที่','เวลา','รหัสจอง','ไกด์','ธนาคาร','เลขที่บัญชี','เบอร์โทร','สถานะการเดินทาง','เริ่ม','สิ้นสุด','ค่าไกด์','สถานะจ่าย','ผู้ยืนยันจ่าย','เวลาจ่าย','เลขอ้างอิง'];
+    const rows=L.map(b=>{const g=gObj(DB,b.guideId)||{};return [b.date,b.time,b.code,`${g.firstName||''} ${g.lastName||''}`.trim(),g.bankName||'',g.accountNo||'',g.phone||'',({completed:'เดินเสร็จ',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||b.trip),b.startedAt?fmtDT(b.startedAt):'',b.endedAt?fmtDT(b.endedAt):'',b.split.guide,b.payout.paid?'จ่ายแล้ว':'รอจ่าย',b.payout.paidByName||'',b.payout.paidAt?fmtDT(b.payout.paidAt):'',b.payout.ref||'']});
+    rows.push(['รวม','','','','','','','','','',L.reduce((a,b)=>a+b.split.guide,0),'','','','']);
+    const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+    const blob=new Blob(['﻿'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`phangam-guide-payout-${lab.file}-${today()}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('ดาวน์โหลด CSV แล้ว')},
+  paypdf:()=>{const {L,lab}=payData(),w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
+    const tot=L.reduce((a,b)=>a+b.split.guide,0),by={};L.forEach(b=>{const k=b.guideId;by[k]=by[k]||{n:0,s:0};by[k].n++;by[k].s+=b.split.guide});
+    const R=DB.settings.receipt||{};
+    const tr=L.map(b=>{const g=gObj(DB,b.guideId)||{};return `<tr><td>${fmtDateS(b.date)} ${b.time}<div class="m">${b.code}</div></td><td>${esc((g.firstName||'')+' '+(g.lastName||''))}</td><td>${g.accountNo?esc(g.bankName||'')+'<br><b>'+esc(g.accountNo)+'</b>':'<span style="color:#b42318">ไม่มีเลขบัญชี</span>'}</td><td>${({completed:'เดินเสร็จ',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||'')}</td><td class="n">${baht(b.split.guide)}</td><td>${b.payout.paid?`จ่ายแล้ว<div class="m">${esc(b.payout.paidByName||'')} · ${fmtDT(b.payout.paidAt)}${b.payout.ref?' · '+esc(b.payout.ref):''}</div>`:'รอจ่าย'}</td></tr>`}).join('')||'<tr><td colspan="6" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>';
+    w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>รายงานเบิกจ่ายค่าไกด์ ${lab.text}</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>@page{size:A4 landscape;margin:12mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:12px;margin:0}h1{font-size:20px;margin:0;color:#1f5c40}.sub{color:#6b7280;margin:2px 0 12px}
+.sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.sum div{border:1px solid #d9e2dc;border-radius:8px;padding:6px 10px}.sum b{font-size:15px}
+table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}th{background:#eef4f0}.n{text-align:right}.m{color:#6b7280;font-size:10.5px}tfoot td{font-weight:700;border-top:2px solid #1f5c40}
+.sign{display:flex;justify-content:space-around;margin-top:40px}.sign div{width:220px;text-align:center;border-top:1px dotted #6b7280;padding-top:6px;color:#4b5563}
+.bar{margin:0 0 12px}.bar button{font:inherit;padding:6px 14px;border-radius:8px;border:0;background:#1f5c40;color:#fff;cursor:pointer}@media print{.bar{display:none}}@media screen{body{padding:18px;max-width:1200px;margin:auto}}</style></head><body>
+<div class="bar"><button onclick="print()">🖨 พิมพ์ / บันทึกเป็น PDF</button></div>
+<h1>รายงานเบิกจ่ายค่าไกด์ — ${esc(R.name||'ผาแง่ม Trail')}</h1><div class="sub">${lab.text} · ${L.length} รายการ · รวม ${baht(tot)} · ออกรายงาน ${new Date().toLocaleString('th-TH')} โดย ${esc(me()?.name||'')}</div>
+<div class="sum">${Object.entries(by).map(([id,v])=>`<div>${esc(gName(DB,id))}<br><b>${baht(v.s)}</b> <span class="m">(${v.n} งาน)</span></div>`).join('')}</div>
+<table><thead><tr><th>วันที่/รหัส</th><th>ไกด์</th><th>ธนาคาร / เลขที่บัญชี</th><th>ประเภทงาน</th><th class="n">ค่าไกด์</th><th>สถานะจ่าย</th></tr></thead><tbody>${tr}</tbody><tfoot><tr><td colspan="4">รวม</td><td class="n">${baht(tot)}</td><td></td></tr></tfoot></table>
+<div class="sign"><div>ผู้จัดทำ</div><div>ผู้อนุมัติ</div></div>
+<script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);w.document.close()},
   calnav:el=>{const d=+el.dataset.d;if(!d)calM=today().slice(0,7);else{const [y,m]=calM.split('-').map(Number),n=new Date(y,m-1+d,1);calM=`${n.getFullYear()}-${pad(n.getMonth()+1)}`}render()},
   calday:el=>{calSel=el.dataset.d;calR={preset:'custom',from:calSel,to:calSel};render()},
   calp:el=>{calR.preset=el.dataset.k;calSel='';if(el.dataset.k==='custom'&&!calR.from){calR.from=monthRange(calM+'-01')[0];calR.to=monthRange(calM+'-01')[1]}render()},
