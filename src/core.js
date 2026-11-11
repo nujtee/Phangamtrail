@@ -415,6 +415,9 @@ export const adminActions = {
   tripEnd(db, p) {
     const b = byId(db, p.id); if (!(can(db.$actor, 'tripAdmin') || ownTrip(db, b))) need(db.$actor, 'tripAdmin');
     if (b.trip !== 'started') fail('ต้องเริ่มการเดินทางก่อน');
+    const photo = str(p.photo, 200); if (photo && !/^\/img\/trips\//.test(photo)) fail('รูปไม่ถูกต้อง');
+    if (db.$actor.role === 'guide' && !photo) fail('กรุณาถ่ายรูปกลุ่มก่อนสิ้นสุดการเดินทาง');
+    if (photo) b.endPhoto = photo;
     b.trip = 'completed'; b.endedAt = nowISO(); log(db, 'trip_end', `สิ้นสุดเดินทาง ${b.code} (ไกด์ ${gName(db, b.guideId)})`);
     return { msg: 'สิ้นสุดการเดินทางแล้ว' };
   },

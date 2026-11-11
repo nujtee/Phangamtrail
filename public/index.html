@@ -448,7 +448,7 @@ function renderLogin(){
   ${AUTH.hasUsers?'':'<p class="sm" style="color:var(--red);margin-top:12px">ระบบยังไม่มีผู้ดูแล — ตั้งค่า ADMIN_PASSWORD ใน Cloudflare แล้วโหลดหน้านี้ใหม่</p>'}</form>`;
 }
 /* ===== แอปไกด์ (PWA) ===== */
-const photoLink=b=>b.startPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-src="${esc(b.startPhoto)}">📷 รูปกลุ่ม</button>`:'';
+const photoLink=b=>(b.startPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-t="ก่อนเดิน" data-src="${esc(b.startPhoto)}">📷 รูปก่อนเดิน</button>`:'')+(b.endPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-t="หลังเดินเสร็จ" data-src="${esc(b.endPhoto)}">📷 รูปหลังเดิน</button>`:'');
 function jobCard(b,asGuide){const g=gObj(DB,b.guideId),cls=b.trip==='started'?'started':isDone(b)?'done':'';const tel=String(b.phone||'').replace(/[^\d+]/g,'');
   return `<div class="card job ${cls}"><div class="hd"><div><div class="big">${b.time} น.</div><div class="sm mut">${fmtDate(b.date)} · ${b.code}</div></div>${trB(b)}</div>
    <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน<div class="sm mut">${paxText(b.pax||{})}${b.vehicles?` · รถ ${b.vehicles} คัน`:''}</div></dd>${asGuide?'':`<dt>ไกด์</dt><dd>${g?esc(g.firstName+' '+g.lastName):'<b style="color:var(--red)">ยังไม่มีไกด์</b>'}</dd>`}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
@@ -498,15 +498,17 @@ async function pushOn(){try{const perm=await Notification.requestPermission();if
   const r=await post('/api/push/subscribe',{endpoint:sub.endpoint});if(!r.ok)return toast(r.error||'เปิดแจ้งเตือนไม่สำเร็จ');PUSH.on=true;toast(r.msg);render()}catch(e){toast('เปิดแจ้งเตือนไม่สำเร็จ: '+(e.message||e))}}
 async function pushOff(){try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub){await post('/api/push/unsubscribe',{endpoint:sub.endpoint});await sub.unsubscribe()}PUSH.on=false;toast('ปิดแจ้งเตือนเครื่องนี้แล้ว');render()}catch(e){toast('ไม่สำเร็จ')}}
 /* ถ่ายรูปกลุ่มก่อนเริ่มเดินทาง */
-let tripPhoto=null;
-function tripStartModal(b){const req=me().role==='guide';tripPhoto=null;
-  openModal(`<h3>▶ เริ่มการเดินทาง</h3><p class="sm">${b.code} · ${b.people} คน · ${fmtDate(b.date)} ${b.time} น.</p>
-   <div class="field"><label>📷 รูปกลุ่มก่อนเดิน ${req?'<b style="color:var(--red)">*</b>':'(ไม่บังคับสำหรับเจ้าหน้าที่)'}</label>
+let tripPhoto=null,tripUp=null;
+function tripPhotoModal(b,kind){const req=me().role==='guide',st=kind==='start';tripPhoto=null;tripUp=null;
+  openModal(`<h3>${st?'▶ เริ่มการเดินทาง':'■ สิ้นสุดการเดินทาง'}</h3><p class="sm">${b.code} · ${b.people} คน · ${fmtDate(b.date)} ${b.time} น.${st?'':` · เริ่ม ${fmtDT(b.startedAt)}`}</p>
+   <div class="field"><label>📷 รูปกลุ่มนักท่องเที่ยว${st?'ก่อนเดิน':'หลังเดินเสร็จ'} ${req?'<b style="color:var(--red)">* ต้องถ่ายและอัปโหลดก่อน</b>':'(ไม่บังคับสำหรับเจ้าหน้าที่)'}</label>
     <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0;padding:14px">📷 ถ่ายรูป / เลือกรูป<input type="file" accept="image/*" capture="environment" id="tripcam" style="display:none"></label></div>
-   <div id="tripprev" class="sm mut">${req?'ต้องถ่ายรูปผู้เดินป่าทั้งกลุ่มก่อนกดเริ่ม':''}</div>
-   <div class="mact"><button class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" data-act="tripgo" data-id="${b.id}" ${req?'disabled':''} id="tripgo">▶ ยืนยันเริ่มเดินทาง</button></div>`)}
-document.addEventListener('change',async e=>{if(e.target.id!=='tripcam')return;const f=e.target.files[0];if(!f)return;const d=await shrinkTo(f,1600,.8);tripPhoto=d;
-  document.getElementById('tripprev').innerHTML=`<img class="photo-prev" src="${d}"><div class="sm">ถ้ารูปไม่ชัด แตะ “ถ่ายรูป” ใหม่ได้</div>`;const g=document.getElementById('tripgo');if(g)g.disabled=false});
+   <div id="tripprev" class="sm mut"></div>
+   <div class="mact"><button class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" data-act="tripgo" data-kind="${kind}" data-id="${b.id}" id="tripgo">${st?'▶ ยืนยันเริ่มเดินทาง':'■ ยืนยันสิ้นสุดการเดินทาง'}</button></div>`)}
+document.addEventListener('change',async e=>{if(e.target.id!=='tripcam')return;const f=e.target.files[0];if(!f)return;const pv=document.getElementById('tripprev');
+  const d=await shrinkTo(f,1600,.8);tripPhoto=null;pv.innerHTML=`<img class="photo-prev" src="${d}"><div id="tripst" class="sm">⏳ กำลังอัปโหลดรูป…</div>`;
+  const p=uploadTripPhoto(d);tripUp=p;const url=await p;if(tripUp!==p)return;const s=document.getElementById('tripst');
+  if(url){tripPhoto=url;if(s){s.style.color='#1d6b3a';s.innerHTML='✅ อัปโหลดรูปแล้ว — กดยืนยันได้เลย (ถ่ายใหม่ได้ถ้ารูปไม่ชัด)'}}else if(s){s.style.color='var(--red)';s.textContent='❌ อัปโหลดไม่สำเร็จ — ถ่าย/เลือกรูปใหม่อีกครั้ง'}});
 async function uploadTripPhoto(dataUrl){const blob=await (await fetch(dataUrl)).blob();
   try{const r=await fetch('/api/admin/trip-photo',{method:'POST',headers:{'content-type':'image/jpeg'},body:blob,credentials:'same-origin'});const j=await r.json();if(!r.ok)throw new Error(j.error);return j.url}
   catch(e){return await new Promise(ok=>{const x=new XMLHttpRequest();x.open('POST','/api/admin/trip-photo');x.withCredentials=true;x.setRequestHeader('content-type','image/jpeg');x.onload=()=>{try{const j=JSON.parse(x.responseText);if(x.status<300)return ok(j.url);toast(j.error||'อัปโหลดรูปไม่สำเร็จ')}catch(_){toast('อัปโหลดรูปไม่สำเร็จ')}ok(null)};x.onerror=()=>{toast('อัปโหลดรูปไม่สำเร็จ — ตรวจสอบสัญญาณอินเทอร์เน็ต');ok(null)};x.send(blob)})}}
@@ -1085,14 +1087,16 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
     <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึกการเลื่อนวัน</button></div></form>`)},
   slip:el=>{const b=byId(el.dataset.id);openModal(`<h3>หลักฐานการชำระ ${b.code}</h3>${slipNote(b)}<img class="slipimg" src="${b.slip}"><div class="mact"><a class="btn ghost" href="${b.slip}" target="_blank" rel="noopener" style="text-decoration:none">เปิดรูปเต็ม</a><button class="btn ghost" data-act="mcancel">ปิด</button></div>`)},
   cancelbk:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการจอง?',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}`,'ยกเลิกการจอง','red'))return;call('cancelBooking',{id:b.id})},
-  tripstart:el=>tripStartModal(byId(el.dataset.id)),
-  tripgo:async el=>{if(busy)return;busy=true;el.disabled=true;el.textContent='กำลังบันทึก…';try{let photo='';if(tripPhoto){photo=await uploadTripPhoto(tripPhoto);if(!photo){el.disabled=false;el.textContent='▶ ยืนยันเริ่มเดินทาง';return}}
-    if(await call('tripStart',{id:el.dataset.id,photo}))closeModal();else{el.disabled=false;el.textContent='▶ ยืนยันเริ่มเดินทาง'}}finally{busy=false}},
-  viewphoto:el=>openModal(`<h3>📷 รูปกลุ่มก่อนเดิน</h3><img src="${el.dataset.src}" style="width:100%;border-radius:12px"><div class="mact"><button class="btn" data-act="mcancel">ปิด</button></div>`),
+  tripstart:el=>tripPhotoModal(byId(el.dataset.id),'start'),
+  tripgo:async el=>{if(busy)return;const st=el.dataset.kind==='start',req=me().role==='guide';
+    if(tripUp&&!tripPhoto){return toast('⏳ รอให้อัปโหลดรูปเสร็จก่อน')}
+    if(req&&!tripPhoto){toast(`📷 ต้องถ่ายรูปกลุ่มนักท่องเที่ยวก่อน${st?'เริ่ม':'สิ้นสุด'}การเดินทาง`);const pv=document.getElementById('tripprev');if(pv){pv.style.color='var(--red)';pv.innerHTML='<b>⚠ กรุณาถ่ายรูปกลุ่มนักท่องเที่ยวและรอให้อัปโหลดเสร็จก่อน</b>'}return}
+    busy=true;el.disabled=true;try{if(await call(st?'tripStart':'tripEnd',{id:el.dataset.id,photo:tripPhoto||''}))closeModal();else el.disabled=false}finally{busy=false}},
+  viewphoto:el=>openModal(`<h3>📷 รูปกลุ่ม${esc(el.dataset.t||'')}</h3><img src="${el.dataset.src}" style="width:100%;border-radius:12px"><div class="mact"><button class="btn" data-act="mcancel">ปิด</button></div>`),
   pwainstall:async()=>{if(!installEvt)return;installEvt.prompt();await installEvt.userChoice.catch(()=>{});installEvt=null;render()},
   pushon:()=>pushOn(),pushoff:()=>pushOff(),
   pushtest:async()=>{const r=await post('/api/push/test',{});toast(r.msg||r.error||'ส่งแล้ว')},
-  tripend:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันสิ้นสุดการเดินทาง',`${b.code} · เริ่มเมื่อ ${fmtDT(b.startedAt)}<br>รายการจะถูกส่งไปหน้าเบิกจ่ายค่าไกด์`,'สิ้นสุดการเดินทาง','warn'))return;call('tripEnd',{id:b.id})},
+  tripend:el=>tripPhotoModal(byId(el.dataset.id),'end'),
   paygd:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
     const r=await confirmBox('ยืนยันชำระเงินให้ไกด์',`<dl class="kv"><dt>ไกด์</dt><dd>${esc(g.firstName+' '+g.lastName)}</dd><dt>บัญชี</dt><dd>${esc(g.bankName)} ${esc(g.accountNo)}</dd><dt>โทร</dt><dd>${esc(g.phone)}</dd><dt>งาน</dt><dd>${b.code} · ${fmtDateS(b.date)} ${b.time}</dd><dt>ยอด</dt><dd><b>${baht(b.split.guide)}</b></dd></dl>
       <div class="field" style="margin-top:10px"><label>เลขอ้างอิงการโอน (ถ้ามี)</label><input name="ref"></div><p class="sm mut">ระบบจะบันทึกว่าคุณ (${esc(me().name)}) เป็นผู้กดยืนยัน</p>`,'ยืนยันจ่ายแล้ว');
