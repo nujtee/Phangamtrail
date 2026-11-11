@@ -41,7 +41,7 @@ export default {
       const key = `trips/${crypto.randomUUID()}.${ext}`; await env.IMAGES.put(key, body, { httpMetadata: { contentType: type } });
       return json({ url: '/img/' + key });
     }
-    if (path === '/api/public/slip') return json({ error: 'not found' }, 404); // ใช้ผ่าน slip-upload เท่านั้น
+    if (path === '/api/public/slip' || path === '/api/public/slipCheck') return json({ error: 'not found' }, 404); // ใช้ผ่าน slip-upload เท่านั้น
     // ลูกค้าแนบสลิป (ตรวจรหัสจอง + เบอร์โทรที่ engine)
     if (path === '/api/public/slip-upload' && req.method === 'POST') {
       const fd = await req.formData().catch(() => null); const file = fd?.get('file');
@@ -53,13 +53,10 @@ export default {
       const buf = await file.arrayBuffer();
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(x => x.toString(16).padStart(2, '0')).join('');
       const qr = String(fd.get('qr') || '').trim().slice(0, 512);
-      { // ตรวจสถานะการจองก่อนเก็บไฟล์/ตรวจสลิป (เช่น หมดเวลาชำระเงินแล้ว)
-        const pre = await engine(env).fetch(new Request('https://do/api/public/lookup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone') }) }));
+      { // ตรวจก่อนเก็บไฟล์/ตรวจกับธนาคาร: สถานะการจอง, หมดเวลา, QR ต้องเป็นสลิปธนาคาร, สลิปซ้ำ
+        const pre = await engine(env).fetch(new Request('https://do/api/public/slipCheck', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, phone: fd.get('phone'), channel: fd.get('channel'), qr, hash }) }));
         const pj = await pre.json().catch(() => ({}));
-        if (pj.error) return json({ error: pj.error }, 400);
-        const bk = pj.booking || {};
-        if (bk.status === 'cancelled' && (bk.expired || bk.cancelReason === 'หมดเวลาชำระเงิน')) return json({ error: 'หมดเวลาชำระเงินแล้ว — ระบบคืนรอบนี้ให้ว่างแล้ว กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)', expired: true }, 400);
-        if (bk.status !== 'pending') return json({ error: 'รายการนี้ไม่อยู่ในสถานะรอชำระ' }, 400);
+        if (!pj.ok) return json({ error: pj.error || 'ตรวจสอบสลิปไม่สำเร็จ', expired: /หมดเวลาชำระ/.test(pj.error || '') }, 400);
       }
       await env.IMAGES.put(key, buf, { httpMetadata: { contentType: file.type } });
       let verify = null;
@@ -129,7 +126,9 @@ async function slipokVerify(env, qr) {
     const r = await fetch(`https://api.slipok.com/api/line/apikey/${env.SLIPOK_BRANCH_ID}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-authorization': env.SLIPOK_API_KEY }, body: JSON.stringify({ data: qr, log: true }) });
     const j = await r.json().catch(() => ({}));
     const d = j.data || {};
-    if (r.ok && j.success && d.success !== false) return { ok: true, amount: +d.amount || 0, ref: d.transRef || '', msg: 'ตรวจสลิปผ่าน' };
+    const time = d.transTimestamp || (/^\d{8}$/.test(d.transDate || '') && d.transTime ? `${d.transDate.slice(0, 4)}-${d.transDate.slice(4, 6)}-${d.transDate.slice(6, 8)}T${d.transTime}+07:00` : null);
+    const recv = [d.receiver?.proxy?.value, d.receiver?.account?.value].filter(Boolean).map(String);
+    if (r.ok && j.success && d.success !== false) return { ok: true, amount: +d.amount || 0, ref: d.transRef || '', msg: 'ตรวจกับธนาคารผ่าน', time, recv };
     return { ok: false, amount: +d.amount || 0, ref: d.transRef || '', msg: j.message || `ตรวจสลิปไม่ผ่าน (${j.code || r.status})` };
   } catch (e) { return { ok: false, amount: 0, ref: '', msg: 'ติดต่อระบบตรวจสลิปไม่ได้' } }
 }

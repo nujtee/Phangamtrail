@@ -262,12 +262,53 @@ export function sendReminders(db) {
 }
 
 /* ===== มุมมองข้อมูลที่ส่งให้ client ===== */
+/* ===== ตรวจสลิป: QR บนสลิปโอนเงิน (Slip Verify Mini-QR ตามมาตรฐานธนาคาร) ===== */
+const tlvList = s => { const out = []; let i = 0; while (i < s.length) { const t = s.slice(i, i + 2), l = s.slice(i + 2, i + 4); if (!/^\d{2}$/.test(t) || !/^\d{2}$/.test(l)) return null; const v = s.slice(i + 4, i + 4 + +l); if (v.length !== +l) return null; out.push([t, v]); i += 4 + +l } return out };
+const crc16 = s => { let c = 0xFFFF; for (let i = 0; i < s.length; i++) { c ^= s.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) c = c & 0x8000 ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF } return c.toString(16).toUpperCase().padStart(4, '0') };
+export const BANKS = { '002': 'กรุงเทพ', '004': 'กสิกรไทย', '006': 'กรุงไทย', '011': 'ทหารไทยธนชาต', '014': 'ไทยพาณิชย์', '022': 'ซีไอเอ็มบี', '024': 'ยูโอบี', '025': 'กรุงศรี', '030': 'ออมสิน', '033': 'ธอส.', '034': 'ธ.ก.ส.', '065': 'ธนชาต', '066': 'อิสลาม', '067': 'ทิสโก้', '069': 'เกียรตินาคินภัทร', '070': 'ไอซีบีซี', '071': 'ไทยเครดิต', '073': 'แลนด์ แอนด์ เฮ้าส์' };
+/** คืน {kind:'bank'|'truemoney', bank, ref} ถ้าเป็น QR สลิปโอนเงินจริงตามโครงสร้าง + checksum, ไม่ใช่ → null */
+export function parseSlipQr(raw) {
+  const s = String(raw || '').trim(); if (s.length < 20 || s.length > 512) return null;
+  const top = tlvList(s); if (!top || top.length < 2 || top[0][0] !== '00' || top[top.length - 1][0] !== '91') return null;
+  const T = Object.fromEntries(top), crc = T['91']; if (!/^[0-9a-fA-F]{1,4}$/.test(crc)) return null;
+  const body = s.slice(0, s.length - crc.length - 4), want = crc.toUpperCase().padStart(4, '0');
+  if (crc16(body + '9104') !== want && crc16(body + '91' + String(crc.length).padStart(2, '0')) !== want) return null;
+  const sub = tlvList(T['00']); if (!sub) return null; const S = Object.fromEntries(sub);
+  if (S['00'] === '01' && S['01'] === '01') { const ref = S['03'] || ''; return ref.length >= 6 ? { kind: 'truemoney', bank: 'TrueMoney', ref } : null }
+  if (S['00'] !== undefined && S['00'] !== '000001') return null;
+  if (T['51'] !== 'TH') return null;
+  const ref = S['02'] || ''; if (ref.length < 10) return null;
+  return { kind: 'bank', bank: S['01'] || '', ref };
+}
+const SLIP_QR_CH = ['bank', 'promptpay']; // ช่องทางที่ต้องเป็นสลิปธนาคารที่มี QR
+const slipRefOf = x => x.slipRef || parseSlipQr(x.slipQr)?.ref || '';
+const digitRuns = v => String(v || '').match(/\d{3,}/g) || [];
+/* บัญชีผู้รับในสลิป (จากระบบตรวจสลิป) ตรงกับบัญชีของเราไหม: true/false, null = ไม่มีข้อมูล */
+function recvMatch(db, vals) {
+  const runs = (vals || []).map(digitRuns).filter(r => r.length); if (!runs.length) return null;
+  const c = db.settings.channels, ours = [c.bank?.accountNo, c.promptpay?.id, c.truemoney?.phone].map(x => String(x || '').replace(/\D/g, '')).filter(Boolean);
+  return runs.some(r => ours.some(o => r.every(x => o.includes(x))));
+}
+const NOT_SLIP = 'รูปนี้ไม่ใช่สลิปโอนเงิน (ไม่พบ QR ตรวจสอบสลิปของธนาคาร) — กรุณาแนบสลิปที่บันทึกจากแอปธนาคาร แบบเต็มใบ ไม่ครอป ให้เห็น QR มุมสลิปชัดเจน';
+function slipValidate(db, p) {
+  const code = String(p.code || '').trim().toUpperCase(), phone = String(p.phone || '').replace(/\D/g, '');
+  const b = db.bookings.find(x => (x.id === p.id || x.code === code) && x.phone === phone) || fail('ไม่พบการจอง');
+  if (b.status === 'cancelled' && (b.expired || b.cancelReason === 'หมดเวลาชำระเงิน')) fail('หมดเวลาชำระเงินแล้ว — ระบบคืนรอบนี้ให้ว่างแล้ว กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)');
+  if (b.status !== 'pending') fail('รายการนี้ไม่อยู่ในสถานะรอชำระ');
+  const ch = db.settings.channels[p.channel]; if (!ch?.on) fail('ช่องทางชำระเงินไม่ถูกต้อง');
+  const qr = String(p.qr || '').trim().slice(0, 512), hash = String(p.hash || '').slice(0, 64), info = parseSlipQr(qr);
+  if (SLIP_QR_CH.includes(p.channel) && db.settings.slipStrict !== false && !info) fail(NOT_SLIP);
+  const ref = info?.ref || '';
+  const dup = db.bookings.find(x => x !== b && x.slip && ((ref && slipRefOf(x) === ref) || (qr && x.slipQr === qr) || (hash && x.slipHash === hash)));
+  if (dup) fail(`สลิปนี้เคยถูกใช้แล้วกับการจอง ${dup.code} — กรุณาแนบสลิปของการโอนครั้งนี้ (หากเข้าใจผิด กรุณาติดต่อเจ้าหน้าที่)`);
+  return { b, ch, qr, hash, info, ref };
+}
 const PUBLIC_CH = { bank: ['on', 'mode', 'bankName', 'accountName', 'accountNo'], promptpay: ['on', 'mode', 'id', 'name'], paypal: ['on', 'mode', 'email', 'me', 'passFee', 'feePct', 'feeFixed'], alipay: ['on', 'mode', 'accountId', 'name', 'image'], truemoney: ['on', 'mode', 'phone', 'name', 'image'] };
 export function publicState(db) {
   const s = db.settings, ch = {};
   for (const [k, f] of Object.entries(PUBLIC_CH)) { if (s.channels[k]?.on) { ch[k] = {}; f.forEach(x => ch[k][x] = s.channels[k][x]) } else ch[k] = { on: false } }
   return {
-    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', receipt: s.receipt || {}, vehicleFee: +(s.vehicleFee ?? 30), bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
+    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', receipt: s.receipt || {}, slipStrict: s.slipStrict !== false, vehicleFee: +(s.vehicleFee ?? 30), bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
     site: db.site, guideCount: activeGuides(db).length, today: today(),
   };
 }
@@ -334,23 +375,20 @@ export const publicActions = {
     if (!b) fail('ไม่พบการจอง ตรวจสอบรหัสและเบอร์โทร');
     return { booking: bookingView(b) };
   },
-  slip(db, p) { // p: {code, phone, channel, url} — url ได้จากการอัปโหลดเข้า R2 แล้ว
-    const code = String(p.code || '').trim().toUpperCase(), phone = String(p.phone || '').replace(/\D/g, '');
-    const b = db.bookings.find(x => (x.id === p.id || x.code === code) && x.phone === phone) || fail('ไม่พบการจอง');
-    if (b.status === 'cancelled' && (b.expired || b.cancelReason === 'หมดเวลาชำระเงิน')) fail('หมดเวลาชำระเงินแล้ว — ระบบคืนรอบนี้ให้ว่างแล้ว กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)');
-    if (b.status !== 'pending') fail('รายการนี้ไม่อยู่ในสถานะรอชำระ');
-    const ch = db.settings.channels[p.channel]; if (!ch?.on) fail('ช่องทางชำระเงินไม่ถูกต้อง');
-    const qr = String(p.qr || '').trim().slice(0, 512), hash = String(p.hash || '').slice(0, 64);
-    const dup = db.bookings.find(x => x !== b && x.slip && ((qr && x.slipQr === qr) || (hash && x.slipHash === hash)));
-    if (dup) fail(`สลิปนี้เคยถูกใช้แล้วกับการจอง ${dup.code} — กรุณาใช้สลิปของการโอนครั้งนี้ หากเข้าใจผิดกรุณาติดต่อเจ้าหน้าที่`);
-    b.slip = p.url; b.payChannel = p.channel; b.slipQr = qr || null; b.slipHash = hash || null; b.slipAt = nowISO();
+  slipCheck(db, p) { slipValidate(db, p); return { ok: true } }, // ตรวจก่อนอัปโหลด (เรียกจาก worker เท่านั้น)
+  slip(db, p) { // p: {code, phone, channel, url, qr, hash, verify} — url ได้จากการอัปโหลดเข้า R2 แล้ว
+    const { b, ch, qr, hash, info, ref } = slipValidate(db, p);
+    const v0 = p.verify || null, need0 = p.channel === 'paypal' ? paypalCharge(db, b.total).charge : b.total;
+    if (v0?.ok && +v0.amount > 0 && +v0.amount < need0) fail(`ยอดเงินในสลิป ${baht(v0.amount)} ไม่ตรงกับยอดที่ต้องชำระ ${baht(need0)} — กรุณาแนบสลิปที่ถูกต้อง หรือติดต่อเจ้าหน้าที่`);
+    b.slip = p.url; b.payChannel = p.channel; b.slipQr = qr || null; b.slipHash = hash || null; b.slipAt = nowISO(); b.slipRef = ref || null; b.slipBank = info ? (BANKS[info.bank] || info.bank) : null;
     if (p.channel === 'paypal') { const x = paypalCharge(db, b.total); b.paidAmount = x.charge; b.payFee = x.fee } else { b.paidAmount = b.total; b.payFee = 0 }
     db.$actor = { id: '-', name: 'ลูกค้า (' + b.name + ')', role: 'public' };
-    log(db, 'slip', `แนบหลักฐานการชำระ ${b.code} ผ่าน ${p.channel}${qr ? ' (อ่าน QR สลิปได้)' : ' (อ่าน QR สลิปไม่ได้ — ตรวจด้วยตา)'}`);
+    log(db, 'slip', `แนบหลักฐานการชำระ ${b.code} ผ่าน ${p.channel}${info ? ` (QR สลิปถูกต้อง · ${b.slipBank || '-'} · ref ${ref})` : qr ? ' (QR ไม่ใช่สลิปธนาคาร — ตรวจด้วยตา)' : ' (ไม่มี QR สลิป — ตรวจด้วยตา)'}`);
     // ออโต้: ตรวจสลิปกับผู้ให้บริการ (SlipOK) ผ่าน → ยืนยันทันที / ไม่ผ่านหรือยังไม่เชื่อม → รอเจ้าหน้าที่
     const v = p.verify || null, need = b.paidAmount || b.total;
-    b.slipVerify = v ? { ok: !!v.ok, amount: +v.amount || 0, ref: String(v.ref || '').slice(0, 80), msg: String(v.msg || '').slice(0, 200), at: nowISO() } : null;
-    if (ch.mode === 'auto' && v?.ok && +v.amount >= need) {
+    const tOld = v?.ok && v.time && Date.parse(v.time) < Date.parse(b.createdAt) - 10 * 60e3, rOk = v?.ok ? recvMatch(db, v.recv) : null;
+    b.slipVerify = v ? { ok: !!v.ok, amount: +v.amount || 0, ref: String(v.ref || '').slice(0, 80), msg: String(v.msg || '').slice(0, 200), at: nowISO(), time: v.time || null, recvOk: rOk, recv: (v.recv || []).filter(Boolean).join(' / ').slice(0, 80), old: !!tOld } : null;
+    if (ch.mode === 'auto' && v?.ok && +v.amount >= need && rOk !== false && !tOld) {
       db.$actor = { id: 'auto', name: 'ระบบอัตโนมัติ (ตรวจสลิป)', role: 'system' };
       confirmPayment(db, b, 'ยืนยันอัตโนมัติ (สลิปผ่านการตรวจ)');
       return { booking: bookingView(b), verified: true };
@@ -612,6 +650,7 @@ export const adminActions = {
     const chk = { bank: x => !!(x.accountNo && x.accountName) || 'ใส่ชื่อบัญชีและเลขที่บัญชี', promptpay: x => [10, 13, 15].includes(x.id.length) || 'หมายเลขพร้อมเพย์ต้องเป็น 10 หรือ 13 หลัก', paypal: x => !!(x.email || x.me) || 'ใส่อีเมลหรือชื่อ PayPal.Me', alipay: x => !!(x.image || x.accountId) || 'ใส่ Alipay ID หรืออัปโหลด QR', truemoney: x => !!(x.phone || x.image) || 'ใส่เบอร์หรืออัปโหลด QR' };
     const names = { bank: 'บัญชีธนาคาร', promptpay: 'พร้อมเพย์', paypal: 'PayPal', alipay: 'Alipay', truemoney: 'TrueMoney' };
     for (const k in nc) if (nc[k].on) { const r = chk[k](nc[k]); if (r !== true) fail(`${names[k]}: ${r}`) }
+    if ('slipStrict' in p) db.settings.slipStrict = !!p.slipStrict;
     db.settings.channels = nc; log(db, 'settings', `ปรับช่องทางรับชำระเงิน: ${Object.keys(nc).filter(k => nc[k].on).map(k => `${names[k]} (${nc[k].mode === 'auto' ? 'ออโต้' : 'แมนนวล'})`).join(', ')}`);
     return { msg: Object.values(nc).some(x => x.on) ? 'บันทึกช่องทางรับชำระเงินแล้ว' : 'บันทึกแล้ว — แต่ยังไม่ได้ติ๊ก "เปิดให้ลูกค้าใช้" ลูกค้าจะยังชำระเงินไม่ได้' };
   },

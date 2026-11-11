@@ -887,6 +887,9 @@ function pPayments(){const c=DB.settings.channels;
   return `<div class="hd"><h2>ช่องทางรับชำระเงิน</h2></div>
   <p class="mut sm" style="margin-top:-6px">ช่องทางที่เปิดไว้จะแสดงในหน้าชำระเงินของลูกค้าทุกการจอง ลูกค้าแนบสลิปหรือหลักฐานการชำระ แล้วเจ้าหน้าที่กด "ยืนยันรับเงิน"</p>
   <form data-form="payments">
+  <div class="card"><h3>🛡️ ตรวจสลิปอัตโนมัติ</h3>
+   <label style="display:flex;gap:8px;align-items:flex-start;margin:0;color:var(--ink)"><input type="checkbox" name="slipStrict" style="width:auto;margin-top:4px" ${DB.settings.slipStrict!==false?'checked':''}> <span>รับเฉพาะรูปสลิปโอนเงินที่มี QR ตรวจสอบสลิปของธนาคาร (พร้อมเพย์ / โอนเข้าบัญชี) — แนะนำให้เปิด</span></label>
+   <p class="sm mut" style="margin:8px 0 0">ระบบตรวจทุกสลิป: ① QR ต้องเป็น QR สลิปธนาคารจริงตามมาตรฐาน (ตรวจโครงสร้าง + checksum) — รูปอื่นหรือ QR รับเงินจะถูกปฏิเสธ ② สลิปซ้ำ (เลขอ้างอิงธุรกรรม / QR / ไฟล์เดียวกัน) ถูกปฏิเสธ ③ ${DB.slipok?'<b style="color:#1d6b3a">เชื่อม SlipOK แล้ว</b>':'ถ้าเชื่อม SlipOK (ใส่ SLIPOK_API_KEY + SLIPOK_BRANCH_ID ใน Cloudflare)'}: ตรวจกับธนาคารว่ามีรายการจริง ยอดเงินตรง บัญชีผู้รับเป็นของเรา และโอนหลังเวลาจอง</p></div>
   ${card('bank',`<div class="grid3">${f('bank','bankName','ธนาคาร','เช่น ธ.ก.ส.')}${f('bank','accountName','ชื่อบัญชี')}${f('bank','accountNo','เลขที่บัญชี')}</div>`)}
   ${card('promptpay',`<div class="grid2">${f('promptpay','id','หมายเลขพร้อมเพย์','เบอร์โทร 10 หลัก หรือเลขผู้เสียภาษี 13 หลัก')}${f('promptpay','name','ชื่อบัญชีที่แสดง')}</div>`,'ระบบสร้าง QR พร้อมเพย์ที่ใส่ยอดเงินของแต่ละการจองให้อัตโนมัติ')}
   ${card('paypal',`<div class="grid2">${f('paypal','email','อีเมล PayPal')}${f('paypal','me','ชื่อ PayPal.Me','เช่น phangamtrail')}</div>
@@ -1095,7 +1098,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   chimgdel:el=>{chImgDraft[el.dataset.k]='';document.getElementById('chprev_'+el.dataset.k).innerHTML='<span class="sm mut">ลบรูปแล้ว (ยังไม่บันทึก)</span>'},
   sendslip:async()=>{if(!slipDraft||!VB||busy)return;const f=slipDraft.file;busy=true;toast('กำลังส่งสลิป…');
     try{const data=await shrinkTo(f,1400,.8);if(!data){toast('อ่านไฟล์รูปไม่ได้');return}
-      const qr=await slipQR(f).catch(()=>'');
+      const qr=slipDraft.scan?await slipDraft.scan:await slipQR(f).catch(()=>'');if(!parseSlipQr(qr)&&slipNeedQR()){setSlipBox();toast('รูปนี้ไม่ใช่สลิปโอนเงิน — กรุณาเลือกรูปสลิปใหม่');return}
       const blob=await (await fetch(data)).blob(),fd=new FormData();fd.append('file',new File([blob],'slip.jpg',{type:'image/jpeg'}));fd.append('qr',qr||'');fd.append('code',VB.booking.code);fd.append('phone',VB.phone);fd.append('channel',payCh);
       const r=await api('/api/public/slip-upload',{method:'POST',body:fd});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');if(r.expired){slipDraft=null;refreshVB()}return}
       VB.booking=r.booking;VB.reslip=false;if(checkResult)checkResult.booking=r.booking;toast(r.verified?'ตรวจสลิปผ่าน — จองสำเร็จ':'ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ');URL.revokeObjectURL(slipDraft.url);slipDraft=null;render();scrollTo(0,0)}finally{busy=false}},
@@ -1212,8 +1215,11 @@ let busy=false;
 let slipDraft=null; // {code,file,url}
 function slipBoxHTML(b){const d=slipDraft&&slipDraft.code===b.code?slipDraft:null;
   if(!d)return `<input type="file" accept="image/jpeg,image/png,image/webp" data-slip="${b.code}">`;
-  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center"><img src="${d.url}" style="max-width:100%;max-height:320px;border-radius:8px">
-   <div class="row" style="gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap"><button class="btn lg" data-act="sendslip">📤 ส่งสลิป</button><button class="btn ghost" data-act="slipchange">เปลี่ยนรูป</button></div></div>`}
+  const bad=!d.scanning&&!d.info&&slipNeedQR();
+  const st=d.scanning?'<p class="sm mut" style="margin:8px 0 0">⏳ กำลังตรวจรูปสลิป…</p>':d.info?`<p class="sm" style="margin:8px 0 0;color:#1d6b3a">✓ พบ QR สลิปโอนเงิน${d.info.bank?' · '+esc(d.info.bank):''}</p>`:
+    bad?`<p class="sm" style="margin:8px 0 0;color:var(--red)">✗ รูปนี้ไม่ใช่สลิปโอนเงิน หรืออ่าน QR บนสลิปไม่ได้<br><span class="mut">กรุณาแนบสลิปที่บันทึกจากแอปธนาคารแบบเต็มใบ (ไม่ครอป ไม่ถ่ายจากจอ) ให้เห็น QR มุมสลิปชัดเจน</span></p>`:'<p class="sm" style="margin:8px 0 0;color:var(--warn)">⚠ ไม่พบ QR สลิป — เจ้าหน้าที่จะตรวจด้วยตา</p>';
+  return `<div style="border:1px solid ${bad?'var(--red)':'var(--line)'};border-radius:12px;padding:10px;text-align:center"><img src="${d.url}" style="max-width:100%;max-height:320px;border-radius:8px">${st}
+   <div class="row" style="gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">${bad?'':`<button class="btn lg" data-act="sendslip"${d.scanning?' disabled':''}>📤 ส่งสลิป</button>`}<button class="btn ${bad?'':'ghost'}" data-act="slipchange">${bad?'เลือกรูปสลิปใหม่':'เปลี่ยนรูป'}</button></div></div>`}
 function setSlipBox(){const el=document.getElementById('slipbox');if(el&&VB)el.innerHTML=slipBoxHTML(VB.booking)}
 async function saveBookingImage(b){
   const F=getComputedStyle(document.body).fontFamily||'sans-serif',W=1080,rows=[['รหัสการจอง',b.code],['วันที่',fmtDate(b.date)],['เวลาออกเดินทาง',b.time+' น.'],['จำนวน',b.people+' คน'],['',paxText(b.pax||{})],['ผู้จอง',b.name],['เบอร์โทร',b.phone],...(b.email?[['อีเมล',b.email]]:[]),['ค่าบริการกลุ่ม',baht(b.groupFee)],['ค่าเข้าอุทยาน',baht(b.entryTotal)],...(b.vehicles?[['ค่ารถเข้าอุทยาน',baht(b.vehicleTotal)+` (${b.vehicles} คัน)`]]:[]),['ยอดรวม',baht(b.total)],['สถานะ',b.status==='paid'?'จองสำเร็จ (ชำระแล้ว)':b.status==='pending'&&b.slip?'รอเจ้าหน้าที่ตรวจสอบสลิป':(ST[b.status]?.[0]||b.status)]];
@@ -1228,19 +1234,35 @@ async function saveBookingImage(b){
   const blob=await new Promise(r=>c.toBlob(r,'image/png')),name=`phangam-${b.code}.png`,file=new File([blob],name,{type:'image/png'});
   if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'การจอง '+b.code});return}catch(e){if(e&&e.name==='AbortError')return}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('บันทึกรูปรายละเอียดการจองแล้ว')}
-const slipTag=b=>b.slipQr?' <span class="sm" style="color:#1d6b3a" title="อ่าน QR สลิปได้ และไม่ซ้ำกับการจองอื่น">QR ✓</span>':(b.slipAt?' <span class="sm" style="color:var(--warn)" title="อ่าน QR บนสลิปไม่ได้ — ตรวจด้วยตา">⚠ ไม่มี QR</span>':'');
-const slipNote=b=>b.slipQr?`<p class="sm" style="color:#1d6b3a;margin-top:-4px">✓ อ่าน QR สลิปได้ และไม่ซ้ำกับการจองอื่นในระบบ<br><span class="mut" style="word-break:break-all">${esc(b.slipQr)}</span></p>`:(b.slipAt?`<p class="sm" style="color:var(--warn);margin-top:-4px">⚠ อ่าน QR บนสลิปไม่ได้ (เช่น รูปถ่ายหน้าจอไม่ชัด หรือไม่ใช่สลิปธนาคาร) — ระบบตรวจซ้ำได้เฉพาะไฟล์เดิม กรุณาตรวจยอดเข้าบัญชีจริง</p>`:'');
-/* อ่าน QR บนสลิปโอนเงิน (ใช้ตรวจสลิปซ้ำ) */
+const slipVer=b=>{const v=b.slipVerify;if(!v)return '';const w=[];if(v.ok){if(v.recvOk===false)w.push('บัญชีผู้รับไม่ตรงกับบัญชีของเรา');if(v.old)w.push('โอนก่อนเวลาจอง (อาจเป็นสลิปเก่า)');if(+v.amount<+(b.paidAmount||b.total))w.push('ยอดไม่ครบ')}
+  return v.ok?`<p class="sm" style="margin-top:-4px;color:${w.length?'var(--red)':'#1d6b3a'}">${w.length?'⚠':'✓'} ตรวจกับธนาคาร (SlipOK): ยอด ${baht(v.amount)}${v.time?` · โอน ${fmtDT(v.time)}`:''}${v.recv?` · ผู้รับ ${esc(v.recv)}`:''}${w.length?'<br><b>'+w.join(' · ')+'</b>':''}</p>`:`<p class="sm" style="margin-top:-4px;color:var(--warn)">⚠ ตรวจกับธนาคารไม่ผ่าน: ${esc(v.msg||'-')} — กรุณาตรวจยอดเข้าบัญชีจริง</p>`};
+const slipWarn=b=>{const v=b.slipVerify;return v&&(!v.ok||v.recvOk===false||v.old)};
+const slipTag=b=>slipWarn(b)?' <span class="sm" style="color:var(--red)" title="ตรวจกับธนาคารพบปัญหา">⚠ ตรวจสลิป</span>':b.slipRef?' <span class="sm" style="color:#1d6b3a" title="QR สลิปธนาคารถูกต้อง และไม่ซ้ำกับการจองอื่น">QR ✓</span>':b.slipQr?' <span class="sm" style="color:#1d6b3a" title="อ่าน QR สลิปได้ และไม่ซ้ำกับการจองอื่น">QR ✓</span>':(b.slipAt?' <span class="sm" style="color:var(--warn)" title="อ่าน QR บนสลิปไม่ได้ — ตรวจด้วยตา">⚠ ไม่มี QR</span>':'');
+const slipNote=b=>(b.slipRef?`<p class="sm" style="color:#1d6b3a;margin-top:-4px">✓ QR สลิปธนาคารถูกต้อง${b.slipBank?' · '+esc(b.slipBank):''} · ไม่ซ้ำกับการจองอื่น<br><span class="mut" style="word-break:break-all">เลขอ้างอิง ${esc(b.slipRef)}</span></p>`:'')+slipVer(b)+(b.slipRef?'':b.slipQr?`<p class="sm" style="color:#1d6b3a;margin-top:-4px">✓ อ่าน QR สลิปได้ และไม่ซ้ำกับการจองอื่นในระบบ<br><span class="mut" style="word-break:break-all">${esc(b.slipQr)}</span></p>`:(b.slipAt?`<p class="sm" style="color:var(--warn);margin-top:-4px">⚠ อ่าน QR บนสลิปไม่ได้ (เช่น รูปถ่ายหน้าจอไม่ชัด หรือไม่ใช่สลิปธนาคาร) — ระบบตรวจซ้ำได้เฉพาะไฟล์เดิม กรุณาตรวจยอดเข้าบัญชีจริง</p>`:''));
+/* QR สลิปโอนเงิน (Slip Verify Mini-QR) — ตรวจโครงสร้าง + checksum แบบเดียวกับเซิร์ฟเวอร์ */
+const BANKS={'002':'กรุงเทพ','004':'กสิกรไทย','006':'กรุงไทย','011':'ทหารไทยธนชาต','014':'ไทยพาณิชย์','022':'ซีไอเอ็มบี','024':'ยูโอบี','025':'กรุงศรี','030':'ออมสิน','033':'ธอส.','034':'ธ.ก.ส.','065':'ธนชาต','066':'อิสลาม','067':'ทิสโก้','069':'เกียรตินาคินภัทร','070':'ไอซีบีซี','071':'ไทยเครดิต','073':'แลนด์ แอนด์ เฮ้าส์'};
+function parseSlipQr(raw){const s=String(raw||'').trim();if(s.length<20||s.length>512)return null;
+  const tl=t=>{const o=[];let i=0;while(i<t.length){const a=t.slice(i,i+2),l=t.slice(i+2,i+4);if(!/^\d{2}$/.test(a)||!/^\d{2}$/.test(l))return null;const v=t.slice(i+4,i+4+ +l);if(v.length!==+l)return null;o.push([a,v]);i+=4+ +l}return o};
+  const crc=t=>{let c=0xFFFF;for(let i=0;i<t.length;i++){c^=t.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=c&0x8000?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,'0')};
+  const top=tl(s);if(!top||top.length<2||top[0][0]!=='00'||top[top.length-1][0]!=='91')return null;const T=Object.fromEntries(top),k=T['91'];if(!/^[0-9a-fA-F]{1,4}$/.test(k))return null;
+  const body=s.slice(0,s.length-k.length-4),want=k.toUpperCase().padStart(4,'0');if(crc(body+'9104')!==want&&crc(body+'91'+String(k.length).padStart(2,'0'))!==want)return null;
+  const sub=tl(T['00']);if(!sub)return null;const S=Object.fromEntries(sub);
+  if(S['00']==='01'&&S['01']==='01'){const ref=S['03']||'';return ref.length>=6?{kind:'truemoney',bank:'TrueMoney',ref}:null}
+  if(S['00']!==undefined&&S['00']!=='000001')return null;if(T['51']!=='TH')return null;const ref=S['02']||'';if(ref.length<10)return null;return {kind:'bank',bank:BANKS[S['01']]||S['01']||'',ref}}
+const slipNeedQR=()=>['bank','promptpay'].includes(payCh)&&PUB.settings.slipStrict!==false;
+/* อ่าน QR บนสลิปโอนเงิน (ใช้ตรวจสลิปจริง/ซ้ำ) */
 let jsqrP=null;const loadJsQR=()=>jsqrP||(jsqrP=new Promise((ok,no)=>{if(window.jsQR)return ok(window.jsQR);const s=document.createElement('script');s.src='/vendor/jsqr.js';s.onload=()=>ok(window.jsQR);s.onerror=no;document.head.appendChild(s)}));
 async function slipQR(file){const jsQR=await loadJsQR();const url=URL.createObjectURL(file);
   try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
     const W=img.naturalWidth,H=img.naturalHeight,c=document.createElement('canvas'),x=c.getContext('2d',{willReadFrequently:true});
     const tryArea=(sx,sy,sw,sh,max)=>{const k=Math.min(1,max/Math.max(sw,sh));c.width=Math.round(sw*k);c.height=Math.round(sh*k);x.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);const d=x.getImageData(0,0,c.width,c.height);const r=jsQR(d.data,c.width,c.height,{inversionAttempts:'attemptBoth'});return r&&r.data?r.data.trim():''};
-    return tryArea(0,0,W,H,1600)||tryArea(0,H/2,W,H/2,1600)||tryArea(W/2,H/2,W/2,H/2,1200)||tryArea(0,H/3,W,H*2/3,2000)||''}
+    const passes=[[0,0,W,H,1600],[0,H/2,W,H/2,1600],[W/2,H/2,W/2,H/2,1200],[0,H/3,W,H*2/3,2000],[0,0,W,H,900],[W/2,0,W/2,H,1400],[W*2/3,H*2/3,W/3,H/3,900],[0,H*2/3,W,H/3,1600],[0,0,W,H/2,1600]];
+    let first='';for(const a of passes){const r=tryArea(...a);if(r&&parseSlipQr(r))return r;if(r&&!first)first=r}return first}
   finally{URL.revokeObjectURL(url)}}
 document.addEventListener('change',async e=>{
   const el=e.target,k=el.dataset.chg;
-  if(el.dataset.slip){const f=el.files[0];if(!f||!VB)return;if(slipDraft)URL.revokeObjectURL(slipDraft.url);slipDraft={code:VB.booking.code,file:f,url:URL.createObjectURL(f)};setSlipBox();toast('ตรวจรูปสลิป แล้วกด "ส่งสลิป"');return}
+  if(el.dataset.slip){const f=el.files[0];if(!f||!VB)return;if(slipDraft)URL.revokeObjectURL(slipDraft.url);const d={code:VB.booking.code,file:f,url:URL.createObjectURL(f),scanning:true,qr:'',info:null};slipDraft=d;setSlipBox();
+    d.scan=slipQR(f).catch(()=>'').then(q=>{d.qr=q||'';d.info=parseSlipQr(d.qr);d.scanning=false;if(slipDraft===d)setSlipBox();return d.qr});return}
   if(el.dataset.up){const files=[...el.files];if(!files.length)return;const kind2=el.dataset.up;if(busy)return;busy=true;
     try{
     if(kind2==='gallery'){const urls=[];toast(`กำลังอัปโหลด ${files.length} รูป…`);for(const f of files){const d=await shrinkTo(f,1600,.8);if(d){const u=await uploadImg(d);if(u)urls.push(u)}}
@@ -1288,7 +1310,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='stay'){if(await call('staySave',{id:f.dataset.id||'',name:fd.name,desc:fd.desc,price:fd.price,phone:fd.phone,link:fd.link,imgs:[...draftImgs]}))closeModal();return}
   if(kind==='org'){const p={id:f.dataset.id||'',name:fd.name,pos:fd.pos,parent:fd.parent||'',order:fd.order};if(draftOne)p.photo=draftOne;if(await call('orgSave',p)){draftOne=null;closeModal()}return}
   if(kind==='season'){const k=fd.kind==='date'?'date':'month';if(await call('seasonSave',{id:f.dataset.id||'',name:fd.name,kind:k,from:k==='date'?fd.dfrom:fd.mfrom,to:k==='date'?fd.dto:fd.mto,active:!!fd.active}))closeModal();return}
-  if(kind==='payments'){const p={...fd};['bank','promptpay','paypal','alipay','truemoney'].forEach(k=>p[k+'_on']=!!fd[k+'_on']);p.paypal_passFee=!!fd.paypal_passFee;
+  if(kind==='payments'){const p={...fd,slipStrict:!!fd.slipStrict};['bank','promptpay','paypal','alipay','truemoney'].forEach(k=>p[k+'_on']=!!fd[k+'_on']);p.paypal_passFee=!!fd.paypal_passFee;
     for(const k in chImgDraft)p[k+'_image']=chImgDraft[k];if(await call('paymentsSave',p))chImgDraft={};return}
   if(kind==='reschedule'){if(await call('reschedule',{id:f.dataset.id,date:fd.date,time:fd.time}))closeModal();return}
   if(kind==='guide'){if(await call('guideSave',{...fd,id:f.dataset.id||'',active:!!fd.active,createAcct:!!fd.createAcct}))closeModal();return}
