@@ -137,6 +137,28 @@ body.app .topnav a:not(#navAdmin),body.app .topnav .navsub a[data-nav=check]{dis
 @media(max-width:430px){.frow{grid-template-columns:1fr}}
 .fdate{position:relative;cursor:pointer}.fdate .cal{flex:none;color:var(--g2);pointer-events:none}
 .fdate input[type=date]{position:relative;cursor:pointer}.fdate input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:auto;height:auto;opacity:0;cursor:pointer}
+.set .card{padding:18px 20px}
+h3.sh{display:flex;align-items:center;gap:12px;margin:0 0 16px;font-size:16.5px;line-height:1.3}h3.sh .i{flex:none;width:38px;height:38px;border-radius:11px;background:var(--g3);display:grid;place-items:center;font-size:19px}
+h3.sh small{display:block;font-weight:400;color:var(--mut);font-size:12.5px;margin-top:1px}
+.set .g{display:grid;gap:14px;grid-template-columns:repeat(var(--c,3),minmax(0,1fr))}.set .field{margin:0}.set .field label{display:flex;align-items:center;gap:6px}
+.set .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.inp{display:flex;align-items:center;height:48px;border:1px solid #cfd8d1;border-radius:12px;background:#fafbf9;padding:0 14px;transition:border-color .15s,box-shadow .15s,background .15s}
+.inp:focus-within{border-color:var(--g2);background:#fff;box-shadow:0 0 0 3px rgba(47,125,82,.14)}
+.inp input,.inp select{flex:1;min-width:0;width:auto;height:46px;border:0;background:transparent;padding:0;font-size:16px;outline:none;box-shadow:none;color:var(--ink)}
+.inp input[type=time]{-webkit-appearance:none;appearance:none;text-align:left}.inp input[type=time]::-webkit-date-and-time-value{text-align:left}
+.inp .unit{flex:none;color:var(--mut);font-size:13.5px;margin-left:8px}
+.inp select{flex:none;border-left:1px solid var(--line);padding:0 4px 0 12px;margin-left:10px;cursor:pointer}
+.set .hint{font-size:12px;color:var(--mut);margin-top:5px}
+.set .note{background:#f6f8f5;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--mut);margin-top:14px}
+.erow{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,240px);gap:20px;align-items:end}
+.ratem{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:10px 12px;align-items:center}.ratem .rh{font-size:13px;color:var(--mut)}.ratem .rl{font-weight:600;font-size:14.5px;padding-right:4px;white-space:nowrap}
+.spbar{display:flex;height:12px;border-radius:99px;overflow:hidden;background:#eef1ec;margin:16px 0 8px;gap:2px}.spbar i{display:block;min-width:2px;transition:flex .2s}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;font-size:13px}.chips b{margin-right:4px}.chips span{background:#eef4ef;color:var(--g);border-radius:99px;padding:3px 10px;font-variant-numeric:tabular-nums}.chips em{color:var(--mut);font-style:normal}
+.set .tarea{width:100%;border:1px solid #cfd8d1;border-radius:12px;background:#fafbf9;padding:12px 14px;font-size:15px;line-height:1.6;resize:vertical}.set .tarea:focus{border-color:var(--g2);background:#fff;box-shadow:0 0 0 3px rgba(47,125,82,.14);outline:none}
+.savebar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 16px;box-shadow:0 6px 24px rgba(20,40,30,.10);margin-top:4px}
+body.mob .savebar{bottom:calc(76px + env(safe-area-inset-bottom))}
+@media(max-width:760px){.set .g{grid-template-columns:1fr 1fr}.erow{grid-template-columns:1fr}}
+@media(max-width:430px){.set .g{grid-template-columns:1fr}.savebar .sm{display:none}.savebar .btn{width:100%}}
 .job{border-left:5px solid var(--g)}.job.started{border-left-color:#d97706}.job.done{border-left-color:#9ca3af;opacity:.85}
 .job .big{font-size:26px;font-weight:700;color:var(--g)}.job .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.job .acts .btn{flex:1;white-space:nowrap;min-width:130px;padding:12px;font-size:16px}
 .callrow{display:flex;gap:8px;margin-top:8px}.callrow a{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600}
@@ -864,30 +886,41 @@ ${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r[0]}</td><td class="n">${r[1]}</td>
 <div class="sign"><div>ผู้รับเงิน<br>${esc(R.name||'')}</div></div>
 <script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),400))<\/script></body></html>`}
 function openReceipt(b,R){const w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');w.document.write(receiptDoc(b,R));w.document.close()}
-function pSettings(){const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village+ +sp.park;
-  const f=(n,l,v,t='text')=>`<div class="field"><label>${l}</label><input name="${n}" type="${t}" value="${esc(v)}"></div>`;
+function updSplit(){const f=document.querySelector('form[data-form=settings]');if(!f)return;const v=n=>Math.max(0,+(f.elements[n]?.value)||0);
+  const g=v('sp_guide'),vi=v('sp_village'),p=v('sp_park'),sum=g+vi+p,fee=v('groupFee'),pc=x=>sum?Math.round(x*100/sum):0;
+  const bar=document.getElementById('spbar'),t=document.getElementById('spsum');if(!bar||!t)return;
+  bar.innerHTML=sum?`<i style="flex:${g};background:var(--g)"></i><i style="flex:${vi};background:#e0a33a"></i><i style="flex:${p};background:#4f86c6"></i>`:'';
+  t.innerHTML=`ไกด์ ${pc(g)}% · หมู่บ้าน ${pc(vi)}% · อุทยาน ${pc(p)}% — รวม <b>${baht(sum)}</b> ${sum===fee?'<span style="color:#1d6b3a">= ค่าบริการต่อกลุ่ม ✓</span>':`<span style="color:var(--red)">≠ ค่าบริการต่อกลุ่ม ${baht(fee)} (ต่าง ${baht(Math.abs(fee-sum))})</span>`}`}
+document.addEventListener('input',e=>{if(e.target.form?.dataset.form==='settings'&&/^(sp_|groupFee)/.test(e.target.name||''))updSplit()});
+function pSettings(){setTimeout(updSplit,0);const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village+ +sp.park,SL=slotList();
+  const F=(n,l,v,u='',o={})=>`<div class="field"><label for="st_${n}">${l}</label><div class="inp"><input id="st_${n}" name="${n}" type="${o.t||'number'}" value="${esc(v??'')}"${o.t?'':' inputmode="numeric" min="0"'}>${u?`<span class="unit">${u}</span>`:''}</div>${o.hint?`<div class="hint">${o.hint}</div>`:''}</div>`;
+  const H=(i,t,sub='')=>`<h3 class="sh"><span class="i">${i}</span><span>${t}${sub?`<small>${sub}</small>`:''}</span></h3>`;
+  const R=k=>`<div class="inp"><input name="er_${k}" type="number" inputmode="numeric" min="0" value="${esc(s.entryRates[k])}" aria-label="${(PAX.find(x=>x[0]===k)||[])[1]||k}"><span class="unit">บาท</span></div>`;
   return `<div class="hd"><h2>ตั้งค่าราคาและระบบ</h2></div>
-  <form data-form="settings">
-  <div class="card"><h3>ราคา</h3><div class="grid3">${f('groupFee','ค่าบริการต่อกลุ่ม (บาท)',s.groupFee,'number')}${f('maxGroup','จำนวนคนสูงสุดต่อกลุ่ม',s.maxGroup,'number')}${f('payDeadlineMin','ชำระเงินภายใน (นาที)',s.payDeadlineMin,'number')}</div>
-   <h3>ค่าเข้าอุทยาน (ต่อคน)</h3><div class="grid4">${PAX.map(([k,l])=>f('er_'+k,l,s.entryRates[k],'number')).join('')}</div>
-   <div class="grid4">${f('vehicleFee','ค่ารถเข้าอุทยาน (บาท/คัน)',s.vehicleFee??30,'number')}</div>
-   <p class="mut sm" style="margin-top:-4px">ปรับให้ตรงกับอัตราจริงของอุทยาน</p>
-   <h3>การแบ่งสัดส่วนค่าบริการต่อกลุ่ม</h3><div class="grid3">${f('sp_guide','ค่าไกด์',sp.guide,'number')}${f('sp_village','ส่วนกลางหมู่บ้าน',sp.village,'number')}${f('sp_park','ค่าอุทยาน',sp.park,'number')}</div>
-   <p class="sm ${sumSp===+s.groupFee?'mut':''}" style="${sumSp!==+s.groupFee?'color:var(--red)':''}">ผลรวมสัดส่วน ${baht(sumSp)} ${sumSp===+s.groupFee?'= ค่าบริการต่อกลุ่ม ✓':'≠ ค่าบริการต่อกลุ่ม '+baht(s.groupFee)}</p>
-   <p class="mut sm">การเปลี่ยนราคาจะมีผลกับการจองใหม่เท่านั้น — การจองเดิมเก็บราคา ณ วันที่จองไว้</p></div>
-  <div class="card"><h3>รอบเวลา</h3><div class="grid4">${f('slotStart','เริ่มรอบแรก',s.slotStart,'time')}${f('slotEnd','รอบสุดท้าย',s.slotEnd,'time')}${f('slotStep','ห่างกันทุก (นาที)',s.slotStep,'number')}${f('tripHours','ระยะเวลาเดินป่า (ชม.)',s.tripHours,'number')}</div>
-   <p class="mut sm" style="margin:0">ระยะห่างตั้งได้ 5–240 นาที (เช่น 15 = ปล่อยกลุ่มทุก 15 นาที) · ตอนนี้มี ${slotList().length} รอบ/วัน: ${slotList().slice(0,6).join(', ')}${slotList().length>6?' … '+slotList().slice(-1)[0]:''}</p></div>
-  <div class="card"><h3>การจองล่วงหน้า</h3><div class="grid3">
-   <div class="field"><label>ต้องจองล่วงหน้าอย่างน้อย</label><div class="row" style="gap:6px;flex-wrap:nowrap"><input name="minLead_v" type="number" min="0" value="${esc(s.minLead?.v??0)}" style="max-width:110px"><select name="minLead_u">${Object.entries(LEADU).map(([k,l])=>`<option value="${k}" ${s.minLead?.u===k?'selected':''}>${l}</option>`).join('')}</select></div></div>
-   ${f('bookAheadDays','จองล่วงหน้าได้สูงสุด (วัน)',s.bookAheadDays,'number')}</div>
-   <p class="mut sm" style="margin:0">เช่น 12 ชั่วโมง = รอบ 06:00 พรุ่งนี้ต้องจองก่อน 18:00 วันนี้ · 0 = จองได้จนถึงเวลาออกเดินทาง · ตอนนี้ลูกค้าจองได้เร็วสุด ${fmtDT(earliestBooking().toISOString())}</p></div>
-  <div class="card"><h3>ความจุ (0 = ไม่จำกัด)</h3><div class="grid3">${f('maxPeoplePerDay','จำนวนคนสูงสุดต่อวัน',s.maxPeoplePerDay,'number')}${f('maxGroupsPerSlot','จำนวนกลุ่มสูงสุดต่อรอบ',s.maxGroupsPerSlot,'number')}${f('maxGroupsPerGuideDay','กลุ่มสูงสุดต่อไกด์ต่อวัน',s.maxGroupsPerGuideDay,'number')}</div>
-   <p class="mut sm" style="margin:0">แต่ละรอบรับได้ไม่เกินจำนวนไกด์ที่ว่างเสมอ</p></div>
-  <div class="card"><h3>กฎระเบียบการเดินป่า</h3><div class="field"><label>รายละเอียด (แสดงในหน้าจอง — ลูกค้าต้องติ๊กยอมรับก่อนจอง · เว้นว่าง = ไม่แสดง)</label><textarea name="rules" rows="10" placeholder="เช่น&#10;1. ห้ามนำขยะทิ้งบนเส้นทาง&#10;2. ต้องเดินตามไกด์ตลอดเส้นทาง&#10;3. ห้ามเก็บพืชหรือสัตว์ป่า">${esc(s.rules||'')}</textarea></div>
-   <p class="mut sm" style="margin:0">ขึ้นบรรทัดใหม่ได้ตามต้องการ ระบบแสดงตามที่พิมพ์</p></div>
-  <p class="mut sm">ข้อมูลบัญชีรับเงินย้ายไปที่เมนู “ช่องทางรับชำระเงิน”</p>
-  <div class="row"><button class="btn" type="submit">บันทึกการตั้งค่า</button></div></form>
-  ${(()=>{const r=s.receipt||{};return `<form class="card" data-form="receipt" style="margin-top:16px"><div class="hd"><h3>🧾 หัวใบเสร็จรับเงิน</h3><button type="button" class="btn ghost sm" data-act="rcptpreview">ดูตัวอย่างใบเสร็จ</button></div>
+  <form data-form="settings" class="set">
+  <div class="card">${H('💰','ราคาและการชำระเงิน','ค่าบริการคิดต่อกลุ่ม (1 กลุ่ม = ไกด์ 1 คน)')}
+   <div class="g" style="--c:3">${F('groupFee','ค่าบริการต่อกลุ่ม',s.groupFee,'บาท')}${F('maxGroup','จำนวนคนสูงสุดต่อกลุ่ม',s.maxGroup,'คน')}${F('payDeadlineMin','ชำระเงินภายใน',s.payDeadlineMin,'นาที',{hint:'เกินเวลา = หมดเวลาชำระเงิน คืนรอบให้ว่าง'})}</div></div>
+  <div class="card">${H('🎫','ค่าเข้าอุทยาน','ปรับให้ตรงกับอัตราจริงของอุทยาน')}
+   <div class="erow"><div class="ratem"><span></span><span class="rh">ผู้ใหญ่ (ต่อคน)</span><span class="rh">เด็ก (ต่อคน)</span>
+     <span class="rl">คนไทย</span>${R('ta')}${R('tc')}<span class="rl">ชาวต่างชาติ</span>${R('fa')}${R('fc')}</div>
+    ${F('vehicleFee','ค่ารถเข้าอุทยาน',s.vehicleFee??30,'บาท/คัน')}</div></div>
+  <div class="card">${H('🧮','การแบ่งสัดส่วนค่าบริการต่อกลุ่ม','รวมกันต้องเท่ากับค่าบริการต่อกลุ่ม')}
+   <div class="g" style="--c:3">${F('sp_guide','<i class="dot" style="background:var(--g)"></i>ค่าไกด์',sp.guide,'บาท')}${F('sp_village','<i class="dot" style="background:#e0a33a"></i>ส่วนกลางหมู่บ้าน',sp.village,'บาท')}${F('sp_park','<i class="dot" style="background:#4f86c6"></i>ค่าอุทยาน',sp.park,'บาท')}</div>
+   <div class="spbar" id="spbar"></div><div class="sm" id="spsum"></div></div>
+  <div class="card">${H('⏰','รอบเวลาออกเดินทาง')}
+   <div class="g" style="--c:4">${F('slotStart','เริ่มรอบแรก',s.slotStart,'',{t:'time'})}${F('slotEnd','รอบสุดท้าย',s.slotEnd,'',{t:'time'})}${F('slotStep','ห่างกันทุก',s.slotStep,'นาที',{hint:'ตั้งได้ 5–240 นาที'})}${F('tripHours','ระยะเวลาเดินป่า',s.tripHours,'ชม.')}</div>
+   <div class="chips"><b>${SL.length} รอบ/วัน</b>${SL.slice(0,7).map(t=>`<span>${t}</span>`).join('')}${SL.length>8?'<em>…</em>':''}${SL.length>7?`<span>${SL[SL.length-1]}</span>`:''}</div></div>
+  <div class="card">${H('📅','การจองล่วงหน้า')}
+   <div class="g" style="--c:2"><div class="field"><label for="st_minLead_v">ต้องจองล่วงหน้าอย่างน้อย</label><div class="inp"><input id="st_minLead_v" name="minLead_v" type="number" inputmode="numeric" min="0" value="${esc(s.minLead?.v??0)}"><select name="minLead_u" aria-label="หน่วย">${Object.entries(LEADU).map(([k,l])=>`<option value="${k}" ${s.minLead?.u===k?'selected':''}>${l}</option>`).join('')}</select></div>
+     <div class="hint">0 = จองได้จนถึงเวลาออกเดินทาง</div></div>
+    ${F('bookAheadDays','จองล่วงหน้าได้สูงสุด',s.bookAheadDays,'วัน')}</div>
+   <div class="note">💡 เช่น 12 ชั่วโมง = รอบ 06:00 พรุ่งนี้ต้องจองก่อน 18:00 วันนี้ · ตอนนี้ลูกค้าจองได้เร็วสุด <b>${fmtDT(earliestBooking().toISOString())}</b></div></div>
+  <div class="card">${H('👥','ความจุ','0 = ไม่จำกัด · แต่ละรอบรับได้ไม่เกินจำนวนไกด์ที่ว่างเสมอ')}
+   <div class="g" style="--c:3">${F('maxPeoplePerDay','จำนวนคนสูงสุดต่อวัน',s.maxPeoplePerDay,'คน')}${F('maxGroupsPerSlot','จำนวนกลุ่มสูงสุดต่อรอบ',s.maxGroupsPerSlot,'กลุ่ม')}${F('maxGroupsPerGuideDay','กลุ่มสูงสุดต่อไกด์ต่อวัน',s.maxGroupsPerGuideDay,'กลุ่ม')}</div></div>
+  <div class="card">${H('📜','กฎระเบียบการเดินป่า','แสดงในหน้าจอง ลูกค้าต้องติ๊กยอมรับก่อนจอง · เว้นว่าง = ไม่แสดง')}
+   <textarea name="rules" rows="8" class="tarea" placeholder="เช่น&#10;1. ห้ามนำขยะทิ้งบนเส้นทาง&#10;2. ต้องเดินตามไกด์ตลอดเส้นทาง&#10;3. ห้ามเก็บพืชหรือสัตว์ป่า">${esc(s.rules||'')}</textarea></div>
+  <div class="savebar"><span class="sm mut">การเปลี่ยนราคามีผลกับการจองใหม่เท่านั้น การจองเดิมใช้ราคา ณ วันที่จอง</span><button class="btn" type="submit">💾 บันทึกการตั้งค่า</button></div></form>
+  ${(()=>{const r=s.receipt||{};return `<form class="card" data-form="receipt" style="margin-top:16px"><div class="hd"><h3 class="sh" style="margin:0"><span class="i">🧾</span><span>หัวใบเสร็จรับเงิน</span></h3><button type="button" class="btn ghost sm" data-act="rcptpreview">ดูตัวอย่างใบเสร็จ</button></div>
    <p class="mut sm" style="margin-top:-6px">ข้อมูลนี้แสดงที่หัวใบเสร็จของการจองที่ชำระแล้ว (เจ้าหน้าที่พิมพ์จากรายการจอง · ลูกค้าดาวน์โหลดจากหน้ายืนยันการจอง)</p>
    <div class="grid2"><div class="field"><label>ชื่อหน่วยงาน / ผู้รับเงิน</label><input name="name" value="${esc(r.name||'')}" placeholder="เช่น วิสาหกิจชุมชนท่องเที่ยวผาแง่ม"></div>
     <div class="field"><label>เลขประจำตัวผู้เสียภาษี (ถ้ามี)</label><input name="taxId" value="${esc(r.taxId||'')}"></div>
@@ -897,7 +930,7 @@ function pSettings(){const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village
    <div class="field"><label>หมายเหตุท้ายใบเสร็จ (ถ้ามี)</label><textarea name="note" rows="2" placeholder="เช่น ขอบคุณที่ใช้บริการ · ชำระแล้วไม่คืนเงินทุกกรณี">${esc(r.note||'')}</textarea></div>
    <div class="field"><label>รูปหัวใบเสร็จ (โลโก้/ตราหน่วยงาน)</label><div class="row" id="rcptbox" style="gap:12px;align-items:center;flex-wrap:wrap">${rcptBoxHTML()}</div></div>
    <button class="btn" type="submit">บันทึกหัวใบเสร็จ</button></form>`})()}
-  <div class="card" style="margin-top:16px"><div class="hd"><h3>ฤดูกาล — ช่วงปิดรับจอง</h3><button class="btn sm" data-act="seasonform">+ เพิ่มช่วงปิด</button></div>
+  <div class="card" style="margin-top:16px"><div class="hd"><h3 class="sh" style="margin:0"><span class="i">🌧️</span><span>ฤดูกาล — ช่วงปิดรับจอง</span></h3><button class="btn sm" data-act="seasonform">+ เพิ่มช่วงปิด</button></div>
    <p class="mut sm" style="margin-top:-6px">ช่วงที่ “เปิดใช้” ลูกค้าจะจองวันนั้นไม่ได้ · กำหนดได้ 2 แบบ: <b>วันที่ถึงวันที่</b> (ครั้งเดียว) หรือ <b>เดือนถึงเดือน</b> (ซ้ำทุกปี เช่น ปิดฤดูฝน มิ.ย.–ก.ย.)</p>
    ${(s.seasons||[]).length?`<div class="tbl-wrap"><table><tr><th>ชื่อ</th><th>ช่วง</th><th>สถานะ</th><th>การจองที่ค้างอยู่ในช่วงนี้</th><th></th></tr>
    ${s.seasons.map(x=>{const hit=DB.bookings.filter(b=>b.status!=='cancelled'&&b.date>=today()&&seasonCovers(x,b.date));return `<tr><td><b>${esc(x.name)}</b></td><td>${seasonText(x)}<div class="sm mut">${x.kind==='date'?'วันที่ถึงวันที่':'เดือนถึงเดือน (ทุกปี)'}</div></td>
