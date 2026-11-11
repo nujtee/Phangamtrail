@@ -209,6 +209,16 @@ export class Engine extends DurableObject {
       if (path.startsWith('/api/admin/')) {
         const actor = await this.actorOf(req); if (!actor) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
         if (path === '/api/admin/state') { const db = await this.load(); return json(this.stateFor(db, actor)) }
+        if (path === '/api/admin/slipquota') { // โควตา EasySlip (ไม่เสียโควตา) — แคช 10 นาที
+          if (actor.role === 'guide') return json({ error: 'ไม่มีสิทธิ์' }, 403);
+          if (!this.env.EASYSLIP_API_KEY) return json({ provider: (this.env.SLIPOK_API_KEY && this.env.SLIPOK_BRANCH_ID) ? 'SlipOK' : '' });
+          if (!this.esq || Date.now() - this.esq.t > 600e3) {
+            try { const r = await fetch(`${this.env.EASYSLIP_URL || 'https://api.easyslip.com'}/v1/me`, { headers: { authorization: `Bearer ${this.env.EASYSLIP_API_KEY}` } }); const j = await r.json().catch(() => ({}));
+              this.esq = { t: Date.now(), v: r.ok && j.data ? { provider: 'EasySlip', used: j.data.usedQuota ?? null, max: j.data.maxQuota ?? null, remaining: j.data.remainingQuota ?? null, expiredAt: j.data.expiredAt || null } : { provider: 'EasySlip', error: j.message === 'unauthorized' ? 'คีย์ EasySlip ไม่ถูกต้อง' : 'อ่านโควตาไม่ได้' } };
+            } catch (e) { this.esq = { t: Date.now() - 540e3, v: { provider: 'EasySlip', error: 'ติดต่อ EasySlip ไม่ได้' } } }
+          }
+          return json(this.esq.v);
+        }
         const name = path.slice(11), fn = adminActions[name]; if (!fn || req.method !== 'POST') return json({ error: 'not found' }, 404);
         const p = await req.json().catch(() => ({}));
         const out = await this.run(actor, db => fn(db, p, { hash: hashPw, verify: verifyPw }));

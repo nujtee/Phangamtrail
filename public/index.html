@@ -149,6 +149,8 @@ body.app .topnav a:not(#navAdmin),body.app .topnav .navsub a[data-nav=check]{dis
 .side a.on{background:var(--g3);color:var(--g);font-weight:600}
 @media(max-width:860px){.admin{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}.side .who{display:none}.side a{white-space:nowrap}}
 .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+.grid5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}@media(max-width:760px){.grid5{grid-template-columns:1fr 1fr}.grid5>:last-child{grid-column:1/-1}}
+.stat.click{cursor:pointer;transition:border-color .15s,box-shadow .15s}.stat.click:hover{border-color:var(--g2);box-shadow:0 2px 10px rgba(31,95,63,.08)}
 .stat .k{font-size:13px;color:var(--mut)}.stat .v{font-size:24px;font-weight:700;margin-top:2px}.stat .s{font-size:12.5px;color:var(--mut)}
 .tabs{display:flex;gap:4px;background:#eef1ec;border-radius:10px;padding:3px;width:fit-content}
 .tabs button{font:inherit;border:none;background:transparent;padding:5px 12px;border-radius:8px;cursor:pointer;font-size:13.5px}
@@ -560,20 +562,29 @@ function renderAdmin(sub){
 const live=()=>DB.bookings.filter(b=>b.status!=='cancelled');
 const revenueOf=list=>list.filter(b=>b.status==='paid').reduce((a,b)=>a+b.total,0);
 
+let slipQ={t:0,v:null};
+async function fillSlipQuota(){const el=document.getElementById('esq');if(!el)return;
+  const show=v=>{const e=document.getElementById('esq');if(!e||!v)return;e.innerHTML=!v.provider?'<span style="color:var(--warn)">ยังไม่ได้เชื่อม EasySlip</span>':v.error?`<span style="color:var(--red)">${esc(v.provider)}: ${esc(v.error)}</span>`:v.provider==='EasySlip'?(v.remaining!=null?`EasySlip เหลือ <b style="color:${+v.remaining<50?'var(--red)':'#1d6b3a'}">${(+v.remaining).toLocaleString()}</b>${v.max!=null?'/'+(+v.max).toLocaleString():''}`:`EasySlip ใช้ไป ${(+v.used||0).toLocaleString()}`):`ตรวจผ่าน ${esc(v.provider)}`};
+  if(slipQ.v&&Date.now()-slipQ.t<300e3)return show(slipQ.v);
+  const r=await api('/api/admin/slipquota');if(r.ok){slipQ={t:Date.now(),v:r};show(r)}}
 function pDashboard(){
   const t=today(),tm=addDays(t,1),wk=weekRange(t),mo=monthRange(t),L=live();
   const moB=L.filter(b=>inR(b.date,mo)),regMo=DB.bookings.filter(b=>inR(b.createdAt.slice(0,10),mo));
   const tmB=L.filter(b=>b.date===tm).sort((a,b)=>a.time.localeCompare(b.time));
-  const pend=L.filter(b=>b.status==='pending');
+  const pend=L.filter(b=>b.status==='pending'&&!b.slip),rev=L.filter(b=>b.status==='pending'&&b.slip);
+  const slipMo=DB.bookings.filter(b=>b.slipAt&&inR(bkkYmd(b.slipAt),mo)),slipWarnN=rev.filter(slipWarn).length;
+  setTimeout(fillSlipQuota,0);
   const range=dashTab==='day'?[t,t]:dashTab==='week'?wk:mo;
   const rB=L.filter(b=>b.guideId&&inR(b.date,range)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const byG=DB.guides.map(g=>({g,list:rB.filter(b=>b.guideId===g.id)})).filter(x=>x.list.length||x.g.active).sort((a,b)=>a.g.priority-b.g.priority);
   const recent=[...DB.bookings].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,8);
   return `<div class="hd"><h2>แดชบอร์ด</h2><span class="mut sm">${fmtDate(t)}</span></div>
-  <div class="grid4" style="margin-bottom:16px">
+  <div class="grid5" style="margin-bottom:16px">
    <div class="stat"><div class="k">ลงทะเบียนเดือนนี้</div><div class="v">${regMo.length} <span class="sm mut">กลุ่ม</span></div><div class="s">${regMo.reduce((a,b)=>a+b.people,0)} คน</div></div>
    <div class="stat"><div class="k">เดินป่าพรุ่งนี้</div><div class="v">${tmB.reduce((a,b)=>a+b.people,0)} <span class="sm mut">คน</span></div><div class="s">${tmB.length} กลุ่ม</div></div>
-   <div class="stat"><div class="k">รอชำระเงิน</div><div class="v" style="color:var(--warn)">${pend.length}</div><div class="s">${baht(pend.reduce((a,b)=>a+b.total,0))}</div></div>
+   <div class="stat click" data-act="gobk" data-k="pending"><div class="k">รอชำระเงิน</div><div class="v" style="color:var(--warn)">${pend.length}</div><div class="s">${baht(pend.reduce((a,b)=>a+b.total,0))} · ยังไม่ส่งสลิป</div></div>
+   <div class="stat click" data-act="gobk" data-k="review"><div class="k">ส่งตรวจสลิป</div><div class="v" style="color:var(--blue)">${slipMo.length} <span class="sm mut">ใบ · เดือนนี้</span></div>
+    <div class="s">${rev.length?`<b style="color:var(--warn)">รอตรวจ ${rev.length} · ${baht(rev.reduce((a,b)=>a+(b.paidAmount||b.total),0))}</b>${slipWarnN?` <b style="color:var(--red)">⚠${slipWarnN}</b>`:''}`:'ไม่มีรอตรวจ ✓'}</div><div class="s" id="esq"></div></div>
    <div class="stat"><div class="k">รายรับเดือนนี้</div><div class="v" style="color:var(--g)">${baht(revenueOf(moB))}</div><div class="s">ชำระแล้ว ${moB.filter(b=>b.status==='paid').length} กลุ่ม</div></div>
   </div>
   <div class="card"><h3>รายรับ (ชำระแล้ว ตามวันเดินป่า)</h3><div class="grid3">
@@ -1143,6 +1154,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   accp:el=>{acc.preset=el.dataset.k;render()},
   ptab:el=>{payTab=el.dataset.k;render()},
   bkst:el=>{bkF.status=el.dataset.k;render()},
+  gobk:el=>{Object.assign(bkF,{status:el.dataset.k,q:'',from:'',to:''});location.hash='admin-bookings'},
   bkclear:()=>{Object.assign(bkF,{status:'all',q:'',from:addDays(today(),-15),to:today()});render()},
   ntf:el=>{ntF=el.dataset.k;render()},
   confirmpay:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันรับเงิน',`${b.code} · ${esc(b.name)}<br>ยอด <b>${baht(b.paidAmount||b.total)}</b>${b.payFee?` <span class="sm mut">(รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})</span>`:''}${b.payChannel?`<br>ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}`:''}${b.slip&&!b.slipQr?'<br><span style="color:var(--warn)">⚠ อ่าน QR บนสลิปไม่ได้ — ตรวจยอดเงินเข้าบัญชีจริงก่อนยืนยัน</span>':''}${b.slip?'':'<br><span style="color:var(--warn)">⚠ ลูกค้ายังไม่ได้แนบหลักฐาน — ตรวจยอดเงินเข้าบัญชีก่อนยืนยัน</span>'}`))return;call('confirmPay',{id:b.id})},
