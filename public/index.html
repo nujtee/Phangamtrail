@@ -159,6 +159,15 @@ h3.sh small{display:block;font-weight:400;color:var(--mut);font-size:12.5px;marg
 body.mob .savebar{bottom:calc(76px + env(safe-area-inset-bottom))}
 @media(max-width:760px){.set .g{grid-template-columns:1fr 1fr}.erow{grid-template-columns:1fr}}
 @media(max-width:430px){.set .g{grid-template-columns:1fr}.savebar .sm{display:none}.savebar .btn{width:100%}}
+.gtabs{display:inline-flex;gap:4px;padding:5px;background:#e9ede7;border-radius:14px;max-width:100%;overflow-x:auto;margin-bottom:16px;scrollbar-width:none}.gtabs::-webkit-scrollbar{display:none}
+.gtabs button{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:#4d5a52;font:inherit;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.gtabs button:hover{color:var(--g)}.gtabs button.on{background:#fff;color:var(--g);font-weight:600;box-shadow:0 1px 3px rgba(20,40,30,.14)}
+.glhd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.gcard{display:flex;gap:14px;padding:16px 18px;margin-bottom:12px}.gcard.off{opacity:.7}
+.gord{display:flex;flex-direction:column;align-items:center;gap:4px}.gord .n{width:32px;height:32px;border-radius:50%;background:var(--g);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}.gord .btn{width:34px;padding:2px 0}
+.gbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}.gname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.gname b{font-size:17px}
+.ginfo{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13.5px;color:#3d4a42;word-break:break-word}.gact{display:flex;flex-wrap:wrap;gap:8px}
+.gtabs .tb{padding:0 8px;border-radius:99px;font-size:12.5px;font-weight:700;line-height:22px}
 .job{border-left:5px solid var(--g)}.job.started{border-left-color:#d97706}.job.done{border-left-color:#9ca3af;opacity:.85}
 .job .big{font-size:26px;font-weight:700;color:var(--g)}.job .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.job .acts .btn{flex:1;white-space:nowrap;min-width:130px;padding:12px;font-size:16px}
 .callrow{display:flex;gap:8px;margin-top:8px}.callrow a{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600}
@@ -700,12 +709,27 @@ function lineLinkCard(){const s=DB.settings,by=s.lineLinkBy||'both',G=[...DB.gui
    <div class="tbl-wrap" style="margin-top:12px"><table><tr><th>ไกด์</th><th>เบอร์</th><th>สถานะ LINE</th><th></th></tr>
     ${G.map(g=>`<tr><td>${esc(g.firstName+' '+g.lastName)}</td><td class="sm">${esc(g.phone)}</td><td>${g.lineUserId?'<span class="badge b-ok">✓ ผูก LINE เรียบร้อย</span>':'<span class="badge b-warn">ยังไม่ผูก</span>'}</td>
      <td style="text-align:right">${!g.lineUserId&&ed?`<button class="btn sm" data-act="linkqr" data-id="${g.id}">📱 ผูก LINE</button>`:''}${g.lineUserId?`<button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>${ed?` <button class="btn ghost sm" data-act="lineunlink" data-id="${g.id}">ยกเลิกการผูก</button>`:''}`:''}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">ยังไม่มีไกด์</td></tr>'}</table></div></div>`}
+let gTab='queue';
 function pGuides(){
   const ag=activeGuides(DB),dG=dayGuides(DB,qDate),dB=dayBookings(DB,qDate);
   const un=DB.bookings.filter(b=>b.status==='paid'&&b.qn!=null&&b.trip==='unassigned'&&b.date>=today());
   const up=DB.bookings.filter(b=>b.status!=='cancelled'&&b.guideId&&b.date>=today()&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,12);
   const ed=can('editGuides');
+  const lk=ag.filter(g=>g.lineUserId).length,svg=p=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  const TB=[['queue','คิวไกด์','<path d="M20 11a8 8 0 0 0-14.9-4"/><path d="M4 3.5V7.5h4"/><path d="M4 13a8 8 0 0 0 14.9 4"/><path d="M20 20.5v-4h-4"/>',un.length?`<span class="tb b-red">รอมอบหมาย ${un.length}</span>`:''],['line','ผูก LINE','<path d="M20.5 11.5a8.5 8 0 0 1-12.3 7.1L3.5 20l1.3-4A8.5 8 0 1 1 20.5 11.5z"/>',`<span class="tb ${ag.length&&lk===ag.length?'b-ok':'b-warn'}">${lk}/${ag.length}</span>`],['list','รายชื่อไกด์','<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 19.5a5.5 5.5 0 0 0-2.4-4.6"/>',`<span class="tb b-gray">${DB.guides.length}</span>`]];
+  const tabs=`<div class="gtabs" role="tablist">${TB.map(([k,l,ic,bd])=>`<button type="button" role="tab" aria-selected="${gTab===k}" class="${gTab===k?'on':''}" data-act="gtab" data-k="${k}">${svg(ic)}${l}${bd}</button>`).join('')}</div>`;
   return `<div class="hd"><h2>มอบหมายงานไกด์</h2>${ed?`<button class="btn" data-act="guideform">+ เพิ่มไกด์</button>`:''}</div>
+  ${tabs}
+  ${gTab==='line'?`
+  ${lineLinkCard()}
+`:gTab==='list'?`
+  <div class="glhd"><span class="mut sm">ไกด์ ${DB.guides.length} คน · เปิดใช้งาน ${ag.length} คน</span>${can('editGuides')?'<div class="row" style="gap:8px"><button class="btn" data-act="gmsg">📢 ส่งข้อความถึงไกด์</button><button class="btn ghost" data-act="gnotifyall">🔔 ทดสอบแจ้งเตือนทั้งหมด</button></div>':''}</div>
+  ${[...DB.guides].sort((a,b)=>a.priority-b.priority).map(g=>{const acc=DB.users.find(u=>u.guideId===g.id&&u.role==='guide');return `<div class="card gcard${g.active?'':' off'}">
+   <div class="gord"><span class="n">${g.priority}</span>${ed?`<button class="btn ghost sm" data-act="gup" data-id="${g.id}" aria-label="เลื่อนขึ้น">▲</button><button class="btn ghost sm" data-act="gdown" data-id="${g.id}" aria-label="เลื่อนลง">▼</button>`:''}</div>
+   <div class="gbody"><div class="gname"><b>${esc(g.firstName)} ${esc(g.lastName)}</b>${g.active?badge(['เปิดใช้งาน','b-ok']):badge(['ปิดใช้งาน','b-gray'])}${g.lineUserId?badge(['LINE ✓','b-ok']):badge(['ยังไม่ผูก LINE','b-warn'])}</div>
+    <div class="ginfo"><span>📞 ${esc(g.phone)}</span>${g.email?`<span>✉️ ${esc(g.email)}</span>`:''}${g.line?`<span>LINE: ${esc(g.line)}</span>`:''}<span>${acc?`🔑 บัญชีเข้าแอป: ${esc(acc.username)}`:'<b style="color:var(--red)">🔑 ยังไม่มีบัญชีเข้าแอป</b>'}</span><span>${g.accountNo?`🏦 ${esc(g.bankName)} ${esc(g.accountNo)}`:'<b style="color:var(--red)">🏦 ยังไม่มีเลขบัญชีธนาคาร</b>'}</span></div>
+    <div class="gact">${ed?`<button class="btn ghost sm" data-act="guideform" data-id="${g.id}">แก้ไข</button><button class="btn ghost sm" data-act="gtoggle" data-id="${g.id}">${g.active?'ปิดใช้งาน':'เปิดใช้งาน'}</button><button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>`:''}${can('markUnavail')&&g.active?`<button class="btn sm red" data-act="unavailform" data-id="${g.id}">แจ้งไม่ว่าง</button>`:''}</div></div></div>`}).join('')||'<div class="card empty">ยังไม่มีไกด์ — กด “+ เพิ่มไกด์”</div>'}
+`:`
   <div class="card"><h3>คิววนของไกด์</h3>
    <div class="queue">${ag.map(g=>{const nx=nextQueueGuide(DB);return `<div class="qitem ${nx&&nx.id===g.id?'next':''}"><span class="n">${g.priority}</span>${esc(g.firstName)}${nx&&nx.id===g.id?` <span class="badge b-ok">คนถัดไปในคิว</span>`:''}</div>`}).join('')||'<span class="mut">ยังไม่มีไกด์ที่เปิดใช้งาน</span>'}</div>
    <p class="mut sm" style="margin-bottom:0">จับคู่ไกด์<b>เรียงตามวันและเวลาที่เดินจริง</b> (วันเดียวกันเวลาเดียวกัน → ใครชำระก่อนได้ก่อน) ไกด์วนตามลำดับ 1→2→3→…→1 ต่อเนื่องไม่เริ่มใหม่ · เมื่อมีกลุ่มใหม่ที่<b>เดินก่อน</b>แทรกเข้ามา หรือไกด์แจ้งไม่ว่าง ระบบจัดคู่ใหม่ตั้งแต่จุดนั้นเป็นต้นไป (งานที่เดินก่อนหน้าไม่เปลี่ยน) และแจ้งเตือนไกด์ที่ถูกเปลี่ยนงานอัตโนมัติ · งานที่เริ่มเดินแล้ว/กำหนดไกด์เอง ไม่ถูกเปลี่ยน</p></div>
@@ -717,16 +741,9 @@ function pGuides(){
      ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?b.time:'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${b.guideId?esc(gName(DB,b.guideId)):'<span style="color:var(--red)">รอมอบหมาย</span>'}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
   ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
    ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
-  ${lineLinkCard()}
-  <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th style="text-align:right">${can('editGuides')?'<button class="btn sm" data-act="gmsg">📢 ส่งข้อความถึงไกด์</button> <button class="btn ghost sm" data-act="gnotifyall">🔔 ทดสอบแจ้งเตือนทั้งหมด</button>':''}</th></tr>
-   ${[...DB.guides].sort((a,b)=>a.priority-b.priority).map(g=>`<tr><td><b>${g.priority}</b>${ed?`<div><button class="btn ghost sm" data-act="gup" data-id="${g.id}">▲</button><button class="btn ghost sm" data-act="gdown" data-id="${g.id}">▼</button></div>`:''}</td>
-    <td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td><td>${g.accountNo?`${esc(g.bankName)}<div class="sm">${esc(g.accountNo)}</div>`:'<span class="sm" style="color:var(--red)">ยังไม่มีเลขบัญชี</span>'}</td>
-    <td class="sm">📞 ${esc(g.phone)}<br>✉️ ${esc(g.email)}<br>LINE: ${esc(g.line)}${g.lineUserId?' ✓เชื่อม OA':''}<br>${(a=>a?`🔑 บัญชี: ${esc(a.username)}`:'<span style="color:var(--red)">🔑 ยังไม่มีบัญชีเข้าระบบ</span>')(DB.users.find(u=>u.guideId===g.id&&u.role==='guide'))}</td>
-    <td>${g.active?badge(['เปิดใช้งาน','b-ok']):badge(['ปิดใช้งาน','b-gray'])}</td>
-    <td>${ed?`<button class="btn ghost sm" data-act="guideform" data-id="${g.id}">แก้ไข</button> <button class="btn ghost sm" data-act="gtoggle" data-id="${g.id}">${g.active?'ปิด':'เปิด'}</button> <button class="btn ghost sm" data-act="gnotify" data-id="${g.id}">ทดสอบแจ้งเตือน</button>`:''}${can('markUnavail')&&g.active?` <button class="btn sm red" data-act="unavailform" data-id="${g.id}">แจ้งไม่ว่าง</button>`:''}</td></tr>`).join('')}</table></div></div>
   ${unavailSection()}
   <div class="card"><h3>งานที่มอบหมายแล้ว (กำลังจะมาถึง)</h3>${up.length?`<div class="tbl-wrap"><table><tr><th>วัน/เวลา</th><th>รหัส</th><th>ผู้จอง</th><th class="num">คน</th><th>ไกด์</th><th>ชำระ</th><th>สถานะ</th><th style="text-align:right">${can('assign')?`<button class="btn sm" data-act="notifyall">🔔 แจ้งทุกคน</button>`:'แจ้งเตือน'}</th></tr>
-   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${esc(gName(DB,b.guideId))}${(g=>g?`<div class="sm mut">${g.lineUserId?'LINE ✓':'LINE ✗'} · ${g.email?'อีเมล ✓':'อีเมล ✗'}</div>`:'')(DB.guides.find(x=>x.id===b.guideId))}</td><td>${stB(b)}</td><td>${trB(b)}</td><td style="text-align:right">${can('assign')&&b.status==='paid'&&b.guideId?`<button class="btn ghost sm" data-act="notifyone" data-id="${b.id}">🔔 แจ้ง</button>`:''}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`;
+   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${esc(gName(DB,b.guideId))}${(g=>g?`<div class="sm mut">${g.lineUserId?'LINE ✓':'LINE ✗'} · ${g.email?'อีเมล ✓':'อีเมล ✗'}</div>`:'')(DB.guides.find(x=>x.id===b.guideId))}</td><td>${stB(b)}</td><td>${trB(b)}</td><td style="text-align:right">${can('assign')&&b.status==='paid'&&b.guideId?`<button class="btn ghost sm" data-act="notifyone" data-id="${b.id}">🔔 แจ้ง</button>`:''}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`}`;
 }
 function unavailSection(){
   const L=[...DB.unavail].sort((a,b)=>b.date.localeCompare(a.date)),dec=[];
@@ -1194,6 +1211,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   accp:el=>{acc.preset=el.dataset.k;render()},
   ptab:el=>{payTab=el.dataset.k;render()},
   bkst:el=>{bkF.status=el.dataset.k;render()},
+  gtab:el=>{gTab=el.dataset.k;render()},
   gobk:el=>{Object.assign(bkF,{status:el.dataset.k,q:'',from:'',to:''});location.hash='admin-bookings'},
   bkclear:()=>{Object.assign(bkF,{status:'all',q:'',from:addDays(today(),-15),to:today()});render()},
   ntf:el=>{ntF=el.dataset.k;render()},
