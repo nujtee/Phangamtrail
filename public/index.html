@@ -119,6 +119,8 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
  body.mob .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around}
  .bnav a{flex:1;text-align:center;text-decoration:none;color:var(--muted,#6b7280);font-size:11.5px;padding:4px 2px;border-radius:10px}.bnav a b{display:block;font-size:21px;line-height:1.2}.bnav a.on{color:var(--g);font-weight:700;background:var(--g3)}}
 body.app .topnav a:not(#navAdmin),body.app .topnav .navsub a[data-nav=check]{display:none}
+.nbadge{position:absolute;top:0;right:calc(50% - 22px);background:var(--red,#c0392b);color:#fff;border-radius:10px;font-size:10.5px;font-weight:700;padding:0 5px;min-width:16px;line-height:16px}
+.inb{display:flex;gap:10px;padding:12px 4px;border-bottom:1px solid #eef1ec}.inb.new{background:#f2f8f4;border-radius:10px}.inb .ic{font-size:22px}.inb .t{font-weight:700}.inb .m{white-space:pre-wrap;font-size:14px;margin-top:2px}
 .job{border-left:5px solid var(--g)}.job.started{border-left-color:#d97706}.job.done{border-left-color:#9ca3af;opacity:.85}
 .job .big{font-size:26px;font-weight:700;color:var(--g)}.job .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.job .acts .btn{flex:1;white-space:nowrap;min-width:130px;padding:12px;font-size:16px}
 .callrow{display:flex;gap:8px;margin-top:8px}.callrow a{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600}
@@ -223,9 +225,9 @@ const ROLES={
   finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','accounting','payouts','payments','audit','me']},
   guidemgr:{label:'ผู้จัดการไกด์',pages:['today','dashboard','calendar','bookings','guides','notifications','audit','me']},
   staff:{label:'เจ้าหน้าที่ประสานงาน',pages:['dashboard','calendar','content','bookings','guides','notifications','me']},
-  guide:{label:'ไกด์',pages:['today','mytrips','earn','me']}
+  guide:{label:'ไกด์',pages:['today','mytrips','inbox','earn','me']}
 };
-const PAGES={today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
+const PAGES={inbox:'🔔 แจ้งเตือน',today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
 const PERM={
   confirmPay:['superadmin','admin','finance'],
   assign:['superadmin','admin','guidemgr','staff'],
@@ -454,6 +456,13 @@ function jobCard(b,asGuide){const g=gObj(DB,b.guideId),cls=b.trip==='started'?'s
    <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน<div class="sm mut">${paxText(b.pax||{})}${b.vehicles?` · รถ ${b.vehicles} คัน`:''}</div></dd>${asGuide?'':`<dt>ไกด์</dt><dd>${g?esc(g.firstName+' '+g.lastName):'<b style="color:var(--red)">ยังไม่มีไกด์</b>'}</dd>`}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
    <div class="callrow">${tel?`<a href="tel:${tel}">📞 โทรลูกค้า</a>`:''}${b.line?`<a href="https://line.me/ti/p/~${encodeURIComponent(b.line)}" target="_blank" rel="noopener">💬 LINE ลูกค้า</a>`:''}${!asGuide&&g?.phone?`<a href="tel:${esc(g.phone)}">📞 โทรไกด์</a>`:''}</div>
    <div class="acts">${tripButtons(b,asGuide)}</div></div>`}
+const unreadN=()=>me()?.role==='guide'?(DB.notifications||[]).filter(n=>n.at>(DB.notifSeenAt||'')).length:0;
+let inboxAt=Date.now();
+function pInbox(){if(Date.now()-inboxAt>15000){inboxAt=Date.now();loadAdmin().then(ok=>{if(ok&&location.hash==='#admin-inbox'&&!DIRTY)render()})}
+  const L=DB.notifications||[],seen=DB.notifSeenAt||'';if(unreadN())setTimeout(()=>post('/api/admin/notifSeen',{}).then(r=>{if(r.ok){DB.notifSeenAt=new Date().toISOString()}}),1500);
+  const ic=n=>n.kind==='msg'?'📢':/ยกเลิก/.test(n.title)?'❌':/เตือน/.test(n.title)?'⏰':/ทดสอบ/.test(n.title)?'🔔':'📅';
+  return `<div class="row" style="justify-content:space-between;align-items:center"><h2>แจ้งเตือน</h2><button class="btn ghost sm" data-act="reloaddata">🔄 รีเฟรช</button></div><div class="card">${L.map(n=>`<div class="inb ${n.at>seen?'new':''}"><div class="ic">${ic(n)}</div><div style="flex:1"><div class="t">${esc((n.title||'').replace(/^[^\wก-๙]+\s*/,''))}${n.at>seen?' <span class="badge b-warn">ใหม่</span>':''}</div>
+   <div class="m">${esc(n.kind==='msg'?(n.message||'').replace(/^\[ผาแง่ม\][^\n]*\n\n/,'').replace(/\n\nเปิดแอป:.*$/s,''):n.body||'')}</div><div class="sm mut">${fmtDT(n.at)}</div></div></div>`).join('')||'<div class="empty">ยังไม่มีแจ้งเตือน</div>'}</div>`}
 function pToday(){const u=me(),t=today(),tm=addDays(t,1);
   if(u.role==='guide'){const g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์ — ติดต่อผู้จัดการไกด์</div>`;
     const L=DB.bookings.filter(b=>b.guideId===g.id&&b.status!=='cancelled'),T=L.filter(b=>b.date===t).sort((a,b)=>a.time.localeCompare(b.time)),N=L.filter(b=>b.date>t&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
@@ -505,6 +514,7 @@ function tripPhotoModal(b,kind){const req=me().role==='guide',st=kind==='start';
     <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0;padding:14px">📷 ถ่ายรูป / เลือกรูป<input type="file" accept="image/*" capture="environment" id="tripcam" style="display:none"></label></div>
    <div id="tripprev" class="sm mut"></div>
    <div class="mact"><button class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" data-act="tripgo" data-kind="${kind}" data-id="${b.id}" id="tripgo">${st?'▶ ยืนยันเริ่มเดินทาง':'■ ยืนยันสิ้นสุดการเดินทาง'}</button></div>`)}
+document.addEventListener('change',e=>{if(e.target.id==='gmall'){const l=document.getElementById('gmlist');if(l)l.style.display=e.target.checked?'none':'block'}});
 document.addEventListener('change',async e=>{if(e.target.id!=='tripcam')return;const f=e.target.files[0];if(!f)return;const pv=document.getElementById('tripprev');
   const d=await shrinkTo(f,1600,.8);tripPhoto=null;pv.innerHTML=`<img class="photo-prev" src="${d}"><div id="tripst" class="sm">⏳ กำลังอัปโหลดรูป…</div>`;
   const p=uploadTripPhoto(d);tripUp=p;const url=await p;if(tripUp!==p)return;const s=document.getElementById('tripst');
@@ -520,11 +530,11 @@ function renderAdmin(sub){
     .map(g=>({...g,inn:g.pages.filter(p=>pages.includes(p))})).filter(g=>g.inn.length>1);
   const grpOf=p=>GROUPS.find(g=>g.inn.includes(p)),cur=grpOf(page);
   const accBar=cur?`<div class="tabs" style="margin-bottom:14px;display:inline-flex;max-width:100%;overflow-x:auto">${cur.inn.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="text-decoration:none;padding:7px 14px">${PAGES[p]}</a>`).join('')}</div>`:'';
-  const body=accBar+{today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
+  const body=accBar+{inbox:pInbox,today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
    ${pages.filter(p=>{const g=grpOf(p);return !g||p===g.inn[0]}).map(p=>{const g=grpOf(p);return g?`<a href="#admin-${g.inn[0]}" class="${g===cur?'on':''}">${g.label}</a>`:`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`}).join('')}
    <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>
-   <nav class="bnav">${(u.role==='guide'?[['today','📍','วันนี้'],['mytrips','🥾','งานของฉัน'],['earn','💵','รายได้'],['me','📱','ฉัน']]:[['today','📍','วันนี้'],['bookings','📋','การจอง'],['guides','🧭','ไกด์'],['me','📱','ฉัน']]).filter(([p])=>pages.includes(p)).map(([p,i,l])=>`<a href="#admin-${p}" class="${p===page?'on':''}"><b>${i}</b>${l}</a>`).join('')}</nav>`;
+   <nav class="bnav">${(u.role==='guide'?[['today','📍','วันนี้'],['mytrips','🥾','งาน'],['inbox','🔔','แจ้งเตือน'],['earn','💵','รายได้'],['me','📱','ฉัน']]:[['today','📍','วันนี้'],['bookings','📋','การจอง'],['guides','🧭','ไกด์'],['me','📱','ฉัน']]).filter(([p])=>pages.includes(p)).map(([p,i,l])=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="position:relative"><b>${i}</b>${l}${p==='inbox'&&unreadN()?`<span class="nbadge">${unreadN()}</span>`:''}</a>`).join('')}</nav>`;
 }
 const live=()=>DB.bookings.filter(b=>b.status!=='cancelled');
 const revenueOf=list=>list.filter(b=>b.status==='paid').reduce((a,b)=>a+b.total,0);
@@ -643,7 +653,7 @@ function pGuides(){
   ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
    ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
   ${lineLinkCard()}
-  <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th style="text-align:right">${can('editGuides')?'<button class="btn sm" data-act="gnotifyall">🔔 ทดสอบแจ้งเตือนทั้งหมด</button>':''}</th></tr>
+  <div class="card"><h3>รายชื่อไกด์</h3><div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>บัญชีธนาคาร</th><th>ติดต่อ</th><th>สถานะ</th><th style="text-align:right">${can('editGuides')?'<button class="btn sm" data-act="gmsg">📢 ส่งข้อความถึงไกด์</button> <button class="btn ghost sm" data-act="gnotifyall">🔔 ทดสอบแจ้งเตือนทั้งหมด</button>':''}</th></tr>
    ${[...DB.guides].sort((a,b)=>a.priority-b.priority).map(g=>`<tr><td><b>${g.priority}</b>${ed?`<div><button class="btn ghost sm" data-act="gup" data-id="${g.id}">▲</button><button class="btn ghost sm" data-act="gdown" data-id="${g.id}">▼</button></div>`:''}</td>
     <td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td><td>${g.accountNo?`${esc(g.bankName)}<div class="sm">${esc(g.accountNo)}</div>`:'<span class="sm" style="color:var(--red)">ยังไม่มีเลขบัญชี</span>'}</td>
     <td class="sm">📞 ${esc(g.phone)}<br>✉️ ${esc(g.email)}<br>LINE: ${esc(g.line)}${g.lineUserId?' ✓เชื่อม OA':''}<br>${(a=>a?`🔑 บัญชี: ${esc(a.username)}`:'<span style="color:var(--red)">🔑 ยังไม่มีบัญชีเข้าระบบ</span>')(DB.users.find(u=>u.guideId===g.id&&u.role==='guide'))}</td>
@@ -1109,6 +1119,12 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   gtoggle:el=>call('guideToggle',{id:el.dataset.id}),
   gup:el=>call('guideMove',{id:el.dataset.id,d:-1}),gdown:el=>call('guideMove',{id:el.dataset.id,d:1}),
   gnotify:el=>call('guideTest',{id:el.dataset.id}),
+  gmsg:()=>{const G=DB.guides.filter(g=>g.active!==false).sort((a,b)=>a.priority-b.priority);if(!G.length)return toast('ยังไม่มีไกด์ที่เปิดใช้งาน');
+    openModal(`<h3>📢 ส่งข้อความถึงไกด์</h3><form data-form="gmsg"><p class="sm mut" style="margin-top:-4px">ส่งทาง LINE · อีเมล · แอป และแสดงในเมนู “แจ้งเตือน” ของไกด์</p>
+     <div class="field"><label>ถึง</label><label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:600"><input type="checkbox" id="gmall" checked style="width:auto"> ไกด์ทั้งหมด (${G.length} คน)</label>
+      <div id="gmlist" style="display:none;max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-top:6px">${G.map(g=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0;color:var(--ink)"><input type="checkbox" name="gid" value="${g.id}" style="width:auto"> ${esc(g.firstName+' '+g.lastName)} <span class="sm mut">${g.lineUserId?'LINE ✓':''}</span></label>`).join('')}</div></div>
+     <div class="field"><label>ข้อความ</label><textarea name="text" rows="5" maxlength="1000" placeholder="เช่น พรุ่งนี้มีฝน ให้เตรียมเสื้อกันฝนให้ลูกค้า"></textarea></div>
+     <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">📢 ส่งข้อความ</button></div></form>`)},
   gnotifyall:async()=>{const G=DB.guides.filter(g=>g.active!==false);if(!G.length)return toast('ยังไม่มีไกด์ที่เปิดใช้งาน');
     if(await confirmBox('ทดสอบแจ้งเตือนไกด์ทั้งหมด',`ส่งข้อความทดสอบถึงไกด์ที่เปิดใช้งาน <b>${G.length} คน</b> ทาง <b>LINE · อีเมล · แอป</b><div class="sm mut" style="margin-top:6px">LINE ผูกแล้ว ${G.filter(g=>g.lineUserId).length}/${G.length} · มีอีเมล ${G.filter(g=>g.email).length}/${G.length}</div>`,'ส่งทดสอบ'))call('guideTestAll',{})},
   autoall:()=>call('autoAll'),
@@ -1246,6 +1262,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='reschedule'){if(await call('reschedule',{id:f.dataset.id,date:fd.date,time:fd.time}))closeModal();return}
   if(kind==='guide'){if(await call('guideSave',{...fd,id:f.dataset.id||'',active:!!fd.active,createAcct:!!fd.createAcct}))closeModal();return}
   if(kind==='user'){if(await call('userSave',{...fd,id:f.dataset.id||'',active:!!fd.active}))closeModal();return}
+  if(kind==='gmsg'){const all=document.getElementById('gmall').checked,ids=[...f.querySelectorAll('input[name=gid]:checked')].map(x=>x.value);if(!all&&!ids.length)return toast('กรุณาเลือกไกด์อย่างน้อย 1 คน');if(await call('guideMessage',{all,ids,text:fd.text}))closeModal();return}
   if(kind==='linelink'){call('lineLinkSave',{lineLinkBy:'both',lineOa:fd.lineOa});return}
   if(kind==='receipt'){const p={...fd,image:rcptImg??(DB.settings.receipt||{}).image??''};if(await call('receiptSave',p)){rcptImg=null;setRcptBox()}return}
   if(kind==='settings'){call('settingsSave',fd);return}

@@ -278,12 +278,13 @@ export function bookingView(b) {
 }
 const safeUser = u => ({ id: u.id, no: u.no || null, username: u.username, name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, guideId: u.guideId || null, active: u.active });
 export function adminState(db, actor) {
-  const base = { settings: db.settings, site: db.site, rotSeq: db.rotSeq, lastGuideId: db.lastGuideId, me: safeUser(actor), today: today() };
+  const base = { settings: db.settings, site: db.site, rotSeq: db.rotSeq, lastGuideId: db.lastGuideId, me: safeUser(actor), today: today(), notifSeenAt: db.users.find(u => u.id === actor.id)?.notifSeenAt || '' };
   if (actor.role === 'guide') {
     return {
       ...base, settings: { ...db.settings, channels: {} }, site: undefined,
       guides: db.guides.filter(g => g.id === actor.guideId), users: [], unavail: db.unavail.filter(u => u.guideId === actor.guideId),
-      bookings: db.bookings.filter(b => b.guideId === actor.guideId && b.status !== 'cancelled'), audit: [], notifications: [],
+      bookings: db.bookings.filter(b => b.guideId === actor.guideId && b.status !== 'cancelled'), audit: [],
+      notifications: db.notifications.filter(n => n.guideId === actor.guideId && n.channel === 'push').slice(0, 100).map(n => ({ id: n.id, at: n.at, title: n.title, body: n.body, message: n.message, kind: n.kind || '', from: n.fromName || '', url: n.url || '' })),
     };
   }
   return {
@@ -507,6 +508,21 @@ export const adminActions = {
     log(db, 'notify', `แจ้งงานไกด์ ${L.length} งาน: ${L.map(b => `${b.code}→${gName(db, b.guideId)}`).join(', ')}`);
     return { msg: `ส่งแจ้งเตือน ${L.length} งานแล้ว${noCh.size ? ` · ⚠ ${[...noCh].join(', ')} ยังไม่ผูก LINE และไม่มีอีเมล` : ''}` };
   },
+  guideMessage(db, p) {
+    need(db.$actor, 'editGuides'); const text = String(p.text || '').trim().slice(0, 1000); if (!text) fail('กรุณาพิมพ์ข้อความ');
+    const ids = p.all ? null : new Set(Array.isArray(p.ids) ? p.ids : []);
+    const G = db.guides.filter(g => g.active !== false && (!ids || ids.has(g.id))); if (!G.length) fail('กรุณาเลือกไกด์อย่างน้อย 1 คน');
+    const from = db.$actor.name, head = `📢 ข้อความจาก ${from}`;
+    G.forEach(g => {
+      const base = { at: nowISO(), guideId: g.id, bookingId: '', kind: 'msg', fromName: from, message: `[ผาแง่ม] ${head}\n\n${text}\n\nเปิดแอป: ${SITE_URL}/#admin-inbox`, status: 'pending' };
+      db.$notify.push({ ...base, id: uid(), channel: 'line', to: g.lineUserId || '', toLabel: g.line || '' });
+      if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] ${head}` });
+      db.$notify.push({ ...base, id: uid(), channel: 'push', to: 'guide:' + g.id, toLabel: 'แอป', title: head, body: text.slice(0, 180), url: '/#admin-inbox' });
+    });
+    log(db, 'notify', `ส่งข้อความถึงไกด์ ${G.length} คน (${G.map(g => g.firstName).join(', ')}): ${text.slice(0, 80)}`);
+    return { msg: `ส่งข้อความถึงไกด์ ${G.length} คนแล้ว (LINE · อีเมล · แอป)` };
+  },
+  notifSeen(db) { const u = db.users.find(x => x.id === db.$actor.id); if (u) u.notifSeenAt = nowISO(); return {} },
   guideTestAll(db) {
     need(db.$actor, 'editGuides'); const G = db.guides.filter(g => g.active !== false); if (!G.length) fail('ยังไม่มีไกด์ที่เปิดใช้งาน');
     G.forEach(g => notifyGuide(db, g, { code: 'TEST', date: today(), time: '06:00', name: 'ทดสอบระบบ', people: 0, phone: '-' }, 'test'));

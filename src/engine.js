@@ -33,6 +33,13 @@ export class Engine extends DurableObject {
   }
 
   /* ----- โหลด / บันทึก ----- */
+  stateFor(db, actor) {
+    const st = { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET) };
+    if (actor.role === 'guide' && actor.guideId) { // กล่องแจ้งเตือนของไกด์: ดึงจากฐานข้อมูลโดยตรง (ย้อนหลังได้ไกลกว่า log ในหน่วยความจำ)
+      try { st.notifications = this.sql.exec(`SELECT json FROM notif WHERE json_extract(json,'$.to') = ? ORDER BY n DESC LIMIT 100`, 'guide:' + actor.guideId).toArray().map(r => JSON.parse(r.json)).map(n => ({ id: n.id, at: n.at, title: n.title, body: n.body, message: n.message, kind: n.kind || '', from: n.fromName || '', url: n.url || '' })) } catch (e) { }
+    }
+    return st;
+  }
   async load() {
     if (this.db) return this.db;
     const meta = Object.fromEntries(this.sql.exec('SELECT k,json FROM meta').toArray().map(r => [r.k, JSON.parse(r.json)]));
@@ -195,11 +202,11 @@ export class Engine extends DurableObject {
 
       if (path.startsWith('/api/admin/')) {
         const actor = await this.actorOf(req); if (!actor) return json({ error: 'กรุณาเข้าสู่ระบบ' }, 401);
-        if (path === '/api/admin/state') { const db = await this.load(); return json({ ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET) }) }
+        if (path === '/api/admin/state') { const db = await this.load(); return json(this.stateFor(db, actor)) }
         const name = path.slice(11), fn = adminActions[name]; if (!fn || req.method !== 'POST') return json({ error: 'not found' }, 404);
         const p = await req.json().catch(() => ({}));
         const out = await this.run(actor, db => fn(db, p, { hash: hashPw, verify: verifyPw }));
-        const db = await this.load(); return json({ ...out, state: { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET) } });
+        const db = await this.load(); return json({ ...out, state: this.stateFor(db, actor) });
       }
       if (path === '/internal/can') { // worker ถามสิทธิ์ก่อนอัปโหลดรูป
         const actor = await this.actorOf(req); return json({ actor });
