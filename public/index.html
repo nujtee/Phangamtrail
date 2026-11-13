@@ -322,6 +322,8 @@ async function uploadImg(dataURL){const blob=await (await fetch(dataURL)).blob()
 const gObj=(db,id)=>db.guides.find(g=>g.id===id);
 const gName=(db,id)=>{const g=gObj(db,id);return g?`${g.firstName} ${g.lastName}`:'-'};
 const PAX=[['ta','คนไทย ผู้ใหญ่'],['tc','คนไทย เด็ก'],['fa','ชาวต่างชาติ ผู้ใหญ่'],['fc','ชาวต่างชาติ เด็ก']];
+const PAXB=PAX.filter(([k])=>k==='ta'||k==='fa'); // ประเภทที่จองได้ (ยกเลิกประเภทเด็กแล้ว)
+const vehText=b=>[b.vehicles?`รถยนต์ ${b.vehicles} คัน`:'',b.motos?`จักรยานยนต์ ${b.motos} คัน`:''].filter(Boolean).join(' · ');
 const paxCount=p=>PAX.reduce((a,[k])=>a+(+p[k]||0),0);
 const entryOf=(p,r)=>PAX.reduce((a,[k])=>a+(+p[k]||0)*(+r[k]||0),0);
 const paxText=p=>PAX.filter(([k])=>+p[k]).map(([k,l])=>`${l} ${p[k]}`).join(' · ');
@@ -365,7 +367,7 @@ function confirmBox(title,body,okLabel='ยืนยัน',cls=''){return new P
 /* ========== FRONT: booking ========== */
 let VB=null; /* การจองที่กำลังแสดง {booking, phone} */
 let AV=null,avKey=''; /* ที่ว่างจากเซิร์ฟเวอร์ */
-const bf={date:addDays(today(),1),time:null,pax:{ta:2,tc:0,fa:0,fc:0},vehicles:1,name:'',phone:'',email:'',line:'',note:''};
+const bf={date:addDays(today(),1),time:null,pax:{ta:2,tc:0,fa:0,fc:0},vehicles:1,motos:0,name:'',phone:'',email:'',line:'',note:''};
 let viewBookingId=null;
 function siteImg(src,alt=''){return `<img src="${src}" alt="${esc(alt)}" loading="lazy">`}
 function renderHome(){const S=PUB.site,s=PUB.settings,h=S.home,imgs=S.gallery.imgs.slice(-6).reverse();
@@ -405,9 +407,10 @@ function renderBook(){
    <label>เวลาออกเดินทาง</label><div id="slots">${slotsHTML()}</div>
    <h2 style="margin-top:22px">2. จำนวนผู้เดินป่า</h2>
    <p class="mut sm" style="margin-top:-6px">รวมไม่เกิน ${s.maxGroup} คนต่อกลุ่ม</p>
-   ${PAX.map(([k,l])=>`<div class="row" style="justify-content:space-between;margin-bottom:8px;max-width:420px"><span>${l} <span class="mut sm">(${baht(s.entryRates[k])}/คน)</span></span><div class="stepper"><button type="button" data-act="ppl" data-k="${k}" data-d="-1">−</button><b id="ppl_${k}">${bf.pax[k]}</b><button type="button" data-act="ppl" data-k="${k}" data-d="1">+</button></div></div>`).join('')}
+   ${PAXB.map(([k,l])=>`<div class="row" style="justify-content:space-between;margin-bottom:8px;max-width:420px"><span>${l} <span class="mut sm">(${baht(s.entryRates[k])}/คน)</span></span><div class="stepper"><button type="button" data-act="ppl" data-k="${k}" data-d="-1">−</button><b id="ppl_${k}">${bf.pax[k]}</b><button type="button" data-act="ppl" data-k="${k}" data-d="1">+</button></div></div>`).join('')}
    <div class="row" style="justify-content:space-between;margin:14px 0 8px;max-width:420px"><span>🚗 รถยนต์เข้าอุทยาน <span class="mut sm">(${baht(s.vehicleFee??30)}/คัน)</span></span><div class="stepper"><button type="button" data-act="veh" data-d="-1">−</button><b id="veh_n">${bf.vehicles}</b><button type="button" data-act="veh" data-d="1">+</button></div></div>
-   <p class="mut sm" style="margin:0;max-width:420px">ใส่ 0 ถ้าไม่ได้นำรถยนต์เข้าอุทยาน</p>
+   <div class="row" style="justify-content:space-between;margin:0 0 8px;max-width:420px"><span>🏍️ รถจักรยานยนต์เข้าอุทยาน <span class="mut sm">(${baht(s.motoFee??20)}/คัน)</span></span><div class="stepper"><button type="button" data-act="moto" data-d="-1">−</button><b id="moto_n">${bf.motos||0}</b><button type="button" data-act="moto" data-d="1">+</button></div></div>
+   <p class="mut sm" style="margin:0;max-width:420px">ใส่ 0 ถ้าไม่ได้นำรถเข้าอุทยาน</p>
    <h2 style="margin-top:22px">3. ข้อมูลผู้จอง</h2>
    <div class="grid2">
     <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(bf.name)}" data-bf="name" autocomplete="name"></div>
@@ -447,10 +450,11 @@ function slotsHTML(){
 async function loadAvail(key){const [date,people]=key.split('|');const r=await post('/api/public/availability',{date,people});if(avKey!==key)return;
   AV=r.ok?r:{slots:[],closed:{name:r.error||'โหลดไม่สำเร็จ',text:''}};const el=document.getElementById('slots');if(el)el.innerHTML=slotsHTML()}
 const POLICY=()=>`ชำระภายใน ${PUB.settings.payDeadlineMin} นาทีหลังจอง มิฉะนั้นระบบจะยกเลิกอัตโนมัติ · <b>ชำระแล้วไม่คืนเงินทุกกรณี (รวมถึงยกเลิกหรือไม่มาตามนัด)</b> แต่ขอเลื่อนวันเดินป่าได้ โดยติดต่อเจ้าหน้าที่`;
-function priceHTML(){const s=PUB.settings,e=entryOf(bf.pax,s.entryRates),vf=+(s.vehicleFee??30),vt=(bf.vehicles||0)*vf;
+function priceHTML(){const s=PUB.settings,e=entryOf(bf.pax,s.entryRates),vf=+(s.vehicleFee??30),mf=+(s.motoFee??20),vt=(bf.vehicles||0)*vf+(bf.motos||0)*mf;
   return `<div class="l"><span>ค่าบริการนำเที่ยว (ต่อกลุ่ม)</span><span>${baht(s.groupFee)}</span></div>
   ${PAX.filter(([k])=>bf.pax[k]).map(([k,l])=>`<div class="l"><span>ค่าเข้าอุทยาน ${l} ${baht(s.entryRates[k])} × ${bf.pax[k]}</span><span>${baht(s.entryRates[k]*bf.pax[k])}</span></div>`).join('')}
-  ${bf.vehicles?`<div class="l"><span>ค่ารถเข้าอุทยาน ${baht(vf)} × ${bf.vehicles} คัน</span><span>${baht(vt)}</span></div>`:''}
+  ${bf.vehicles?`<div class="l"><span>ค่ารถยนต์เข้าอุทยาน ${baht(vf)} × ${bf.vehicles} คัน</span><span>${baht(bf.vehicles*vf)}</span></div>`:''}
+  ${bf.motos?`<div class="l"><span>ค่ารถจักรยานยนต์เข้าอุทยาน ${baht(mf)} × ${bf.motos} คัน</span><span>${baht(bf.motos*mf)}</span></div>`:''}
   <div class="l t"><span>ยอดชำระทั้งหมด</span><span>${baht(+s.groupFee+e+vt)}</span></div>`}
 function renderDone(b,fromBooking){
   const ok=b.status==='paid';
@@ -462,7 +466,7 @@ function renderDone(b,fromBooking){
   <div class="card"><h3>รายละเอียดการจอง</h3>
    <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลาออกเดินทาง</dt><dd>${b.time} น.</dd>
    <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>${b.email?`<dt>อีเมล</dt><dd>${esc(b.email)}</dd>`:''}
-   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${b.vehicles} คัน)</span></dd>`:''}<dt>ยอดชำระ</dt><dd><b>${baht(b.paidAmount||b.total)}</b></dd>
+   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles||b.motos?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${vehText(b)})</span></dd>`:''}<dt>ยอดชำระ</dt><dd><b>${baht(b.paidAmount||b.total)}</b></dd>
    <dt>สถานะ</dt><dd>${ok?'<span class="badge b-ok">จองสำเร็จ</span>':'<span class="badge b-warn">รอเจ้าหน้าที่ตรวจสอบสลิป</span>'}</dd></dl>
    <p class="mut sm">ใช้รหัสการจองและเบอร์โทรตรวจสอบสถานะได้ที่เมนู “ตรวจสอบการจอง” · ชำระแล้วไม่คืนเงินทุกกรณี แต่ขอเลื่อนวันได้โดยติดต่อเจ้าหน้าที่</p>
    <div class="row" style="gap:8px;flex-wrap:wrap">${!ok&&fromBooking?`<button class="btn ghost sm" data-act="reslip">ส่งสลิปใหม่</button>`:''}${fromBooking?`<button class="btn ghost sm" data-act="newbook">จองรอบใหม่</button>`:''}</div></div>`;
@@ -483,7 +487,7 @@ function renderPayment(b,fromBooking){
   <div class="card"><h3>รายละเอียดการจอง</h3>
    <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลา</dt><dd>${b.time} น.</dd>
    <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>
-   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${b.vehicles} คัน)</span></dd>`:''}<dt>รวม</dt><dd><b>${baht(b.total)}</b></dd>
+   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles||b.motos?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${vehText(b)})</span></dd>`:''}<dt>รวม</dt><dd><b>${baht(b.total)}</b></dd>
    <dt>สถานะ</dt><dd>${stB(b)}</dd></dl>
    <p class="mut sm">เก็บรหัสการจองไว้ใช้ตรวจสอบสถานะที่เมนู “ตรวจสอบการจอง”</p><p class="sm" style="color:#6d4a0c">${POLICY()}</p>
    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${fromBooking?`<button class="btn ghost" data-act="newbook">จองรอบใหม่</button>`:''}</div>
@@ -511,7 +515,7 @@ function renderLogin(){
 const photoLink=b=>(b.startPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-t="ก่อนเดิน" data-src="${esc(b.startPhoto)}">📷 รูปก่อนเดิน</button>`:'')+(b.endPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-t="หลังเดินเสร็จ" data-src="${esc(b.endPhoto)}">📷 รูปหลังเดิน</button>`:'');
 function jobCard(b,asGuide){const g=gObj(DB,b.guideId),cls=b.trip==='started'?'started':isDone(b)?'done':'';const tel=String(b.phone||'').replace(/[^\d+]/g,'');
   return `<div class="card job ${cls}"><div class="hd"><div><div class="big">${b.time} น.</div><div class="sm mut">${fmtDate(b.date)} · ${b.code}</div></div>${trB(b)}</div>
-   <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน<div class="sm mut">${paxText(b.pax||{})}${b.vehicles?` · รถ ${b.vehicles} คัน`:''}</div></dd>${asGuide?'':`<dt>ไกด์</dt><dd>${g?esc(g.firstName+' '+g.lastName):'<b style="color:var(--red)">ยังไม่มีไกด์</b>'}</dd>`}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
+   <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน<div class="sm mut">${paxText(b.pax||{})}${b.vehicles||b.motos?` · ${vehText(b)}`:''}</div></dd>${asGuide?'':`<dt>ไกด์</dt><dd>${g?esc(g.firstName+' '+g.lastName):'<b style="color:var(--red)">ยังไม่มีไกด์</b>'}</dd>`}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
    <div class="callrow">${tel?`<a href="tel:${tel}">📞 โทรลูกค้า</a>`:''}${b.line?`<a href="https://line.me/ti/p/~${encodeURIComponent(b.line)}" target="_blank" rel="noopener">💬 LINE ลูกค้า</a>`:''}${!asGuide&&g?.phone?`<a href="tel:${esc(g.phone)}">📞 โทรไกด์</a>`:''}</div>
    <div class="acts">${tripButtons(b,asGuide)}</div></div>`}
 const unreadN=()=>me()?.role==='guide'?(DB.notifications||[]).filter(n=>n.at>(DB.notifSeenAt||'')).length:0;
@@ -795,7 +799,7 @@ function pAccounting(){
    <div class="stat"><div class="k">ส่วนของไกด์</div><div class="v">${baht(G)}</div><div class="s">จ่ายแล้ว ${baht(gPaid)} · ค้างจ่าย ${baht(G-gPaid)}</div></div>
    <div class="stat"><div class="k">ส่วนกลางหมู่บ้าน</div><div class="v">${baht(V)}</div><div class="s">${L.length} กลุ่ม × ${baht(DB.settings.split.village)}</div></div>
    <div class="stat"><div class="k">ส่วนของอุทยาน</div><div class="v">${baht(P)}</div><div class="s">${L.length} กลุ่ม × ${baht(DB.settings.split.park)}</div></div>
-   <div class="stat"><div class="k">ค่าเข้าพื้นที่อุทยาน</div><div class="v">${baht(E)}</div><div class="s">${sum(b=>b.people)} คน${VH?` · ค่ารถ ${baht(VH)} (${sum(b=>b.vehicles||0)} คัน)`:''}</div></div></div>
+   <div class="stat"><div class="k">ค่าเข้าพื้นที่อุทยาน</div><div class="v">${baht(E)}</div><div class="s">${sum(b=>b.people)} คน${VH?` · ค่ารถ ${baht(VH)} (รถยนต์ ${sum(b=>b.vehicles||0)} · จยย. ${sum(b=>b.motos||0)} คัน)`:''}</div></div></div>
   <div class="card"><div class="hd"><h3>รายละเอียด</h3><b>รวมทั้งหมด ${baht(G+V+P+E+VH)}</b></div><div class="tbl-wrap"><table>
    <tr><th>วันที่</th><th>รหัส</th><th>ไกด์</th><th class="num">คน</th><th class="num">ไกด์</th><th class="num">ส่วนกลางหมู่บ้าน</th><th class="num">อุทยาน</th><th class="num">ค่าเข้าอุทยาน</th><th class="num">ค่ารถ</th><th class="num">รวม</th></tr>
    ${L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gName(DB,b.guideId))}</td><td class="num">${b.people}</td><td class="num">${baht(b.split.guide)}</td><td class="num">${baht(b.split.village)}</td><td class="num">${baht(b.split.park)}</td><td class="num">${baht(b.entryTotal)}</td><td class="num">${baht(b.vehicleTotal||0)}</td><td class="num"><b>${baht(b.total)}</b></td></tr>`).join('')||`<tr><td colspan="10" class="empty">ไม่มีรายการในช่วงนี้</td></tr>`}
@@ -880,7 +884,8 @@ function bahtText(n){n=Math.round(+n||0);if(!n)return 'ศูนย์บาท�
   let out='',m=Math.floor(n/1e6),r=n%1e6;if(m)out=bahtText(m).replace('บาทถ้วน','')+'ล้าน';out+=g(r);return out+'บาทถ้วน'}
 function receiptDoc(b,R){R=R||{};const rows=[['ค่าบริการนำเที่ยวพร้อมไกด์ (ต่อกลุ่ม)',1,b.groupFee]];
   PAX.forEach(([k,l])=>{const q=b.pax?.[k];if(q){const rate=b.entryRates?.[k]??(q?Math.round((b.entryTotal||0)/(b.people||1)):0);rows.push([`ค่าเข้าพื้นที่อุทยาน ${l}`,q,rate])}});
-  if(b.vehicles)rows.push(['ค่ารถเข้าอุทยาน (คัน)',b.vehicles,b.vehicleFee||Math.round((b.vehicleTotal||0)/b.vehicles)]);
+  if(b.vehicles)rows.push(['ค่ารถยนต์เข้าอุทยาน (คัน)',b.vehicles,b.vehicleFee||Math.round(((b.vehicleTotal||0)-(b.motos||0)*(b.motoFee||0))/b.vehicles)]);
+  if(b.motos)rows.push(['ค่ารถจักรยานยนต์เข้าอุทยาน (คัน)',b.motos,b.motoFee||20]);
   if(b.payFee)rows.push(['ค่าธรรมเนียม PayPal',1,b.payFee]);
   const total=rows.reduce((a,r)=>a+r[1]*r[2],0),ch=(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1],paid=b.paidConfirmedAt?fmtDate(b.paidConfirmedAt.slice(0,10)):fmtDate(today());
   return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>ใบเสร็จรับเงิน ${b.code}</title>
@@ -912,15 +917,13 @@ document.addEventListener('input',e=>{if(e.target.form?.dataset.form==='settings
 function pSettings(){setTimeout(updSplit,0);const s=DB.settings,sp=s.split,sumSp=+sp.guide+ +sp.village+ +sp.park,SL=slotList();
   const F=(n,l,v,u='',o={})=>`<div class="field"><label for="st_${n}">${l}</label><div class="inp"><input id="st_${n}" name="${n}" type="${o.t||'number'}" value="${esc(v??'')}"${o.t?'':' inputmode="numeric" min="0"'}>${u?`<span class="unit">${u}</span>`:''}</div>${o.hint?`<div class="hint">${o.hint}</div>`:''}</div>`;
   const H=(i,t,sub='')=>`<h3 class="sh"><span class="i">${i}</span><span>${t}${sub?`<small>${sub}</small>`:''}</span></h3>`;
-  const R=k=>`<div class="inp"><input name="er_${k}" type="number" inputmode="numeric" min="0" value="${esc(s.entryRates[k])}" aria-label="${(PAX.find(x=>x[0]===k)||[])[1]||k}"><span class="unit">บาท</span></div>`;
   return `<div class="hd"><h2>ตั้งค่าราคาและระบบ</h2></div>
   <form data-form="settings" class="set">
   <div class="card">${H('💰','ราคาและการชำระเงิน','ค่าบริการคิดต่อกลุ่ม (1 กลุ่ม = ไกด์ 1 คน)')}
    <div class="g" style="--c:3">${F('groupFee','ค่าบริการต่อกลุ่ม',s.groupFee,'บาท')}${F('maxGroup','จำนวนคนสูงสุดต่อกลุ่ม',s.maxGroup,'คน')}${F('payDeadlineMin','ชำระเงินภายใน',s.payDeadlineMin,'นาที',{hint:'เกินเวลา = หมดเวลาชำระเงิน คืนรอบให้ว่าง'})}</div></div>
   <div class="card">${H('🎫','ค่าเข้าอุทยาน','ปรับให้ตรงกับอัตราจริงของอุทยาน')}
-   <div class="erow"><div class="ratem"><span></span><span class="rh">ผู้ใหญ่ (ต่อคน)</span><span class="rh">เด็ก (ต่อคน)</span>
-     <span class="rl">คนไทย</span>${R('ta')}${R('tc')}<span class="rl">ชาวต่างชาติ</span>${R('fa')}${R('fc')}</div>
-    ${F('vehicleFee','ค่ารถเข้าอุทยาน',s.vehicleFee??30,'บาท/คัน')}</div></div>
+   <div class="g" style="--c:4">${F('er_ta','คนไทย',s.entryRates.ta,'บาท/คน')}${F('er_fa','ชาวต่างชาติ',s.entryRates.fa,'บาท/คน')}${F('vehicleFee','รถยนต์',s.vehicleFee??30,'บาท/คัน')}${F('motoFee','รถจักรยานยนต์',s.motoFee??20,'บาท/คัน')}</div>
+   <input type="hidden" name="er_tc" value="${esc(s.entryRates.tc??0)}"><input type="hidden" name="er_fc" value="${esc(s.entryRates.fc??0)}"></div>
   <div class="card">${H('🧮','การแบ่งสัดส่วนค่าบริการต่อกลุ่ม','รวมกันต้องเท่ากับค่าบริการต่อกลุ่ม')}
    <div class="g" style="--c:3">${F('sp_guide','<i class="dot" style="background:var(--g)"></i>ค่าไกด์',sp.guide,'บาท')}${F('sp_village','<i class="dot" style="background:#e0a33a"></i>ส่วนกลางหมู่บ้าน',sp.village,'บาท')}${F('sp_park','<i class="dot" style="background:#4f86c6"></i>ค่าอุทยาน',sp.park,'บาท')}</div>
    <div class="spbar" id="spbar"></div><div class="sm" id="spsum"></div></div>
@@ -1114,13 +1117,14 @@ const ACT={
   ppl:el=>{const k=el.dataset.k,d=+el.dataset.d,n=Math.max(0,bf.pax[k]+d),tot=paxCount(bf.pax)-bf.pax[k]+n;
     if(tot>PUB.settings.maxGroup)return toast(`รวมได้ไม่เกิน ${PUB.settings.maxGroup} คนต่อกลุ่ม`);if(tot<1)return;
     bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
+  moto:el=>{bf.motos=Math.max(0,Math.min(10,(bf.motos||0)+(+el.dataset.d)));document.getElementById('moto_n').textContent=bf.motos;document.getElementById('price').innerHTML=priceHTML()},
   veh:el=>{bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+(+el.dataset.d)));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
   lineunlink:async el=>{const g=DB.guides.find(x=>x.id===el.dataset.id);if(g&&await confirmBox('ยกเลิกการผูก LINE',`${esc(g.firstName+' '+g.lastName)} จะไม่ได้รับแจ้งเตือนทาง LINE จนกว่าจะผูกใหม่`))call('lineUnlink',{id:g.id})},
   logodel:async()=>{if(await confirmBox('ลบโลโก้','เว็บจะกลับไปใช้ไอคอนภูเขาแทน'))call('logoSave',{logo:''})},
   receipt:el=>{const b=byId(el.dataset.id);openReceipt(b,DB.settings.receipt)},
   custreceipt:()=>{const b=VB?.booking||checkResult?.booking;if(b&&b.status==='paid')openReceipt(b,PUB.settings.receipt)},
   rcptpreview:()=>{const f=document.querySelector('form[data-form=receipt]'),fd=Object.fromEntries(new FormData(f));const R={...fd,image:rcptImg??(DB.settings.receipt||{}).image};
-    openReceipt({code:'PG0000',name:'ตัวอย่าง ลูกค้า',phone:'0812345678',date:addDays(today(),3),time:'08:00',people:3,pax:{ta:2,tc:1},entryRates:DB.settings.entryRates,groupFee:DB.settings.groupFee,entryTotal:DB.settings.entryRates.ta*2+DB.settings.entryRates.tc,vehicles:1,vehicleFee:DB.settings.vehicleFee??30,vehicleTotal:DB.settings.vehicleFee??30,payChannel:'promptpay',paidConfirmedAt:new Date().toISOString()},R)},
+    openReceipt({code:'PG0000',name:'ตัวอย่าง ลูกค้า',phone:'0812345678',date:addDays(today(),3),time:'08:00',people:3,pax:{ta:2,fa:1},entryRates:DB.settings.entryRates,groupFee:DB.settings.groupFee,entryTotal:DB.settings.entryRates.ta*2+DB.settings.entryRates.fa,vehicles:1,vehicleFee:DB.settings.vehicleFee??30,motos:1,motoFee:DB.settings.motoFee??20,vehicleTotal:(DB.settings.vehicleFee??30)+(DB.settings.motoFee??20),payChannel:'promptpay',paidConfirmedAt:new Date().toISOString()},R)},
   rcptimgdel:()=>{rcptImg='';setRcptBox()},
   rcptuselogo:()=>{rcptImg=PUB.site.logo;setRcptBox()},
   linkqr:el=>lineLinkModal(el.dataset.id),
@@ -1272,9 +1276,9 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
     <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">บันทึกไม่ว่าง</button></div></form>`)},
   unavaildel:async el=>{const u=DB.unavail.find(x=>x.id===el.dataset.id);if(!await confirmBox('ลบวันไม่ว่าง?',`${esc(gName(DB,u.guideId))} · ${fmtDate(u.date)}<br><span class="sm mut">ลำดับคิวจะไม่ถูกย้ายกลับ (ปรับเองได้ด้วยปุ่ม ▲▼)</span>`,'ลบ','red'))return;call('unavailDel',{id:u.id})},
   userform:el=>openModal(userFormHTML(el.dataset.id&&DB.users.find(u=>u.id===el.dataset.id))),
-  acccsv:()=>{const {L,label}=accData();const head=['วันที่','รหัส','ไกด์','คน','ค่าไกด์','ส่วนกลางหมู่บ้าน','อุทยาน','ค่าเข้าอุทยาน','จำนวนรถ','ค่ารถ','รวม'];
-    const rows=L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.vehicleTotal||0,b.total]);
-    const S=i=>rows.reduce((a,r)=>a+(+r[i]||0),0);rows.push(['รวม','','',S(3),S(4),S(5),S(6),S(7),S(8),S(9),S(10)]);
+  acccsv:()=>{const {L,label}=accData();const head=['วันที่','รหัส','ไกด์','คน','ค่าไกด์','ส่วนกลางหมู่บ้าน','อุทยาน','ค่าเข้าอุทยาน','รถยนต์ (คัน)','จักรยานยนต์ (คัน)','ค่ารถ','รวม'];
+    const rows=L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total]);
+    const S=i=>rows.reduce((a,r)=>a+(+r[i]||0),0);rows.push(['รวม','','',S(3),S(4),S(5),S(6),S(7),S(8),S(9),S(10),S(11)]);
     const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
     const blob=new Blob(['﻿'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`phangam-income-${label.file}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('ดาวน์โหลด CSV แล้ว')},
@@ -1296,7 +1300,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
 <tfoot><tr><td colspan="3">รวม</td><td class="n">${sum(b=>b.people)}</td><td class="n">${baht(G)}</td><td class="n">${baht(V)}</td><td class="n">${baht(P)}</td><td class="n">${baht(E)}</td><td class="n">${baht(VH)}</td><td class="n">${baht(G+V+P+E+VH)}</td></tr></tfoot></table>
 <div class="ft">ออกรายงานโดย ${esc(me()?.name||'')} · ${new Date().toLocaleString('th-TH')} · phangamtrail.com</div>
 <script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);w.document.close()},
-  csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','vehicles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.vehicleTotal||0,b.total])];
+  csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','cars','motorcycles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total])];
     navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});

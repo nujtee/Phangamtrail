@@ -62,6 +62,7 @@ export class Engine extends DurableObject {
     db.notifications = this.sql.exec(`SELECT json FROM notif ORDER BY n DESC LIMIT ${KEEP}`).toArray().map(r => JSON.parse(r.json));
     this.db = db;
     if (db.settings.vehicleFee === undefined) { db.settings.vehicleFee = 30; this.persist() } // ค่ารถเข้าอุทยาน (ค่าเริ่มต้น)
+    if (db.settings.motoFee === undefined) { db.settings.motoFee = 20; this.persist() } // ค่ารถจักรยานยนต์เข้าอุทยาน (ค่าเริ่มต้น)
     if (db.users.some(u => !u.no)) this.persist();
     if (!db.settings.slotV2) { db.settings.slotStep = 15; db.settings.slotV2 = true; this.persist() } // ปรับรอบเป็นทุก 15 นาที (ครั้งเดียว)
     if (!db.users.length && this.env.ADMIN_PASSWORD) { db.users.push({ id: 'u' + uid(), username: this.env.ADMIN_USERNAME || 'admin', pw: await hashPw(this.env.ADMIN_PASSWORD), name: 'ผู้ดูแลระบบ', role: 'superadmin', active: true }); this.persist() }
