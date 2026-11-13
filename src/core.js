@@ -374,6 +374,7 @@ export const publicActions = {
     if (sl.free <= 0) fail('รอบนี้เต็มแล้ว กรุณาเลือกรอบอื่น');
     if (db.bookings.filter(b => b.phone === phone && b.status === 'pending').length >= 3) fail('เบอร์นี้มีการจองที่รอชำระอยู่หลายรายการ กรุณาชำระหรือรอให้หมดเวลาก่อน');
     const vehicles = Math.max(0, Math.min(10, Math.floor(+p.vehicles || 0))), vehicleFee = +(s.vehicleFee ?? 30), motos = Math.max(0, Math.min(10, Math.floor(+p.motos || 0))), motoFee = +(s.motoFee ?? 20), vehicleTotal = vehicles * vehicleFee + motos * motoFee; // ค่ารถรวม (รถยนต์ + จักรยานยนต์)
+    if (vehicles + motos > people) fail(`จำนวนรถยนต์และรถจักรยานยนต์รวมกันต้องไม่เกินจำนวนผู้เดินป่า (${people} คน)`);
     const entryTotal = entryOf(pax, s.entryRates), created = nowISO();
     const b = {
       id: uid(), code: 'PG' + (++db.seq), qn: null, date: p.date, time: p.time, people, pax, entryRates: { ...s.entryRates },

@@ -410,7 +410,7 @@ function renderBook(){
    ${PAXB.map(([k,l])=>`<div class="row" style="justify-content:space-between;margin-bottom:8px;max-width:420px"><span>${l} <span class="mut sm">(${baht(s.entryRates[k])}/คน)</span></span><div class="stepper"><button type="button" data-act="ppl" data-k="${k}" data-d="-1">−</button><b id="ppl_${k}">${bf.pax[k]}</b><button type="button" data-act="ppl" data-k="${k}" data-d="1">+</button></div></div>`).join('')}
    <div class="row" style="justify-content:space-between;margin:14px 0 8px;max-width:420px"><span>🚗 รถยนต์เข้าอุทยาน <span class="mut sm">(${baht(s.vehicleFee??30)}/คัน)</span></span><div class="stepper"><button type="button" data-act="veh" data-d="-1">−</button><b id="veh_n">${bf.vehicles}</b><button type="button" data-act="veh" data-d="1">+</button></div></div>
    <div class="row" style="justify-content:space-between;margin:0 0 8px;max-width:420px"><span>🏍️ รถจักรยานยนต์เข้าอุทยาน <span class="mut sm">(${baht(s.motoFee??20)}/คัน)</span></span><div class="stepper"><button type="button" data-act="moto" data-d="-1">−</button><b id="moto_n">${bf.motos||0}</b><button type="button" data-act="moto" data-d="1">+</button></div></div>
-   <p class="mut sm" style="margin:0;max-width:420px">ใส่ 0 ถ้าไม่ได้นำรถเข้าอุทยาน</p>
+   <p class="mut sm" style="margin:0;max-width:420px">ใส่ 0 ถ้าไม่ได้นำรถเข้าอุทยาน · รถยนต์ + รถจักรยานยนต์ รวมกันไม่เกินจำนวนผู้เดินป่า</p>
    <h2 style="margin-top:22px">3. ข้อมูลผู้จอง</h2>
    <div class="grid2">
     <div class="field"><label>ชื่อ-นามสกุล *</label><input name="name" value="${esc(bf.name)}" data-bf="name" autocomplete="name"></div>
@@ -1116,9 +1116,13 @@ const ACT={
   slot:el=>{bf.time=el.dataset.t;document.getElementById('slots').innerHTML=slotsHTML()},
   ppl:el=>{const k=el.dataset.k,d=+el.dataset.d,n=Math.max(0,bf.pax[k]+d),tot=paxCount(bf.pax)-bf.pax[k]+n;
     if(tot>PUB.settings.maxGroup)return toast(`รวมได้ไม่เกิน ${PUB.settings.maxGroup} คนต่อกลุ่ม`);if(tot<1)return;
-    bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
-  moto:el=>{bf.motos=Math.max(0,Math.min(10,(bf.motos||0)+(+el.dataset.d)));document.getElementById('moto_n').textContent=bf.motos;document.getElementById('price').innerHTML=priceHTML()},
-  veh:el=>{bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+(+el.dataset.d)));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
+    bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;
+    // จำนวนรถรวมต้องไม่เกินจำนวนคน — ลดคนแล้วรถเกิน: ลดจักรยานยนต์ก่อน แล้วจึงรถยนต์
+    let over=(bf.vehicles||0)+(bf.motos||0)-tot;if(over>0){const m=Math.min(over,bf.motos||0);bf.motos-=m;bf.vehicles=Math.max(0,(bf.vehicles||0)-(over-m));
+      document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('moto_n').textContent=bf.motos;toast('ปรับจำนวนรถให้ไม่เกินจำนวนผู้เดินป่า')}
+    document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
+  moto:el=>{const d=+el.dataset.d;if(d>0&&(bf.vehicles||0)+(bf.motos||0)+1>paxCount(bf.pax))return toast(`รถยนต์ + รถจักรยานยนต์ รวมกันได้ไม่เกินจำนวนผู้เดินป่า (${paxCount(bf.pax)} คน)`);bf.motos=Math.max(0,Math.min(10,(bf.motos||0)+d));document.getElementById('moto_n').textContent=bf.motos;document.getElementById('price').innerHTML=priceHTML()},
+  veh:el=>{const d=+el.dataset.d;if(d>0&&(bf.vehicles||0)+(bf.motos||0)+1>paxCount(bf.pax))return toast(`รถยนต์ + รถจักรยานยนต์ รวมกันได้ไม่เกินจำนวนผู้เดินป่า (${paxCount(bf.pax)} คน)`);bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+d));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
   lineunlink:async el=>{const g=DB.guides.find(x=>x.id===el.dataset.id);if(g&&await confirmBox('ยกเลิกการผูก LINE',`${esc(g.firstName+' '+g.lastName)} จะไม่ได้รับแจ้งเตือนทาง LINE จนกว่าจะผูกใหม่`))call('lineUnlink',{id:g.id})},
   logodel:async()=>{if(await confirmBox('ลบโลโก้','เว็บจะกลับไปใช้ไอคอนภูเขาแทน'))call('logoSave',{logo:''})},
   receipt:el=>{const b=byId(el.dataset.id);openReceipt(b,DB.settings.receipt)},
