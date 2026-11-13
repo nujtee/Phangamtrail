@@ -59,7 +59,7 @@ export function seedState() {
       groupFee: 1100, entryRates: { ta: 30, tc: 30, fa: 30, fc: 30 }, maxGroup: 6, payDeadlineMin: 30,
       maxPeoplePerDay: 0, maxGroupsPerSlot: 0, maxGroupsPerGuideDay: 1, minLead: { v: 12, u: 'h' }, seasons: [],
       slotStart: '06:00', slotEnd: '12:00', slotStep: 15, slotV2: true, tripHours: 3, bookAheadDays: 60, rules: '', vehicleFee: 30, motoFee: 20, lineLinkBy: 'both', lineOa: '',
-      split: { guide: 700, village: 100, park: 300 }, villageAcct: { bankName: '', accountName: '', accountNo: '' },
+      split: { guide: 700, village: 100, park: 300 }, extraGuideFee: 700, villageAcct: { bankName: '', accountName: '', accountNo: '' },
       channels: {
         bank: { on: false, mode: 'manual', bankName: '', accountName: '', accountNo: '' },
         promptpay: { on: false, mode: 'manual', id: '', name: '' },
@@ -87,15 +87,23 @@ const paxCount = p => PAX.reduce((a, [k]) => a + (+p[k] || 0), 0);
 const entryOf = (p, r) => PAX.reduce((a, [k]) => a + (+p[k] || 0) * (+r[k] || 0), 0);
 const gObj = (db, id) => db.guides.find(g => g.id === id);
 const gName = (db, id) => { const g = gObj(db, id); return g ? `${g.firstName} ${g.lastName}` : '-' };
+/* ไกด์ต่อกลุ่ม: 1 คนต่อ maxGroup คน สูงสุด MAX_GUIDES คน (เช่น 7–12 คน = ไกด์ 2 คน) */
+export const MAX_GUIDES = 2;
+export const guidesFor = (s, people) => Math.min(MAX_GUIDES, Math.max(1, Math.ceil((+people || 1) / Math.max(1, +s.maxGroup || 6))));
+const needG = b => Math.max(1, +b.guidesNeeded || 1);
+const gIds = b => [b.guideId, b.guide2Id].filter(Boolean);
+const hasGuide = (b, gid) => !!gid && (b.guideId === gid || b.guide2Id === gid);
+const missingG = b => Math.max(0, needG(b) - gIds(b).length);
+const gNames = (db, b) => gIds(b).map(id => gName(db, id)).join(' + ') || '-';
 const byId = (db, id) => db.bookings.find(b => b.id === id) || fail('ไม่พบรายการจอง');
 export const activeGuides = db => db.guides.filter(g => g.active).sort((a, b) => a.priority - b.priority);
 export function slotList(db) { const s = db.settings, o = []; for (let m = toMin(s.slotStart); m <= toMin(s.slotEnd); m += Math.max(5, +s.slotStep || 15)) o.push(fromMin(m)); return o }
 function guideBusy(db, gid, date, time, exceptId) {
   const dur = db.settings.tripHours * 60, st = toMin(time);
-  return db.bookings.some(b => b.id !== exceptId && b.guideId === gid && b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date && Math.abs(toMin(b.time) - st) < dur);
+  return db.bookings.some(b => b.id !== exceptId && hasGuide(b, gid) && b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date && Math.abs(toMin(b.time) - st) < dur);
 }
 const unavailOn = (db, gid, date) => db.unavail.some(u => u.guideId === gid && u.date === date);
-const guideDayCount = (db, gid, date, exceptId) => db.bookings.filter(b => b.id !== exceptId && b.guideId === gid && b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date).length;
+const guideDayCount = (db, gid, date, exceptId) => db.bookings.filter(b => b.id !== exceptId && hasGuide(b, gid) && b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date).length;
 function guideBlocked(db, gid, date, time, exceptId, b) {
   const cap = +db.settings.maxGroupsPerGuideDay || 0;
   return (cap > 0 && guideDayCount(db, gid, date, exceptId) >= cap) || guideBusy(db, gid, date, time, exceptId) || unavailOn(db, gid, date) || !!(b && (b.declined || []).some(d => d.guideId === gid));
@@ -128,10 +136,11 @@ const seasonText = x => x.kind === 'date' ? `${fmtDate(x.from)} – ${fmtDate(x.
 const freeGuides = (db, date, time) => activeGuides(db).filter(g => !guideBlocked(db, g.id, date, time)).length;
 function slotCapacity(db, date, time, people) {
   const s = db.settings, dur = s.tripHours * 60, cap = +s.maxGroupsPerGuideDay || 0;
-  const live = db.bookings.filter(b => b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date), pend = live.filter(b => !b.guideId);
-  let free = freeGuides(db, date, time) - pend.filter(b => Math.abs(toMin(b.time) - toMin(time)) < dur).length;
-  if (cap > 0) { const dayLeft = dayGuides(db, date).reduce((a, g) => a + Math.max(0, cap - guideDayCount(db, g.id, date)), 0) - pend.length; free = Math.min(free, dayLeft) }
-  if (+s.maxGroupsPerSlot > 0) free = Math.min(free, +s.maxGroupsPerSlot - live.filter(b => b.time === time).length);
+  const live = db.bookings.filter(b => b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date), pend = live.filter(b => missingG(b) > 0);
+  const W = L => L.reduce((a, b) => a + missingG(b), 0); // จำนวนไกด์ที่ยังต้องใช้ (กลุ่มใหญ่ = 2)
+  let free = freeGuides(db, date, time) - W(pend.filter(b => Math.abs(toMin(b.time) - toMin(time)) < dur));
+  if (cap > 0) { const dayLeft = dayGuides(db, date).reduce((a, g) => a + Math.max(0, cap - guideDayCount(db, g.id, date)), 0) - W(pend); free = Math.min(free, dayLeft) }
+  if (+s.maxGroupsPerSlot > 0) free = Math.min(free, +s.maxGroupsPerSlot - live.filter(b => b.time === time).reduce((a, b) => a + needG(b), 0));
   let reason = free <= 0 ? 'เต็ม' : '';
   if (+s.maxPeoplePerDay > 0) { const left = +s.maxPeoplePerDay - live.reduce((a, b) => a + b.people, 0); if (left < (people || 1)) { free = 0; reason = left > 0 ? `เหลือ ${left} ที่` : 'เต็มวัน' } }
   return { free: Math.max(0, free), reason };
@@ -142,10 +151,12 @@ export function availability(db, date, people) {
   if (cs) return { date, closed: { name: cs.name, text: seasonText(cs) }, slots: [] };
   if (date > addDays(today(), db.settings.bookAheadDays)) return { date, tooFar: true, slots: [] };
   if (!dayGuides(db, date).length) return { date, noGuide: true, slots: [] };
+  const gn = guidesFor(db.settings, people);
   return {
-    date, slots: slotList(db).map(t => {
+    date, guides: gn, slots: slotList(db).map(t => {
       if (!slotOpen(db, date, t)) return { t, free: 0, reason: 'lead' };
-      const c = slotCapacity(db, date, t, people); return { t, free: c.free, reason: c.reason };
+      const c = slotCapacity(db, date, t, people), f = Math.floor(c.free / gn); // free = จำนวนกลุ่มขนาดนี้ที่ยังรับได้ (กลุ่มใหญ่ใช้ไกด์ 2 คน)
+      return { t, free: f, reason: f > 0 ? '' : c.free > 0 ? `ไกด์ว่างไม่พอ (ต้องใช้ ${gn} คน)` : c.reason || 'เต็ม' };
     })
   };
 }
@@ -159,7 +170,8 @@ const SITE_URL = 'https://phangamtrail.com';
 function notifyGuide(db, g, b, kind) {
   const head = { paidcancel: 'ℹ️ ลูกค้ายกเลิก (คุณยังได้รับค่าไกด์ตามปกติ และคิวของคุณย้ายไปลำดับสุดท้าย)', new: '📅 งานนำเที่ยวใหม่', cancel: '❌ ยกเลิกงานนำเที่ยว', remind: '⏰ เตือนงานนำเที่ยวพรุ่งนี้', test: '🔔 ทดสอบการแจ้งเตือน', job: '📋 แจ้งงานนำเที่ยวของคุณ' }[kind];
   const link = kind === 'cancel' || kind === 'paidcancel' ? '' : `\n\nเข้าระบบไกด์ (ดูงาน/กดเริ่ม-สิ้นสุด/แจ้งไม่ว่าง):\n${SITE_URL}/#admin-mytrips`;
-  const msg = `[ผาแง่ม] ${head}\nรหัสจอง ${b.code}\nวันที่ ${fmtDate(b.date)} เวลา ${b.time} น.\nผู้จอง ${b.name} (${b.people} คน) โทร ${b.phone}${link}`;
+  const co = gIds(b).filter(x => x !== g.id).map(x => gName(db, x)), coTxt = needG(b) > 1 ? `\nกลุ่มนี้ใช้ไกด์ ${needG(b)} คน · ไกด์ร่วม: ${co.join(', ') || 'รอมอบหมาย'}` : '';
+  const msg = `[ผาแง่ม] ${head}\nรหัสจอง ${b.code}\nวันที่ ${fmtDate(b.date)} เวลา ${b.time} น.\nผู้จอง ${b.name} (${b.people} คน) โทร ${b.phone}${coTxt}${link}`;
   const base = { at: nowISO(), guideId: g.id, bookingId: b.id || '', message: msg, status: 'pending' };
   db.$notify.push({ ...base, id: uid(), channel: 'line', to: g.lineUserId || '', toLabel: g.line || '' });
   if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] ${head} ${b.code}` });
@@ -173,14 +185,14 @@ function notifyManagers(db, title, body, bookingId) {
 export function lateStartAlerts(db) {
   const d = bkk(), t = today(), nowMin = d.getUTCHours() * 60 + d.getUTCMinutes(); let n = 0;
   db.bookings.filter(b => b.date === t && b.status === 'paid' && b.trip === 'assigned' && !b.lateAlert && toMin(b.time) + 15 <= nowMin).forEach(b => {
-    b.lateAlert = true; n++; notifyManagers(db, '⏰ ไกด์ยังไม่กดเริ่มเดินทาง', `${b.code} รอบ ${b.time} น. · ไกด์ ${gName(db, b.guideId)} · ${b.name} (${b.people} คน)`, b.id);
+    b.lateAlert = true; n++; notifyManagers(db, '⏰ ไกด์ยังไม่กดเริ่มเดินทาง', `${b.code} รอบ ${b.time} น. · ไกด์ ${gNames(db, b)} · ${b.name} (${b.people} คน)`, b.id);
   });
   return n;
 }
 
 function notifyCustomer(db, b, kind) {
   if (!b.email) return;
-  const det = `รหัสจอง: ${b.code}\nวันที่: ${fmtDate(b.date)}\nเวลาออกเดินทาง: ${b.time} น.\nจำนวน: ${b.people} คน (${PAX.filter(([k]) => b.pax?.[k]).map(([k, l]) => `${l} ${b.pax[k]}`).join(', ')})${b.vehicles ? `\nรถยนต์: ${b.vehicles} คัน` : ''}${b.motos ? `\nรถจักรยานยนต์: ${b.motos} คัน` : ''}\nผู้จอง: ${b.name} โทร ${b.phone}\nยอดชำระ: ${baht(b.paidAmount || b.total)}`;
+  const det = `รหัสจอง: ${b.code}\nวันที่: ${fmtDate(b.date)}\nเวลาออกเดินทาง: ${b.time} น.\nจำนวน: ${b.people} คน (${PAX.filter(([k]) => b.pax?.[k]).map(([k, l]) => `${l} ${b.pax[k]}`).join(', ')})${b.vehicles ? `\nรถยนต์: ${b.vehicles} คัน` : ''}${b.motos ? `\nรถจักรยานยนต์: ${b.motos} คัน` : ''}${needG(b) > 1 ? `\nไกด์นำทาง: ${needG(b)} คน` : ''}\nผู้จอง: ${b.name} โทร ${b.phone}\nยอดชำระ: ${baht(b.paidAmount || b.total)}`;
   const T = {
     slip: ['ได้รับสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ', `เรียน คุณ${b.name}\n\nเราได้รับหลักฐานการชำระเงินของการจอง ${b.code} แล้ว เจ้าหน้าที่จะตรวจสอบและแจ้งผลทางอีเมลนี้อีกครั้ง\n\n${det}`],
     confirmed: ['การจองเสร็จสมบูรณ์ ✅', `เรียน คุณ${b.name}\n\nการชำระเงินได้รับการยืนยันแล้ว การจองของคุณเสร็จสมบูรณ์\n\n${det}\nสถานะ: ชำระแล้ว — จองสำเร็จ\n\nกรุณามาถึงจุดนัดพบก่อนเวลาออกเดินทาง 15 นาที\nตรวจสอบการจองได้ที่ https://phangamtrail.com (เมนู "ตรวจสอบการจอง")\nชำระแล้วไม่คืนเงินทุกกรณี · ขอเลื่อนวันได้โดยติดต่อเจ้าหน้าที่`],
@@ -189,9 +201,9 @@ function notifyCustomer(db, b, kind) {
 }
 
 /* ===== คิวไกด์ (คิววนต่อเนื่อง ไม่นับวัน) ===== */
-function streamNext(db, ptr, b) {
+function streamNext(db, ptr, b, skip) {
   const G = activeGuides(db); if (!G.length) return null; const i = G.findIndex(g => g.id === ptr), st = i >= 0 ? i + 1 : 0;
-  for (let k = 0; k < G.length; k++) { const g = G[(st + k) % G.length]; if (!b || !guideBlocked(db, g.id, b.date, b.time, b.id, b)) return g }
+  for (let k = 0; k < G.length; k++) { const g = G[(st + k) % G.length]; if (g.id !== skip && (!b || !guideBlocked(db, g.id, b.date, b.time, b.id, b))) return g }
   return null;
 }
 function autoAssign(db, b) {
@@ -204,30 +216,36 @@ const qKey = b => `${b.date}|${b.time}|${String(b.qn ?? 0).padStart(9, '0')}`;
 function assignOnPay(db, b) { b.qn = db.rotSeq++; rerunFrom(db, qKey(b)); return gObj(db, b.guideId) || null }
 function rerunFrom(db, startKey) {
   const all = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null).sort((a, b) => qKey(a).localeCompare(qKey(b))), t = today();
-  const prev = [...all].reverse().find(b => qKey(b) < startKey && b.guideId && !b.manual); let ptr = prev ? prev.guideId : null;
+  const lastG = b => b.guide2Id || b.guideId; // ไกด์คนสุดท้ายของงาน (กลุ่มใหญ่ใช้ 2 คน)
+  const prev = [...all].reverse().find(b => qKey(b) < startKey && b.guideId && !b.manual); let ptr = prev ? lastG(prev) : null;
   const seg = all.filter(b => qKey(b) >= startKey), before = new Map();
-  seg.forEach(b => { if (!isLocked(b) && b.date >= t) { before.set(b.id, b.guideId); b.guideId = null } });
+  seg.forEach(b => { if (!isLocked(b) && b.date >= t) { before.set(b.id, gIds(b)); b.guideId = null; b.guide2Id = null } });
   const changes = [];
   seg.forEach(b => {
-    if (!before.has(b.id)) { if (!b.manual && b.guideId) ptr = b.guideId; return }
-    const g = streamNext(db, ptr, b); b.guideId = g ? g.id : null; b.trip = g ? 'assigned' : 'unassigned'; if (g) ptr = g.id;
-    const old = before.get(b.id);
-    if (old !== b.guideId) { changes.push({ b, old, nw: b.guideId }); if (old && gObj(db, old)) notifyGuide(db, gObj(db, old), b, 'cancel'); if (g) notifyGuide(db, g, b, 'new') }
+    if (!before.has(b.id)) { if (!b.manual && b.guideId) ptr = lastG(b); return }
+    const n = needG(b), got = [];
+    for (let i = 0; i < n; i++) { const g = streamNext(db, ptr, b, got[0]); if (!g) break; got.push(g.id); ptr = g.id }
+    b.guideId = got[0] || null; b.guide2Id = got[1] || null; b.trip = got.length ? 'assigned' : 'unassigned';
+    const old = before.get(b.id), rm = old.filter(x => !got.includes(x)), add = got.filter(x => !old.includes(x));
+    if (rm.length || add.length || got.length < n) changes.push({ b, old, nw: got, short: got.length < n });
+    rm.forEach(x => { const g = gObj(db, x); if (g) notifyGuide(db, g, b, 'cancel') });
+    add.forEach(x => { const g = gObj(db, x); if (g) notifyGuide(db, g, b, 'new') });
   });
   db.lastGuideId = ptr;
-  changes.forEach(c => log(db, 'assign', `จัดคิวใหม่ ${c.b.code} (${fmtDateS(c.b.date)} ${c.b.time}): ${c.old ? gName(db, c.old) : '-'} → ${c.nw ? gName(db, c.nw) : 'รอมอบหมาย'}`));
+  const nm = L => L.length ? L.map(x => gName(db, x)).join(' + ') : '-';
+  changes.filter(c => c.old.join() !== c.nw.join()).forEach(c => log(db, 'assign', `จัดคิวใหม่ ${c.b.code} (${fmtDateS(c.b.date)} ${c.b.time}): ${nm(c.old)} → ${c.nw.length ? nm(c.nw) : 'รอมอบหมาย'}${c.short && c.nw.length ? ` (ยังขาดไกด์ ${needG(c.b) - c.nw.length} คน)` : ''}`));
   return changes;
 }
 function markGuideUnavailable(db, gid, date, reason, bookingId) {
   const u = db.$actor, g = gObj(db, gid) || fail('ไม่พบไกด์');
   if (bookingId) { const b = byId(db, bookingId); b.declined = b.declined || []; b.declined.push({ guideId: gid, reason, byName: u.name, at: nowISO() }); b.manual = false }
-  else { db.unavail.push({ id: uid(), guideId: gid, date, reason, byName: u.name, byRole: u.role, at: nowISO() }); db.bookings.filter(b => b.date === date && b.guideId === gid && b.manual).forEach(b => b.manual = false) }
+  else { db.unavail.push({ id: uid(), guideId: gid, date, reason, byName: u.name, byRole: u.role, at: nowISO() }); db.bookings.filter(b => b.date === date && hasGuide(b, gid) && b.manual).forEach(b => b.manual = false) }
   moveToLast(db, gid);
   if (u.role === 'guide') notifyManagers(db, '🙅 ไกด์แจ้งไม่ว่าง', `${g.firstName} ${g.lastName} · ${fmtDateS(date)}${bookingId ? ' งาน ' + byId(db, bookingId).code : ' ทั้งวัน'} — ${reason}`, bookingId);
   log(db, u.role === 'guide' ? 'decline' : 'unavail', `${g.firstName} ${g.lastName} ไม่ว่าง ${bookingId ? 'งาน ' + byId(db, bookingId).code : 'ทั้งวัน'} ${fmtDate(date)} — เหตุผล: ${reason} · ย้ายไปลำดับสุดท้าย (${g.priority})`);
-  const aff = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null && b.date === date && !isLocked(b) && (bookingId ? b.id === bookingId : b.guideId === gid));
+  const aff = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null && b.date === date && !isLocked(b) && (bookingId ? b.id === bookingId : hasGuide(b, gid)));
   const res = aff.length ? rerunFrom(db, aff.map(qKey).sort()[0]) : [];
-  res.filter(c => !c.nw).forEach(c => notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${c.b.code} · ${fmtDateS(c.b.date)} ${c.b.time} น. · ${c.b.people} คน`, c.b.id));
+  res.filter(c => c.short).forEach(c => notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${c.b.code} · ${fmtDateS(c.b.date)} ${c.b.time} น. · ${c.b.people} คน${c.nw.length ? ` · ยังขาดไกด์ ${needG(c.b) - c.nw.length} คน` : ''}`, c.b.id));
   return res;
 }
 
@@ -240,8 +258,8 @@ function confirmPayment(db, b, how) {
   b.status = 'paid'; b.paidConfirmedBy = db.$actor?.name || 'ระบบอัตโนมัติ'; b.paidConfirmedAt = nowISO();
   const g = assignOnPay(db, b);
   notifyCustomer(db, b, 'confirmed');
-  if (!g) notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${b.code} · ${fmtDateS(b.date)} ${b.time} น. · ${b.people} คน`, b.id);
-  log(db, 'confirm_payment', `${how} ${b.code} ${baht(b.paidAmount || b.total)}${b.payFee ? ` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})` : ''} → ${g ? 'ไกด์ ' + gName(db, g.id) : '(ยังไม่มีไกด์ว่าง)'}`);
+  if (missingG(b)) notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${b.code} · ${fmtDateS(b.date)} ${b.time} น. · ${b.people} คน${g ? ` · ยังขาดไกด์ ${missingG(b)} คน` : ''}`, b.id);
+  log(db, 'confirm_payment', `${how} ${b.code} ${baht(b.paidAmount || b.total)}${b.payFee ? ` (รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})` : ''} → ${g ? 'ไกด์ ' + gNames(db, b) : '(ยังไม่มีไกด์ว่าง)'}${missingG(b) && g ? ` (ยังขาดไกด์ ${missingG(b)} คน)` : ''}`);
   return g;
 }
 export function expirePending(db) {
@@ -257,7 +275,7 @@ export function expirePending(db) {
 export function sendReminders(db) {
   const d = bkk(); if (d.getUTCHours() < 18) return 0; const t = today(); if (db.lastReminder === t) return 0;
   db.lastReminder = t; const tm = addDays(t, 1); let n = 0;
-  db.bookings.filter(b => b.date === tm && b.status === 'paid' && b.trip === 'assigned' && b.guideId).forEach(b => { const g = gObj(db, b.guideId); if (g) { notifyGuide(db, g, b, 'remind'); n++ } });
+  db.bookings.filter(b => b.date === tm && b.status === 'paid' && b.trip === 'assigned' && b.guideId).forEach(b => gIds(b).forEach(id => { const g = gObj(db, id); if (g) { notifyGuide(db, g, b, 'remind'); n++ } }));
   return n;
 }
 
@@ -315,13 +333,13 @@ export function publicState(db) {
   const s = db.settings, ch = {};
   for (const [k, f] of Object.entries(PUBLIC_CH)) { if (s.channels[k]?.on) { ch[k] = {}; f.forEach(x => ch[k][x] = s.channels[k][x]) } else ch[k] = { on: false } }
   return {
-    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', receipt: s.receipt || {}, slipStrict: s.slipStrict !== false, vehicleFee: +(s.vehicleFee ?? 30), motoFee: +(s.motoFee ?? 20), bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
+    settings: { groupFee: s.groupFee, entryRates: s.entryRates, maxGroup: s.maxGroup, payDeadlineMin: s.payDeadlineMin, slotStart: s.slotStart, slotEnd: s.slotEnd, slotStep: s.slotStep, rules: s.rules || '', receipt: s.receipt || {}, slipStrict: s.slipStrict !== false, vehicleFee: +(s.vehicleFee ?? 30), motoFee: +(s.motoFee ?? 20), extraGuideFee: +(s.extraGuideFee ?? s.split?.guide ?? 700), maxGuides: MAX_GUIDES, bookAheadDays: s.bookAheadDays, minLead: s.minLead, seasons: (s.seasons || []).filter(x => x.active), channels: ch },
     site: db.site, guideCount: activeGuides(db).length, today: today(),
   };
 }
 export function bookingView(b) {
   if (!b) return null;
-  const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'motos', 'motoFee', 'vehicleTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'expired', 'name', 'createdAt'];
+  const k = ['id', 'code', 'date', 'time', 'people', 'pax', 'groupFee', 'entryTotal', 'entryRates', 'paidConfirmedAt', 'vehicles', 'vehicleFee', 'motos', 'motoFee', 'vehicleTotal', 'guidesNeeded', 'extraGuideFee', 'extraGuideTotal', 'total', 'status', 'expiresAt', 'payChannel', 'paidAmount', 'payFee', 'cancelReason', 'expired', 'name', 'createdAt'];
   const o = {}; k.forEach(x => o[x] = b[x]); o.slip = !!b.slip; o.phone = b.phone.replace(/^(\d{3})\d+(\d{3})$/, '$1xxxx$2'); if (b.email) o.email = b.email.replace(/^(.{2})[^@]*(@.*)$/, '$1***$2'); return o;
 }
 const safeUser = u => ({ id: u.id, no: u.no || null, username: u.username, name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, guideId: u.guideId || null, active: u.active });
@@ -330,8 +348,11 @@ export function adminState(db, actor) {
   if (actor.role === 'guide') {
     return {
       ...base, settings: { ...db.settings, channels: {}, villageAcct: {} }, site: undefined,
-      guides: db.guides.filter(g => g.id === actor.guideId), users: [], unavail: db.unavail.filter(u => u.guideId === actor.guideId),
-      bookings: db.bookings.filter(b => b.guideId === actor.guideId && b.status !== 'cancelled'), audit: [],
+      guides: db.guides.filter(g => g.id === actor.guideId), users: [],
+      coGuides: [...new Set(db.bookings.filter(b => hasGuide(b, actor.guideId) && b.status !== 'cancelled').flatMap(gIds))].filter(id => id !== actor.guideId)
+        .map(id => gObj(db, id)).filter(Boolean).map(g => ({ id: g.id, firstName: g.firstName, lastName: g.lastName, phone: g.phone || '' })), // ไกด์ร่วมงาน (กลุ่มใหญ่ 2 ไกด์)
+      unavail: db.unavail.filter(u => u.guideId === actor.guideId),
+      bookings: db.bookings.filter(b => hasGuide(b, actor.guideId) && b.status !== 'cancelled'), audit: [],
       notifications: db.notifications.filter(n => n.guideId === actor.guideId && n.channel === 'push').slice(0, 100).map(n => ({ id: n.id, at: n.at, title: n.title, body: n.body, message: n.message, kind: n.kind || '', from: n.fromName || '', url: n.url || '' })),
     };
   }
@@ -346,7 +367,8 @@ export const publicActions = {
   availability(db, p) { return availability(db, p.date, +p.people || 1) },
   createBooking(db, p) {
     const s = db.settings, pax = { ta: +p.pax?.ta || 0, tc: 0, fa: +p.pax?.fa || 0, fc: 0 } /* ยกเลิกประเภทเด็กแล้ว */, people = paxCount(pax);
-    if (people < 1 || people > s.maxGroup) fail(`จำนวนคนต้องอยู่ระหว่าง 1–${s.maxGroup} คน`);
+    if (people < 1 || people > s.maxGroup * MAX_GUIDES) fail(`จำนวนคนต้องอยู่ระหว่าง 1–${s.maxGroup * MAX_GUIDES} คน`);
+    const gn = guidesFor(s, people), xFee = +(s.extraGuideFee ?? s.split?.guide ?? 700), xTotal = (gn - 1) * xFee; // เกิน maxGroup คน → เพิ่มไกด์ + ค่าไกด์เพิ่ม
     if (Object.values(pax).some(v => v < 0 || !Number.isInteger(v))) fail('จำนวนคนไม่ถูกต้อง');
     const name = String(p.name || '').trim().slice(0, 120), phone = String(p.phone || '').replace(/\D/g, '');
     if (!name) fail('กรุณากรอกชื่อ-นามสกุล');
@@ -371,7 +393,7 @@ export const publicActions = {
     if (av.tooFar) fail(`จองล่วงหน้าได้ไม่เกิน ${s.bookAheadDays} วัน`);
     const sl = av.slots.find(x => x.t === p.time);
     if (!sl || sl.reason === 'lead') fail('รอบนี้ต้องจองล่วงหน้ามากกว่านี้ กรุณาเลือกรอบอื่น');
-    if (sl.free <= 0) fail('รอบนี้เต็มแล้ว กรุณาเลือกรอบอื่น');
+    if (sl.free <= 0) fail(/^ไกด์ว่างไม่พอ/.test(sl.reason) ? `รอบนี้มีไกด์ว่างไม่พอสำหรับกลุ่ม ${people} คน (ต้องใช้ไกด์ ${gn} คน) กรุณาเลือกรอบอื่น` : 'รอบนี้เต็มแล้ว กรุณาเลือกรอบอื่น');
     if (db.bookings.filter(b => b.phone === phone && b.status === 'pending').length >= 3) fail('เบอร์นี้มีการจองที่รอชำระอยู่หลายรายการ กรุณาชำระหรือรอให้หมดเวลาก่อน');
     const vehicles = Math.max(0, Math.min(10, Math.floor(+p.vehicles || 0))), vehicleFee = +(s.vehicleFee ?? 30), motos = Math.max(0, Math.min(10, Math.floor(+p.motos || 0))), motoFee = +(s.motoFee ?? 20), vehicleTotal = vehicles * vehicleFee + motos * motoFee; // ค่ารถรวม (รถยนต์ + จักรยานยนต์)
     if (vehicles + motos > people) fail(`จำนวนรถยนต์และรถจักรยานยนต์รวมกันต้องไม่เกินจำนวนผู้เดินป่า (${people} คน)`);
@@ -379,13 +401,14 @@ export const publicActions = {
     const b = {
       id: uid(), code: 'PG' + (++db.seq), qn: null, date: p.date, time: p.time, people, pax, entryRates: { ...s.entryRates },
       name, phone, email, rulesAccepted: !!(s.rules || '').trim(), line: String(p.line || '').trim().slice(0, 60), note: String(p.note || '').trim().slice(0, 500),
-      groupFee: +s.groupFee, entryTotal, vehicles, vehicleFee, motos, motoFee, vehicleTotal, total: +s.groupFee + entryTotal + vehicleTotal, split: { ...s.split },
+      groupFee: +s.groupFee, entryTotal, vehicles, vehicleFee, motos, motoFee, vehicleTotal, guidesNeeded: gn, extraGuideFee: gn > 1 ? xFee : 0, extraGuideTotal: xTotal,
+      total: +s.groupFee + xTotal + entryTotal + vehicleTotal, split: { ...s.split, ...(gn > 1 ? { guide2: xFee } : {}) },
       status: 'pending', slip: null, paidConfirmedBy: null, paidConfirmedAt: null, guideId: null, trip: 'unassigned', startedAt: null, endedAt: null,
       nonce: nonce || null, payout: { paid: false }, createdAt: created, expiresAt: new Date(Date.parse(created) + (+s.payDeadlineMin || 30) * 60e3).toISOString(),
     };
     db.bookings.push(b);
     db.$actor = { id: '-', name: 'ลูกค้า (' + name + ')', role: 'public' };
-    log(db, 'booking', `จองใหม่ ${b.code} ${fmtDate(b.date)} ${b.time} · ${people} คน · ${baht(b.total)}${same.length ? ` (ยืนยันจองเพิ่ม — เบอร์/อีเมลนี้มีการจองวันเดียวกันอยู่แล้ว ${same.length} รายการ)` : ''}`);
+    log(db, 'booking', `จองใหม่ ${b.code} ${fmtDate(b.date)} ${b.time} · ${people} คน${gn > 1 ? ` (ไกด์ ${gn} คน +${baht(xTotal)})` : ''} · ${baht(b.total)}${same.length ? ` (ยืนยันจองเพิ่ม — เบอร์/อีเมลนี้มีการจองวันเดียวกันอยู่แล้ว ${same.length} รายการ)` : ''}`);
     return { booking: bookingView(b) };
   },
   lookup(db, p) {
@@ -418,7 +441,7 @@ export const publicActions = {
 };
 
 /* ===== คำสั่งหลังบ้าน (ต้องเข้าสู่ระบบ + ตรวจสิทธิ์) ===== */
-const ownTrip = (db, b) => db.$actor.role === 'guide' && b.guideId === db.$actor.guideId;
+const ownTrip = (db, b) => db.$actor.role === 'guide' && hasGuide(b, db.$actor.guideId);
 const str = (v, n = 200) => String(v ?? '').trim().slice(0, n);
 export const adminActions = {
   confirmPay(db, p) {
@@ -426,7 +449,7 @@ export const adminActions = {
     if (b.status !== 'pending') fail('รายการนี้ไม่อยู่ในสถานะรอชำระ');
     if (!b.paidAmount) b.paidAmount = b.total;
     const g = confirmPayment(db, b, 'ยืนยันรับเงิน (แมนนวล)');
-    return { msg: g ? `ยืนยันแล้ว → ไกด์ ${gName(db, g.id)}` : 'ยืนยันแล้ว แต่ยังไม่มีไกด์ว่าง' };
+    return { msg: g ? `ยืนยันแล้ว → ไกด์ ${gNames(db, b)}${missingG(b) ? ` (ยังขาดไกด์ ${missingG(b)} คน)` : ''}` : 'ยืนยันแล้ว แต่ยังไม่มีไกด์ว่าง' };
   },
   cancelBooking(db, p) {
     need(db.$actor, 'cancel'); const b = byId(db, p.id);
@@ -437,16 +460,16 @@ export const adminActions = {
     const b = byId(db, p.id); if (!(can(db.$actor, 'tripAdmin') || ownTrip(db, b))) need(db.$actor, 'tripAdmin');
     if (b.status !== 'paid' || b.trip !== 'assigned' || !b.guideId) fail('บันทึกลูกค้าไม่มาได้เฉพาะงานที่ชำระแล้วและยังไม่เริ่มเดินทาง');
     if (b.date > today()) fail('บันทึกลูกค้าไม่มาได้ตั้งแต่วันเดินป่าเป็นต้นไป');
-    b.trip = 'noshow'; b.endedAt = nowISO(); b.closeNote = 'แจ้งโดย ' + db.$actor.name; moveToLast(db, b.guideId);
-    log(db, 'noshow', `ลูกค้าไม่มา ${b.code} — ไกด์ ${gName(db, b.guideId)} ได้ค่าไกด์ ${baht(b.split.guide)} · ย้ายไปลำดับสุดท้าย`);
+    b.trip = 'noshow'; b.endedAt = nowISO(); b.closeNote = 'แจ้งโดย ' + db.$actor.name; gIds(b).forEach(id => moveToLast(db, id));
+    log(db, 'noshow', `ลูกค้าไม่มา ${b.code} — ไกด์ ${gNames(db, b)} ได้ค่าไกด์ตามปกติ · ย้ายไปลำดับสุดท้าย`);
     return { msg: 'บันทึกแล้ว — ส่งค่าไกด์ไปหน้าเบิกจ่าย และย้ายไกด์ไปต่อท้ายคิว' };
   },
   paidcancel(db, p) {
     need(db.$actor, 'cancel'); const b = byId(db, p.id);
     if (b.status !== 'paid' || isLocked({ ...b, manual: false })) fail('รายการนี้ยกเลิกไม่ได้');
-    const g = gObj(db, b.guideId); b.trip = 'paidcancel'; b.endedAt = nowISO(); b.closeNote = 'แจ้งโดย ' + db.$actor.name;
-    if (g) { notifyGuide(db, g, b, 'paidcancel'); moveToLast(db, g.id) }
-    log(db, 'paidcancel', `ลูกค้ายกเลิก ${b.code} (ไม่คืนเงิน) — ${g ? 'ไกด์ ' + g.firstName + ' ' + g.lastName + ' ได้ค่าไกด์ ' + baht(b.split.guide) + ' · ย้ายไปลำดับสุดท้าย' : 'ไม่มีไกด์ได้รับมอบหมาย'}`);
+    const G = gIds(b).map(id => gObj(db, id)).filter(Boolean); b.trip = 'paidcancel'; b.endedAt = nowISO(); b.closeNote = 'แจ้งโดย ' + db.$actor.name;
+    G.forEach(g => { notifyGuide(db, g, b, 'paidcancel'); moveToLast(db, g.id) });
+    log(db, 'paidcancel', `ลูกค้ายกเลิก ${b.code} (ไม่คืนเงิน) — ${G.length ? 'ไกด์ ' + gNames(db, b) + ' ได้ค่าไกด์ตามปกติ · ย้ายไปลำดับสุดท้าย' : 'ไม่มีไกด์ได้รับมอบหมาย'}`);
     return { msg: 'บันทึกการยกเลิกแล้ว' };
   },
   reschedule(db, p) {
@@ -455,11 +478,11 @@ export const adminActions = {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date || '') || !slotList(db).includes(p.time)) fail('กรุณาเลือกวันและเวลา');
     if (p.date < today()) fail('เลื่อนไปวันที่ผ่านมาแล้วไม่ได้');
     const od = b.date, ot = b.time; if (p.date === od && p.time === ot) return { msg: 'ไม่มีการเปลี่ยนแปลง' };
-    const oldKey = qKey(b), old = gObj(db, b.guideId); b.date = p.date; b.time = p.time;
-    if (b.manual && old && guideBlocked(db, old.id, b.date, b.time, b.id, b)) b.manual = false;
-    const ch = rerunFrom(db, [oldKey, qKey(b)].sort()[0]);
-    if (old && old.id === b.guideId && !ch.some(c => c.b === b)) notifyGuide(db, old, b, 'new'); // ไกด์เดิม → แจ้งวันใหม่
-    log(db, 'reschedule', `เลื่อน ${b.code} ${fmtDateS(od)} ${ot} → ${fmtDateS(b.date)} ${b.time} · ไกด์ ${old ? old.firstName : '-'} → ${b.guideId ? gName(db, b.guideId) : 'รอมอบหมาย'}${ch.length > 1 ? ` (จัดคิวใหม่อีก ${ch.length - 1} งาน)` : ''}`);
+    const oldKey = qKey(b), oldIds = gIds(b), oldNames = gNames(db, b); b.date = p.date; b.time = p.time;
+    if (b.manual && oldIds.some(id => guideBlocked(db, id, b.date, b.time, b.id, b))) b.manual = false;
+    const ch = rerunFrom(db, [oldKey, qKey(b)].sort()[0]), mine = ch.find(c => c.b === b);
+    oldIds.filter(id => hasGuide(b, id) && !(mine && !mine.old.includes(id))).forEach(id => { const g = gObj(db, id); if (g) notifyGuide(db, g, b, 'new') }); // ไกด์เดิม → แจ้งวันใหม่
+    log(db, 'reschedule', `เลื่อน ${b.code} ${fmtDateS(od)} ${ot} → ${fmtDateS(b.date)} ${b.time} · ไกด์ ${oldNames} → ${b.guideId ? gNames(db, b) : 'รอมอบหมาย'}${ch.length > 1 ? ` (จัดคิวใหม่อีก ${ch.length - 1} งาน)` : ''}`);
     return { msg: 'เลื่อนวันแล้ว' };
   },
   tripStart(db, p) {
@@ -468,7 +491,7 @@ export const adminActions = {
     const photo = str(p.photo, 200); if (photo && !/^\/img\/trips\//.test(photo)) fail('รูปไม่ถูกต้อง');
     if (db.$actor.role === 'guide' && !photo) fail('กรุณาถ่ายรูปกลุ่มก่อนเริ่มเดินทาง');
     if (photo) b.startPhoto = photo;
-    b.trip = 'started'; b.startedAt = nowISO(); b.startedBy = db.$actor.name; log(db, 'trip_start', `เริ่มเดินทาง ${b.code} (ไกด์ ${gName(db, b.guideId)})`);
+    b.trip = 'started'; b.startedAt = nowISO(); b.startedBy = db.$actor.name; log(db, 'trip_start', `เริ่มเดินทาง ${b.code} (ไกด์ ${gNames(db, b)})`);
     return { msg: 'บันทึกเวลาเริ่มเดินทางแล้ว' };
   },
   tripEnd(db, p) {
@@ -477,15 +500,15 @@ export const adminActions = {
     const photo = str(p.photo, 200); if (photo && !/^\/img\/trips\//.test(photo)) fail('รูปไม่ถูกต้อง');
     if (db.$actor.role === 'guide' && !photo) fail('กรุณาถ่ายรูปกลุ่มก่อนสิ้นสุดการเดินทาง');
     if (photo) b.endPhoto = photo;
-    b.trip = 'completed'; b.endedAt = nowISO(); log(db, 'trip_end', `สิ้นสุดเดินทาง ${b.code} (ไกด์ ${gName(db, b.guideId)})`);
+    b.trip = 'completed'; b.endedAt = nowISO(); log(db, 'trip_end', `สิ้นสุดเดินทาง ${b.code} (ไกด์ ${gNames(db, b)})`);
     return { msg: 'สิ้นสุดการเดินทางแล้ว' };
   },
-  payGuide(db, p) {
-    need(db.$actor, 'payout'); const b = byId(db, p.id), g = gObj(db, b.guideId) || fail('ไม่พบไกด์');
-    if (b.status !== 'paid' || !isDone(b)) fail('จ่ายได้เมื่อจบงานแล้วเท่านั้น'); if (b.payout?.paid) fail('รายการนี้จ่ายแล้ว');
+  payGuide(db, p) { // slot 1 = ไกด์หลัก (split.guide) · slot 2 = ไกด์คนที่ 2 (split.guide2)
+    need(db.$actor, 'payout'); const b = byId(db, p.id), two = +p.slot === 2, g = gObj(db, two ? b.guide2Id : b.guideId) || fail('ไม่พบไกด์'), pk = two ? 'payout2' : 'payout', amt = two ? +b.split.guide2 || 0 : b.split.guide;
+    if (b.status !== 'paid' || !isDone(b)) fail('จ่ายได้เมื่อจบงานแล้วเท่านั้น'); if (b[pk]?.paid) fail('รายการนี้จ่ายแล้ว');
     if (!g.accountNo) fail('ไกด์ยังไม่มีเลขบัญชี — ให้ผู้จัดการไกด์เพิ่มก่อน');
-    const ref = str(p.ref, 80); b.payout = { paid: true, paidAt: nowISO(), paidBy: db.$actor.id, paidByName: db.$actor.name, ref };
-    log(db, 'payout_confirm', `ยืนยันจ่ายค่าไกด์ ${g.firstName} ${g.lastName} ${baht(b.split.guide)} (${b.code}) บัญชี ${g.accountNo}${ref ? ' อ้างอิง ' + ref : ''}`);
+    const ref = str(p.ref, 80); b[pk] = { paid: true, paidAt: nowISO(), paidBy: db.$actor.id, paidByName: db.$actor.name, ref };
+    log(db, 'payout_confirm', `ยืนยันจ่ายค่าไกด์ ${g.firstName} ${g.lastName} ${baht(amt)} (${b.code}${two ? ' · ไกด์คนที่ 2' : ''}) บัญชี ${g.accountNo}${ref ? ' อ้างอิง ' + ref : ''}`);
     return { msg: 'บันทึกการจ่ายเงินแล้ว' };
   },
   /* ----- บัญชีหมู่บ้าน (รับส่วนกลางหมู่บ้าน) ----- */
@@ -514,8 +537,8 @@ export const adminActions = {
     L.forEach(b => { delete b.vpay }); return { msg: 'ยกเลิกการยืนยันแล้ว' };
   },
   payUndo(db, p) {
-    need(db.$actor, 'payoutUndo'); const b = byId(db, p.id); if (!b.payout?.paid) fail('รายการนี้ยังไม่ได้จ่าย');
-    log(db, 'payout_undo', `ยกเลิกยืนยันจ่าย ${b.code} (เดิมยืนยันโดย ${b.payout.paidByName})`); b.payout = { paid: false }; return { msg: 'ยกเลิกการยืนยันแล้ว' };
+    need(db.$actor, 'payoutUndo'); const b = byId(db, p.id), pk = +p.slot === 2 ? 'payout2' : 'payout'; if (!b[pk]?.paid) fail('รายการนี้ยังไม่ได้จ่าย');
+    log(db, 'payout_undo', `ยกเลิกยืนยันจ่าย ${b.code}${pk === 'payout2' ? ' (ไกด์คนที่ 2)' : ''} (เดิมยืนยันโดย ${b[pk].paidByName})`); b[pk] = { paid: false }; return { msg: 'ยกเลิกการยืนยันแล้ว' };
   },
   lineLinkSave(db, p) {
     need(db.$actor, 'markUnavail'); const s = db.settings;
@@ -529,32 +552,34 @@ export const adminActions = {
     log(db, 'guide', `ยกเลิกการผูก LINE ของไกด์ ${g.firstName} ${g.lastName}`); return { msg: 'ยกเลิกการผูก LINE แล้ว' };
   },
   reassign(db, p) {
-    need(db.$actor, 'assign'); const b = byId(db, p.id), gid = p.guideId || '', old = gObj(db, b.guideId);
+    need(db.$actor, 'assign'); const b = byId(db, p.id), two = +p.slot === 2, key = two ? 'guide2Id' : 'guideId', gid = p.guideId || '', old = gObj(db, b[key]);
     if (b.status !== 'paid' || b.qn == null) fail('มอบหมายได้หลังชำระเงินแล้ว'); if (b.trip === 'started' || isDone(b)) fail('งานนี้เริ่มหรือจบแล้ว');
+    if (two && needG(b) < 2) fail('งานนี้ใช้ไกด์ 1 คน');
     if (!gid) { b.manual = false; log(db, 'assign', `${b.code} กลับไปใช้คิวอัตโนมัติ`); rerunFrom(db, qKey(b)); return { msg: 'กลับไปใช้คิวอัตโนมัติแล้ว' } }
     const ng = gObj(db, gid) || fail('ไม่พบไกด์');
+    if (gid === (two ? b.guideId : b.guide2Id)) fail('ไกด์คนนี้อยู่ในกลุ่มนี้แล้ว — เลือกคนอื่น');
     if (guideBlocked(db, gid, b.date, b.time, b.id)) fail(unavailOn(db, gid, b.date) ? 'ไกด์คนนี้แจ้งไม่ว่างในวันดังกล่าว' : 'ไกด์คนนี้ติดงานหรือรับงานครบแล้วในวันนั้น');
     if (old && old.id !== gid) notifyGuide(db, old, b, 'cancel');
-    b.guideId = gid; b.trip = 'assigned'; b.manual = true; notifyGuide(db, ng, b, 'new');
-    log(db, 'assign', `กำหนดไกด์เอง ${b.code} → ${gName(db, gid)} (เดิม ${old ? old.firstName : '-'})`);
+    b[key] = gid; b.trip = 'assigned'; b.manual = true; notifyGuide(db, ng, b, 'new');
+    log(db, 'assign', `กำหนดไกด์เอง ${b.code}${two ? ' (ไกด์คนที่ 2)' : ''} → ${gName(db, gid)} (เดิม ${old ? old.firstName : '-'})`);
     return { msg: 'มอบหมายและแจ้งเตือนไกด์แล้ว' };
   },
   autoAll(db) {
     need(db.$actor, 'assign');
-    const un = db.bookings.filter(b => b.status === 'paid' && b.qn != null && b.trip === 'unassigned' && b.date >= today());
+    const un = db.bookings.filter(b => b.status === 'paid' && b.qn != null && ['unassigned', 'assigned'].includes(b.trip) && missingG(b) > 0 && b.date >= today());
     const n = un.length ? rerunFrom(db, un.map(qKey).sort()[0]).length : 0; return { msg: `จัดคิวใหม่ ${n} งาน` };
   },
   decline(db, p) {
     const b = byId(db, p.id); if (!ownTrip(db, b)) fail('ไม่ใช่งานของคุณ');
     const reason = str(p.reason, 300); if (!reason) fail('กรุณาระบุเหตุผล'); if (b.trip !== 'assigned') fail('งานนี้เริ่มเดินทางแล้ว แจ้งไม่ว่างไม่ได้');
-    const res = p.wholeDay ? markGuideUnavailable(db, b.guideId, b.date, reason) : markGuideUnavailable(db, b.guideId, b.date, reason, b.id);
+    const me = db.$actor.guideId, res = p.wholeDay ? markGuideUnavailable(db, me, b.date, reason) : markGuideUnavailable(db, me, b.date, reason, b.id);
     return { msg: `แจ้งไม่ว่างแล้ว — จัดไกด์ใหม่ ${res.length} งาน` };
   },
   unavail(db, p) {
     need(db.$actor, 'markUnavail'); const reason = str(p.reason, 300); if (!reason) fail('กรุณาระบุเหตุผล');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date || '')) fail('กรุณาเลือกวันที่'); if (unavailOn(db, p.guideId, p.date)) fail('ไกด์คนนี้ถูกแจ้งไม่ว่างวันนั้นแล้ว');
     const res = markGuideUnavailable(db, p.guideId, p.date, reason);
-    return { msg: `ย้ายคิวไปลำดับสุดท้าย และจัดไกด์ใหม่ ${res.length} งาน${res.some(c => !c.nw) ? ' (บางงานยังไม่มีไกด์ว่าง)' : ''}` };
+    return { msg: `ย้ายคิวไปลำดับสุดท้าย และจัดไกด์ใหม่ ${res.length} งาน${res.some(c => c.short) ? ' (บางงานยังไม่มีไกด์ว่าง)' : ''}` };
   },
   unavailDel(db, p) {
     need(db.$actor, 'markUnavail'); const u = db.unavail.find(x => x.id === p.id) || fail('ไม่พบรายการ');
@@ -587,8 +612,8 @@ export const adminActions = {
     const L = db.bookings.filter(b => ids.has(b.id) && b.status === 'paid' && b.guideId && b.date >= today() && !isDone(b));
     if (!L.length) fail('ไม่มีงานที่แจ้งได้');
     const noCh = new Set();
-    L.forEach(b => { const g = gObj(db, b.guideId); if (!g) return; notifyGuide(db, g, b, 'job'); if (!g.lineUserId && !g.email) noCh.add(g.firstName) });
-    log(db, 'notify', `แจ้งงานไกด์ ${L.length} งาน: ${L.map(b => `${b.code}→${gName(db, b.guideId)}`).join(', ')}`);
+    L.forEach(b => gIds(b).forEach(id => { const g = gObj(db, id); if (!g) return; notifyGuide(db, g, b, 'job'); if (!g.lineUserId && !g.email) noCh.add(g.firstName) }));
+    log(db, 'notify', `แจ้งงานไกด์ ${L.length} งาน: ${L.map(b => `${b.code}→${gNames(db, b)}`).join(', ')}`);
     return { msg: `ส่งแจ้งเตือน ${L.length} งานแล้ว${noCh.size ? ` · ⚠ ${[...noCh].join(', ')} ยังไม่ผูก LINE และไม่มีอีเมล` : ''}` };
   },
   guideMessage(db, p) {
@@ -642,7 +667,7 @@ export const adminActions = {
       groupFee, split, maxGroup: Math.max(1, n('maxGroup')), slotStep: Math.min(240, Math.max(5, n('slotStep') || 15)), slotV2: true, tripHours: n('tripHours'), bookAheadDays: Math.max(1, n('bookAheadDays')),
       payDeadlineMin: Math.max(5, n('payDeadlineMin')), maxPeoplePerDay: n('maxPeoplePerDay'), maxGroupsPerSlot: n('maxGroupsPerSlot'), maxGroupsPerGuideDay: n('maxGroupsPerGuideDay'),
       rules: String(p.rules ?? s.rules ?? '').replace(/\r/g, '').slice(0, 5000), slotStart: p.slotStart, slotEnd: p.slotEnd, minLead: { v: n('minLead_v'), u: ['h', 'd', 'm'].includes(p.minLead_u) ? p.minLead_u : 'h' },
-      entryRates: Object.fromEntries(PAX.map(([k]) => [k, n('er_' + k)])), vehicleFee: n('vehicleFee'), motoFee: n('motoFee'),
+      entryRates: Object.fromEntries(PAX.map(([k]) => [k, n('er_' + k)])), vehicleFee: n('vehicleFee'), motoFee: n('motoFee'), extraGuideFee: p.extraGuideFee != null && p.extraGuideFee !== '' ? n('extraGuideFee') : +(s.extraGuideFee ?? 700),
     });
     log(db, 'settings', `ปรับตั้งค่า: กลุ่ม ${baht(groupFee)}, ค่าเข้า ${PAX.map(([k]) => s.entryRates[k]).join('/')}, รอบ ${s.slotStart}–${s.slotEnd} ทุก ${s.slotStep} นาที, ไกด์ ${split.guide}/หมู่บ้าน ${split.village}/อุทยาน ${split.park}, สูงสุด ${s.maxGroup} คน, ชำระใน ${s.payDeadlineMin} นาที, จองล่วงหน้า ≥ ${s.minLead.v}${s.minLead.u} ≤ ${s.bookAheadDays} วัน`);
     return { msg: 'บันทึกการตั้งค่าแล้ว' };

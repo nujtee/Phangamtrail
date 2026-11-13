@@ -103,6 +103,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .stepper b{font-size:20px;min-width:30px;text-align:center}
 .price{background:var(--g3);border-radius:12px;padding:14px}
 .price .l{display:flex;justify-content:space-between;padding:3px 0}
+.gnote{background:#fff7e6;border:1px solid #f3c66b;color:#6d4a0c;border-radius:12px;padding:10px 12px;margin:10px 0 4px;max-width:420px}
 .price .t{border-top:1px dashed #9cbca7;margin-top:6px;padding-top:8px;font-weight:700;font-size:18px}
 .paybox{text-align:center}
 .qrwrap{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0}
@@ -319,7 +320,7 @@ async function call(name,p){
   DIRTY=false;DB=r.state;if(r.msg)toast(r.msg);await loadPub();render();return r}
 async function uploadImg(dataURL){const blob=await (await fetch(dataURL)).blob();
   const r=await api('/api/admin/upload',{method:'POST',body:blob,headers:{'content-type':blob.type||'image/jpeg'}});if(!r.ok){toast(r.error||'อัปโหลดไม่สำเร็จ');return null}return r.url}
-const gObj=(db,id)=>db.guides.find(g=>g.id===id);
+const gObj=(db,id)=>id?db.guides.find(g=>g.id===id)||(db.coGuides||[]).find(g=>g.id===id):undefined;
 const gName=(db,id)=>{const g=gObj(db,id);return g?`${g.firstName} ${g.lastName}`:'-'};
 const PAX=[['ta','คนไทย ผู้ใหญ่'],['tc','คนไทย เด็ก'],['fa','ชาวต่างชาติ ผู้ใหญ่'],['fc','ชาวต่างชาติ เด็ก']];
 const PAXB=PAX.filter(([k])=>k==='ta'||k==='fa'); // ประเภทที่จองได้ (ยกเลิกประเภทเด็กแล้ว)
@@ -328,10 +329,15 @@ const paxCount=p=>PAX.reduce((a,[k])=>a+(+p[k]||0),0);
 const entryOf=(p,r)=>PAX.reduce((a,[k])=>a+(+p[k]||0)*(+r[k]||0),0);
 const paxText=p=>PAX.filter(([k])=>+p[k]).map(([k,l])=>`${l} ${p[k]}`).join(' · ');
 const activeGuides=db=>db.guides.filter(g=>g.active).sort((a,b)=>a.priority-b.priority);
+const needG=b=>Math.max(1,+b.guidesNeeded||1),gIds=b=>[b.guideId,b.guide2Id].filter(Boolean),hasGuide=(b,gid)=>!!gid&&(b.guideId===gid||b.guide2Id===gid),missingG=b=>Math.max(0,needG(b)-gIds(b).length);
+const gNames=(db,b)=>gIds(b).map(id=>gName(db,id)).join(' + ')||'-';
+const guidesFor=n=>{const s=PUB?.settings||{};return Math.min(s.maxGuides||2,Math.max(1,Math.ceil((+n||1)/Math.max(1,+s.maxGroup||6))))};
+const gTotal=b=>(+b.split.guide||0)+(+b.split.guide2||0);
+const gSlots=b=>[{slot:1,gid:b.guideId,amt:+b.split.guide||0,po:b.payout||{}},...(needG(b)>1?[{slot:2,gid:b.guide2Id,amt:+b.split.guide2||0,po:b.payout2||{}}]:[])];
 function guideBusy(db,gid,date,time,exceptId){const dur=db.settings.tripHours*60,st=toMin(time);
-  return db.bookings.some(b=>b.id!==exceptId&&b.guideId===gid&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date&&Math.abs(toMin(b.time)-st)<dur)}
+  return db.bookings.some(b=>b.id!==exceptId&&hasGuide(b,gid)&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date&&Math.abs(toMin(b.time)-st)<dur)}
 const unavailOn=(db,gid,date)=>(db.unavail||[]).some(u=>u.guideId===gid&&u.date===date);
-const guideDayCount=(db,gid,date,exceptId)=>db.bookings.filter(b=>b.id!==exceptId&&b.guideId===gid&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date).length;
+const guideDayCount=(db,gid,date,exceptId)=>db.bookings.filter(b=>b.id!==exceptId&&hasGuide(b,gid)&&b.status!=='cancelled'&&b.trip!=='paidcancel'&&b.date===date).length;
 function guideBlocked(db,gid,date,time,exceptId,b){const cap=+db.settings.maxGroupsPerGuideDay||0;return (cap>0&&guideDayCount(db,gid,date,exceptId)>=cap)||guideBusy(db,gid,date,time,exceptId)||unavailOn(db,gid,date)||!!(b&&(b.declined||[]).some(d=>d.guideId===gid))}
 const dayBookings=(db,date)=>db.bookings.filter(b=>b.date===date&&b.status!=='cancelled').sort((a,b)=>a.time.localeCompare(b.time)||(a.qn??1e9)-(b.qn??1e9)||a.createdAt.localeCompare(b.createdAt));
 const dayGuides=(db,date)=>activeGuides(db).filter(g=>!unavailOn(db,g.id,date));
@@ -374,7 +380,7 @@ function renderHome(){const S=PUB.site,s=PUB.settings,h=S.home,imgs=S.gallery.im
   return `<div class="homehero" style="background-image:linear-gradient(rgba(20,50,32,.35),rgba(20,50,32,.55)),url('${h.hero||ph('ผาแง่ม',150,1600,700)}')">
     <h1>${esc(h.title)}</h1><p>${esc(h.subtitle)}</p><a class="btn" href="#book" style="background:#f0b54d;color:#3b2a06;font-size:16px;padding:12px 20px;text-decoration:none">จองขึ้นผาแง่ม →</a></div>
   <div class="grid3" style="margin-bottom:16px">
-   <div class="stat"><div class="k">ค่าบริการนำเที่ยว</div><div class="v">${baht(s.groupFee)}</div><div class="s">ต่อกลุ่ม ไม่เกิน ${s.maxGroup} คน + ค่าเข้าอุทยานรายคน</div></div>
+   <div class="stat"><div class="k">ค่าบริการนำเที่ยว</div><div class="v">${baht(s.groupFee)}</div><div class="s">ต่อกลุ่ม ไม่เกิน ${s.maxGroup} คน (${+s.maxGroup+1}–${maxPpl()} คน +${baht(xgFee())} ไกด์คนที่ 2) + ค่าเข้าอุทยานรายคน</div></div>
    <div class="stat"><div class="k">รอบออกเดินทาง</div><div class="v">${s.slotStart}–${s.slotEnd}</div><div class="s">ทุกวัน${(s.seasons||[]).some(x=>x.active)?' (ยกเว้นช่วงปิดฤดูกาล)':''}</div></div>
    <div class="stat"><div class="k">ไกด์ชุมชน</div><div class="v">${PUB.guideCount} คน</div><div class="s">พาเดินทุกกลุ่ม</div></div></div>
   <div class="card"><p class="prose" style="margin:0">${esc(h.intro)}</p></div>
@@ -398,7 +404,7 @@ function renderAbout(){const a=PUB.site.about;
 function renderBook(){
   if(VB)return renderPayment(VB.booking,true);
   const s=PUB.settings;
-  return `<div class="hero"><h1>จองขึ้นผาแง่ม</h1><p>จองรอบเดินป่าพร้อมไกด์ท้องถิ่น · กลุ่มละไม่เกิน ${s.maxGroup} คน · ออกเดินทาง ${s.slotStart}–${s.slotEnd} น.</p>
+  return `<div class="hero"><h1>จองขึ้นผาแง่ม</h1><p>จองรอบเดินป่าพร้อมไกด์ท้องถิ่น · กลุ่มละไม่เกิน ${maxPpl()} คน · ออกเดินทาง ${s.slotStart}–${s.slotEnd} น.</p>
    <svg width="220" height="120" viewBox="0 0 220 120"><path d="M0 120 L60 40 L95 80 L140 15 L220 120Z" fill="#fff"/></svg></div>
   <form class="card" data-form="book" novalidate>
    <h2>1. เลือกวันและเวลา</h2>
@@ -406,8 +412,9 @@ function renderBook(){
    <p class="sm mut" style="margin-top:-6px">${leadText()?`ต้องจองล่วงหน้าอย่างน้อย <b>${leadText()}</b> · `:''}จองล่วงหน้าได้ไม่เกิน ${s.bookAheadDays} วัน${(s.seasons||[]).filter(x=>x.active).length?`<br>ช่วงปิดรับจอง: ${(s.seasons||[]).filter(x=>x.active).map(x=>`${esc(x.name)} (${seasonText(x)})`).join(' · ')}`:''}</p>
    <label>เวลาออกเดินทาง</label><div id="slots">${slotsHTML()}</div>
    <h2 style="margin-top:22px">2. จำนวนผู้เดินป่า</h2>
-   <p class="mut sm" style="margin-top:-6px">รวมไม่เกิน ${s.maxGroup} คนต่อกลุ่ม</p>
+   <p class="mut sm" style="margin-top:-6px">ไกด์ 1 คนดูแลได้ไม่เกิน ${s.maxGroup} คน · ${+s.maxGroup+1}–${maxPpl()} คน ใช้ไกด์ 2 คน (ค่าไกด์เพิ่ม ${baht(xgFee())}) · รวมไม่เกิน ${maxPpl()} คนต่อกลุ่ม</p>
    ${PAXB.map(([k,l])=>`<div class="row" style="justify-content:space-between;margin-bottom:8px;max-width:420px"><span>${l} <span class="mut sm">(${baht(s.entryRates[k])}/คน)</span></span><div class="stepper"><button type="button" data-act="ppl" data-k="${k}" data-d="-1">−</button><b id="ppl_${k}">${bf.pax[k]}</b><button type="button" data-act="ppl" data-k="${k}" data-d="1">+</button></div></div>`).join('')}
+   <div id="gnote">${gnoteHTML()}</div>
    <div class="row" style="justify-content:space-between;margin:14px 0 8px;max-width:420px"><span>🚗 รถยนต์เข้าอุทยาน <span class="mut sm">(${baht(s.vehicleFee??30)}/คัน)</span></span><div class="stepper"><button type="button" data-act="veh" data-d="-1">−</button><b id="veh_n">${bf.vehicles}</b><button type="button" data-act="veh" data-d="1">+</button></div></div>
    <div class="row" style="justify-content:space-between;margin:0 0 8px;max-width:420px"><span>🏍️ รถจักรยานยนต์เข้าอุทยาน <span class="mut sm">(${baht(s.motoFee??20)}/คัน)</span></span><div class="stepper"><button type="button" data-act="moto" data-d="-1">−</button><b id="moto_n">${bf.motos||0}</b><button type="button" data-act="moto" data-d="1">+</button></div></div>
    <p class="mut sm" style="margin:0;max-width:420px">ใส่ 0 ถ้าไม่ได้นำรถเข้าอุทยาน · รถยนต์ + รถจักรยานยนต์ รวมกันไม่เกินจำนวนผู้เดินป่า</p>
@@ -450,12 +457,17 @@ function slotsHTML(){
 async function loadAvail(key){const [date,people]=key.split('|');const r=await post('/api/public/availability',{date,people});if(avKey!==key)return;
   AV=r.ok?r:{slots:[],closed:{name:r.error||'โหลดไม่สำเร็จ',text:''}};const el=document.getElementById('slots');if(el)el.innerHTML=slotsHTML()}
 const POLICY=()=>`ชำระภายใน ${PUB.settings.payDeadlineMin} นาทีหลังจอง มิฉะนั้นระบบจะยกเลิกอัตโนมัติ · <b>ชำระแล้วไม่คืนเงินทุกกรณี (รวมถึงยกเลิกหรือไม่มาตามนัด)</b> แต่ขอเลื่อนวันเดินป่าได้ โดยติดต่อเจ้าหน้าที่`;
-function priceHTML(){const s=PUB.settings,e=entryOf(bf.pax,s.entryRates),vf=+(s.vehicleFee??30),mf=+(s.motoFee??20),vt=(bf.vehicles||0)*vf+(bf.motos||0)*mf;
+const maxPpl=()=>(+PUB.settings.maxGroup||6)*(PUB.settings.maxGuides||2),xgFee=()=>+(PUB.settings.extraGuideFee??PUB.settings.split?.guide??700);
+function gnoteHTML(){const n=paxCount(bf.pax),gn=guidesFor(n);if(gn<2)return '';
+  return `<div class="gnote">👥 <b>กลุ่ม ${n} คน เกิน ${PUB.settings.maxGroup} คน — ต้องเพิ่มไกด์อีก 1 คน รวมไกด์ ${gn} คน</b><div class="sm">บวกค่าไกด์เพิ่ม ${baht((gn-1)*xgFee())} · กลุ่มนี้จะมีไกด์ ${gn} คนเป็นผู้นำทาง</div></div>`}
+function priceHTML(){const s=PUB.settings,e=entryOf(bf.pax,s.entryRates),vf=+(s.vehicleFee??30),mf=+(s.motoFee??20),vt=(bf.vehicles||0)*vf+(bf.motos||0)*mf,gn=guidesFor(paxCount(bf.pax)),xt=(gn-1)*xgFee();
   return `<div class="l"><span>ค่าบริการนำเที่ยว (ต่อกลุ่ม)</span><span>${baht(s.groupFee)}</span></div>
+  ${xt?`<div class="l"><span>ค่าไกด์เพิ่ม (ไกด์คนที่ 2) · กลุ่มเกิน ${s.maxGroup} คน</span><span>${baht(xt)}</span></div>`:''}
   ${PAX.filter(([k])=>bf.pax[k]).map(([k,l])=>`<div class="l"><span>ค่าเข้าอุทยาน ${l} ${baht(s.entryRates[k])} × ${bf.pax[k]}</span><span>${baht(s.entryRates[k]*bf.pax[k])}</span></div>`).join('')}
   ${bf.vehicles?`<div class="l"><span>ค่ารถยนต์เข้าอุทยาน ${baht(vf)} × ${bf.vehicles} คัน</span><span>${baht(bf.vehicles*vf)}</span></div>`:''}
   ${bf.motos?`<div class="l"><span>ค่ารถจักรยานยนต์เข้าอุทยาน ${baht(mf)} × ${bf.motos} คัน</span><span>${baht(bf.motos*mf)}</span></div>`:''}
-  <div class="l t"><span>ยอดชำระทั้งหมด</span><span>${baht(+s.groupFee+e+vt)}</span></div>`}
+  <div class="l t"><span>ยอดชำระทั้งหมด</span><span>${baht(+s.groupFee+xt+e+vt)}</span></div>`}
+const xgRow=b=>b.extraGuideTotal?`<dt>ค่าไกด์เพิ่ม</dt><dd>${baht(b.extraGuideTotal)} <span class="sm mut">(กลุ่มเกิน ${PUB?.settings?.maxGroup||6} คน ใช้ไกด์ ${needG(b)} คน)</span></dd>`:'';
 function renderDone(b,fromBooking){
   const ok=b.status==='paid';
   const top=ok?`<div class="done ok"><div class="ic">✅</div><h2>จองสำเร็จ</h2><p>การชำระเงินได้รับการยืนยันแล้ว — การจองของคุณเสร็จสมบูรณ์</p>${b.email?`<p class="sm">ส่งรายละเอียดการจองไปที่อีเมล <b>${esc(b.email)}</b></p>`:''}</div>`
@@ -465,8 +477,8 @@ function renderDone(b,fromBooking){
    <div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn lg" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${ok?`<button class="btn ghost lg" data-act="custreceipt">🧾 ใบเสร็จรับเงิน</button>`:''}${ok?'':`<button class="btn ghost" data-act="refreshbk">🔄 ตรวจสถานะล่าสุด</button>`}</div></div>
   <div class="card"><h3>รายละเอียดการจอง</h3>
    <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลาออกเดินทาง</dt><dd>${b.time} น.</dd>
-   <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>${b.email?`<dt>อีเมล</dt><dd>${esc(b.email)}</dd>`:''}
-   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles||b.motos?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${vehText(b)})</span></dd>`:''}<dt>ยอดชำระ</dt><dd><b>${baht(b.paidAmount||b.total)}</b></dd>
+   <dt>จำนวน</dt><dd>${b.people} คน${needG(b)>1?` · <b>ไกด์ ${needG(b)} คน</b>`:''}<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>${b.email?`<dt>อีเมล</dt><dd>${esc(b.email)}</dd>`:''}
+   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd>${xgRow(b)}<dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles||b.motos?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${vehText(b)})</span></dd>`:''}<dt>ยอดชำระ</dt><dd><b>${baht(b.paidAmount||b.total)}</b></dd>
    <dt>สถานะ</dt><dd>${ok?'<span class="badge b-ok">จองสำเร็จ</span>':'<span class="badge b-warn">รอเจ้าหน้าที่ตรวจสอบสลิป</span>'}</dd></dl>
    <p class="mut sm">ใช้รหัสการจองและเบอร์โทรตรวจสอบสถานะได้ที่เมนู “ตรวจสอบการจอง” · ชำระแล้วไม่คืนเงินทุกกรณี แต่ขอเลื่อนวันได้โดยติดต่อเจ้าหน้าที่</p>
    <div class="row" style="gap:8px;flex-wrap:wrap">${!ok&&fromBooking?`<button class="btn ghost sm" data-act="reslip">ส่งสลิปใหม่</button>`:''}${fromBooking?`<button class="btn ghost sm" data-act="newbook">จองรอบใหม่</button>`:''}</div></div>`;
@@ -486,8 +498,8 @@ function renderPayment(b,fromBooking){
   </div>
   <div class="card"><h3>รายละเอียดการจอง</h3>
    <dl class="kv"><dt>รหัสการจอง</dt><dd><b style="font-size:17px">${b.code}</b></dd><dt>วันที่</dt><dd>${fmtDate(b.date)}</dd><dt>เวลา</dt><dd>${b.time} น.</dd>
-   <dt>จำนวน</dt><dd>${b.people} คน<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>
-   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd><dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles||b.motos?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${vehText(b)})</span></dd>`:''}<dt>รวม</dt><dd><b>${baht(b.total)}</b></dd>
+   <dt>จำนวน</dt><dd>${b.people} คน${needG(b)>1?` · <b>ไกด์ ${needG(b)} คน</b>`:''}<div class="sm mut">${paxText(b.pax||{})}</div></dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd>
+   <dt>ค่าบริการกลุ่ม</dt><dd>${baht(b.groupFee)}</dd>${xgRow(b)}<dt>ค่าเข้าอุทยาน</dt><dd>${baht(b.entryTotal)}</dd>${b.vehicles||b.motos?`<dt>ค่ารถเข้าอุทยาน</dt><dd>${baht(b.vehicleTotal)} <span class="sm mut">(${vehText(b)})</span></dd>`:''}<dt>รวม</dt><dd><b>${baht(b.total)}</b></dd>
    <dt>สถานะ</dt><dd>${stB(b)}</dd></dl>
    <p class="mut sm">เก็บรหัสการจองไว้ใช้ตรวจสอบสถานะที่เมนู “ตรวจสอบการจอง”</p><p class="sm" style="color:#6d4a0c">${POLICY()}</p>
    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-act="savebk">💾 บันทึกรายละเอียดการจอง</button>${fromBooking?`<button class="btn ghost" data-act="newbook">จองรอบใหม่</button>`:''}</div>
@@ -514,9 +526,13 @@ function renderLogin(){
 /* ===== แอปไกด์ (PWA) ===== */
 const photoLink=b=>(b.startPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-t="ก่อนเดิน" data-src="${esc(b.startPhoto)}">📷 รูปก่อนเดิน</button>`:'')+(b.endPhoto?` <button class="btn ghost sm" data-act="viewphoto" data-t="หลังเดินเสร็จ" data-src="${esc(b.endPhoto)}">📷 รูปหลังเดิน</button>`:'');
 function jobCard(b,asGuide){const g=gObj(DB,b.guideId),cls=b.trip==='started'?'started':isDone(b)?'done':'';const tel=String(b.phone||'').replace(/[^\d+]/g,'');
+  const me_=me()?.guideId,G=gIds(b).map(id=>gObj(DB,id)).filter(Boolean),co=G.filter(x=>x.id!==me_),miss=missingG(b),two=needG(b)>1;
+  const gList=G.map((x,i)=>`${two?`<span class="sm mut">${i?'ไกด์คนที่ 2':'ไกด์หลัก'}:</span> `:''}${esc(x.firstName+' '+x.lastName)}`).join('<br>');
+  const gRow=asGuide?(two?`<dt>ไกด์ร่วม</dt><dd>${co.length?co.map(x=>esc(x.firstName+' '+x.lastName)).join(', '):'<b style="color:var(--red)">ยังไม่มีไกด์คนที่ 2</b>'}<div class="sm mut">กลุ่มนี้ใช้ไกด์ ${needG(b)} คน</div></dd>`:'')
+    :`<dt>ไกด์${two?` (${needG(b)} คน)`:''}</dt><dd>${gList||''}${miss?`${gList?'<br>':''}<b style="color:var(--red)">${G.length?'ยังขาดไกด์อีก '+miss+' คน':'ยังไม่มีไกด์'}</b>`:''}</dd>`;
   return `<div class="card job ${cls}"><div class="hd"><div><div class="big">${b.time} น.</div><div class="sm mut">${fmtDate(b.date)} · ${b.code}</div></div>${trB(b)}</div>
-   <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน<div class="sm mut">${paxText(b.pax||{})}${b.vehicles||b.motos?` · ${vehText(b)}`:''}</div></dd>${asGuide?'':`<dt>ไกด์</dt><dd>${g?esc(g.firstName+' '+g.lastName):'<b style="color:var(--red)">ยังไม่มีไกด์</b>'}</dd>`}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
-   <div class="callrow">${tel?`<a href="tel:${tel}">📞 โทรลูกค้า</a>`:''}${b.line?`<a href="https://line.me/ti/p/~${encodeURIComponent(b.line)}" target="_blank" rel="noopener">💬 LINE ลูกค้า</a>`:''}${!asGuide&&g?.phone?`<a href="tel:${esc(g.phone)}">📞 โทรไกด์</a>`:''}</div>
+   <dl class="kv"><dt>ผู้จอง</dt><dd><b>${esc(b.name)}</b> · ${b.people} คน${two?' · <b>👥 ไกด์ '+needG(b)+' คน</b>':''}<div class="sm mut">${paxText(b.pax||{})}${b.vehicles||b.motos?` · ${vehText(b)}`:''}</div></dd>${gRow}${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
+   <div class="callrow">${tel?`<a href="tel:${tel}">📞 โทรลูกค้า</a>`:''}${b.line?`<a href="https://line.me/ti/p/~${encodeURIComponent(b.line)}" target="_blank" rel="noopener">💬 LINE ลูกค้า</a>`:''}${(asGuide?co:G).filter(x=>x.phone).map(x=>`<a href="tel:${esc(x.phone)}">📞 ${asGuide?'โทรไกด์ร่วม':'โทรไกด์'}${G.length>1?' '+esc(x.firstName):''}</a>`).join('')}</div>
    <div class="acts">${tripButtons(b,asGuide)}</div></div>`}
 const unreadN=()=>me()?.role==='guide'?(DB.notifications||[]).filter(n=>n.at>(DB.notifSeenAt||'')).length:0;
 let inboxAt=Date.now();
@@ -527,23 +543,24 @@ function pInbox(){if(Date.now()-inboxAt>15000){inboxAt=Date.now();loadAdmin().th
    <div class="m">${esc(n.kind==='msg'?(n.message||'').replace(/^\[ผาแง่ม\][^\n]*\n\n/,'').replace(/\n\nเปิดแอป:.*$/s,''):n.body||'')}</div><div class="sm mut">${fmtDT(n.at)}</div></div></div>`).join('')||'<div class="empty">ยังไม่มีแจ้งเตือน</div>'}</div>`}
 function pToday(){const u=me(),t=today(),tm=addDays(t,1);
   if(u.role==='guide'){const g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์ — ติดต่อผู้จัดการไกด์</div>`;
-    const L=DB.bookings.filter(b=>b.guideId===g.id&&b.status!=='cancelled'),T=L.filter(b=>b.date===t).sort((a,b)=>a.time.localeCompare(b.time)),N=L.filter(b=>b.date>t&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    const L=DB.bookings.filter(b=>hasGuide(b,g.id)&&b.status!=='cancelled'),T=L.filter(b=>b.date===t).sort((a,b)=>a.time.localeCompare(b.time)),N=L.filter(b=>b.date>t&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
     return `<div class="hd"><h2>สวัสดี ${esc(g.firstName)} 👋</h2><span class="sm mut">${fmtDate(t)}</span></div>${pushNudge()}
      <h3 style="margin:6px 0">งานวันนี้</h3>${T.map(b=>jobCard(b,true)).join('')||'<div class="card empty">วันนี้ไม่มีงาน 🌿</div>'}
      <h3 style="margin:14px 0 6px">งานถัดไป</h3>${N.slice(0,3).map(b=>jobCard(b,true)).join('')||'<div class="card empty">ยังไม่มีงานที่จะมาถึง</div>'}`}
   const L=DB.bookings.filter(b=>b.status==='paid'&&(b.date===t||b.date===tm)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)),T=L.filter(b=>b.date===t);
-  const c=f=>T.filter(f).length,noG=L.filter(b=>!b.guideId&&!isDone(b));
+  const c=f=>T.filter(f).length,noG=L.filter(b=>missingG(b)&&!isDone(b));
   return `<div class="hd"><h2>ภาพรวมงานวันนี้</h2><span class="sm mut">${fmtDate(t)}</span></div>${pushNudge()}
    <div class="ovr"><div><b>${T.length}</b><span class="sm">กลุ่มวันนี้</span></div><div><b>${c(b=>b.trip==='assigned')}</b><span class="sm">รอเริ่ม</span></div><div><b style="color:#d97706">${c(b=>b.trip==='started')}</b><span class="sm">กำลังเดิน</span></div><div><b style="color:#6b7280">${c(b=>isDone(b))}</b><span class="sm">จบแล้ว</span></div></div>
-   ${noG.length?`<div class="card" style="border-color:var(--red);background:#fdf0ef"><b style="color:var(--red)">⚠️ มีงานที่ยังไม่มีไกด์ ${noG.length} งาน</b><div class="sm">${noG.map(b=>`${b.code} · ${fmtDateS(b.date)} ${b.time}`).join(' · ')} — ไปที่ “ไกด์” เพื่อมอบหมาย</div></div>`:''}
+   ${noG.length?`<div class="card" style="border-color:var(--red);background:#fdf0ef"><b style="color:var(--red)">⚠️ มีงานที่ยังไม่มีไกด์ ${noG.length} งาน</b><div class="sm">${noG.map(b=>`${b.code} · ${fmtDateS(b.date)} ${b.time}${gIds(b).length?' (ขาด '+missingG(b)+' คน)':''}`).join(' · ')} — ไปที่ “ไกด์” เพื่อมอบหมาย</div></div>`:''}
    <h3 style="margin:6px 0">วันนี้</h3>${T.map(b=>jobCard(b,false)).join('')||'<div class="card empty">วันนี้ไม่มีกลุ่มเดินป่า</div>'}
    <h3 style="margin:14px 0 6px">พรุ่งนี้</h3>${L.filter(b=>b.date===tm).map(b=>jobCard(b,false)).join('')||'<div class="card empty">พรุ่งนี้ยังไม่มีกลุ่ม</div>'}`}
 function pEarn(){const u=me(),g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์</div>`;
-  const D=DB.bookings.filter(b=>b.guideId===g.id&&b.status==='paid'&&isDone(b)).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
-  const owed=D.filter(b=>!b.payout?.paid).reduce((a,b)=>a+b.split.guide,0),paid=D.filter(b=>b.payout?.paid).reduce((a,b)=>a+b.split.guide,0),m=today().slice(0,7),mon=D.filter(b=>b.date.startsWith(m)).reduce((a,b)=>a+b.split.guide,0);
+  const D=DB.bookings.filter(b=>hasGuide(b,g.id)&&b.status==='paid'&&isDone(b)).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const my=b=>gSlots(b).find(x=>x.gid===g.id)||{amt:0,po:{}},sm=L=>L.reduce((a,b)=>a+my(b).amt,0);
+  const owed=sm(D.filter(b=>!my(b).po.paid)),paid=sm(D.filter(b=>my(b).po.paid)),m=today().slice(0,7),mon=sm(D.filter(b=>b.date.startsWith(m)));
   return `<h2>รายได้ของฉัน</h2><div class="ovr" style="grid-template-columns:repeat(3,1fr)"><div><b style="color:var(--g)">${baht(owed)}</b><span class="sm">รอรับ</span></div><div><b>${baht(mon)}</b><span class="sm">เดือนนี้</span></div><div><b>${baht(paid)}</b><span class="sm">รับแล้วทั้งหมด</span></div></div>
    ${g.accountNo?'':'<div class="card sm" style="background:var(--warnbg)">⚠ ยังไม่มีเลขบัญชีรับเงิน — แจ้งผู้จัดการไกด์ให้เพิ่มก่อนรับค่าไกด์</div>'}
-   <div class="card"><h3>ประวัติงาน</h3>${D.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>สถานะ</th></tr>${D.slice(0,50).map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}${b.trip!=='completed'?'<div class="sm mut">'+({noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||'')+'</div>':''}</td><td class="num">${baht(b.split.guide)}</td><td>${b.payout?.paid?badge(['รับแล้ว','b-ok']):badge(['รอรับ','b-warn'])}</td></tr>`).join('')}</table></div>`:'<p class="mut">ยังไม่มีงานที่เสร็จ</p>'}</div>`}
+   <div class="card"><h3>ประวัติงาน</h3>${D.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>สถานะ</th></tr>${D.slice(0,50).map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}${b.trip!=='completed'?'<div class="sm mut">'+({noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||'')+'</div>':''}${needG(b)>1?`<div class="sm mut">👥 ${b.guide2Id===g.id?'ไกด์คนที่ 2':'ไกด์หลัก'}</div>`:''}</td><td class="num">${baht(my(b).amt)}</td><td>${my(b).po.paid?badge(['รับแล้ว','b-ok']):badge(['รอรับ','b-warn'])}</td></tr>`).join('')}</table></div>`:'<p class="mut">ยังไม่มีงานที่เสร็จ</p>'}</div>`}
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 let installEvt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(location.hash.includes('admin-me'))render()});
 let PUSH={sup:'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window,on:false};
@@ -601,6 +618,7 @@ function renderAdmin(sub){
    <nav class="bnav">${(u.role==='guide'?[['today','📍','วันนี้'],['mytrips','🥾','งาน'],['inbox','🔔','แจ้งเตือน'],['earn','💵','รายได้'],['me','📱','ฉัน']]:[['today','📍','วันนี้'],['bookings','📋','การจอง'],['guides','🧭','ไกด์'],['me','📱','ฉัน']]).filter(([p])=>pages.includes(p)).map(([p,i,l])=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="position:relative"><b>${i}</b>${l}${p==='inbox'&&unreadN()?`<span class="nbadge">${unreadN()}</span>`:''}</a>`).join('')}</nav>`;
 }
 const live=()=>DB.bookings.filter(b=>b.status!=='cancelled');
+const gPaidOf=L=>L.reduce((a,b)=>a+gSlots(b).filter(x=>x.po.paid).reduce((s,x)=>s+x.amt,0),0);
 const revenueOf=list=>list.filter(b=>b.status==='paid').reduce((a,b)=>a+b.total,0);
 
 let slipQ={t:0,v:null};
@@ -616,8 +634,8 @@ function pDashboard(){
   const slipMo=DB.bookings.filter(b=>b.slipAt&&inR(bkkYmd(b.slipAt),mo)),slipWarnN=rev.filter(slipWarn).length;
   setTimeout(fillSlipQuota,0);
   const range=dashTab==='day'?[t,t]:dashTab==='week'?wk:mo;
-  const rB=L.filter(b=>b.guideId&&inR(b.date,range)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const byG=DB.guides.map(g=>({g,list:rB.filter(b=>b.guideId===g.id)})).filter(x=>x.list.length||x.g.active).sort((a,b)=>a.g.priority-b.g.priority);
+  const rB=L.filter(b=>gIds(b).length&&inR(b.date,range)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const byG=DB.guides.map(g=>({g,list:rB.filter(b=>hasGuide(b,g.id))})).filter(x=>x.list.length||x.g.active).sort((a,b)=>a.g.priority-b.g.priority);
   const recent=[...DB.bookings].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,8);
   return `<div class="hd"><h2>แดชบอร์ด</h2><span class="mut sm">${fmtDate(t)}</span></div>
   <div class="grid5" style="margin-bottom:16px">
@@ -630,21 +648,21 @@ function pDashboard(){
   </div>
   <div class="card"><h3>รายรับ (ชำระแล้ว ตามวันเดินป่า)</h3><div class="grid3">
    ${[['วันนี้',[t,t]],['สัปดาห์นี้',wk],['เดือนนี้',mo]].map(([k,r])=>{const x=L.filter(b=>inR(b.date,r)&&b.status==='paid');const sum=f=>x.reduce((a,b)=>a+f(b),0);
-     return `<div class="stat" style="background:#fafbf9"><div class="k">${k}</div><div class="v">${baht(sum(b=>b.total))}</div><div class="s">ไกด์ ${baht(sum(b=>b.split.guide))} · หมู่บ้าน ${baht(sum(b=>b.split.village))} · อุทยาน ${baht(sum(b=>b.split.park))} · ค่าเข้า ${baht(sum(b=>b.entryTotal))} · ค่ารถ ${baht(sum(b=>b.vehicleTotal||0))}</div></div>`}).join('')}
+     return `<div class="stat" style="background:#fafbf9"><div class="k">${k}</div><div class="v">${baht(sum(b=>b.total))}</div><div class="s">ไกด์ ${baht(sum(gTotal))} · หมู่บ้าน ${baht(sum(b=>b.split.village))} · อุทยาน ${baht(sum(b=>b.split.park))} · ค่าเข้า ${baht(sum(b=>b.entryTotal))} · ค่ารถ ${baht(sum(b=>b.vehicleTotal||0))}</div></div>`}).join('')}
   </div></div>
   <div class="card"><div class="hd"><h3>ผู้ที่จะเดินป่าพรุ่งนี้ · ${fmtDate(tm)}</h3><span class="badge b-blue">${tmB.length} กลุ่ม / ${tmB.reduce((a,b)=>a+b.people,0)} คน</span></div>
    ${tmB.length?`<div class="tbl-wrap"><table><tr><th>เวลา</th><th>รหัส</th><th>ผู้จอง</th><th>โทร</th><th class="num">คน</th><th>ชำระ</th><th>ไกด์</th></tr>
-   ${tmB.map(b=>`<tr><td><b>${b.time}</b></td><td>${b.code}</td><td>${esc(b.name)}${b.note?`<div class="sm mut">${esc(b.note)}</div>`:''}</td><td>${esc(b.phone)}</td><td class="num">${b.people}</td><td>${stB(b)}</td><td>${b.guideId?esc(gName(DB,b.guideId)):trB(b)}</td></tr>`).join('')}</table></div>`:`<div class="empty">ยังไม่มีการจองสำหรับพรุ่งนี้</div>`}</div>
+   ${tmB.map(b=>`<tr><td><b>${b.time}</b></td><td>${b.code}</td><td>${esc(b.name)}${b.note?`<div class="sm mut">${esc(b.note)}</div>`:''}</td><td>${esc(b.phone)}</td><td class="num">${b.people}</td><td>${stB(b)}</td><td>${gIds(b).length?esc(gNames(DB,b))+(missingG(b)?' <b style="color:var(--red)">(ขาด '+missingG(b)+')</b>':''):trB(b)}</td></tr>`).join('')}</table></div>`:`<div class="empty">ยังไม่มีการจองสำหรับพรุ่งนี้</div>`}</div>
   <div class="card"><div class="hd"><h3>ไกด์ที่ได้รับมอบหมาย</h3><div class="tabs">${[['day','วันนี้'],['week','สัปดาห์นี้'],['month','เดือนนี้']].map(([k,l])=>`<button data-act="dtab" data-k="${k}" class="${dashTab===k?'on':''}">${l}</button>`).join('')}</div></div>
    <div class="tbl-wrap"><table><tr><th>ลำดับ</th><th>ไกด์</th><th class="num">งาน</th><th class="num">ผู้เดินป่า</th><th>รายการ</th></tr>
    ${byG.map(({g,list})=>`<tr><td>${g.priority}</td><td>${esc(g.firstName+' '+g.lastName)}${g.active?'':' <span class="badge b-gray">ปิดใช้งาน</span>'}</td><td class="num"><b>${list.length}</b></td><td class="num">${list.reduce((a,b)=>a+b.people,0)}</td>
-     <td class="sm">${list.map(b=>`${fmtDateS(b.date)} ${b.time} · ${b.code} ${trB(b)}`).join('<br>')||'<span class="mut">-</span>'}</td></tr>`).join('')}</table></div></div>
+     <td class="sm">${list.map(b=>`${fmtDateS(b.date)} ${b.time} · ${b.code}${needG(b)>1?' 👥':''} ${trB(b)}`).join('<br>')||'<span class="mut">-</span>'}</td></tr>`).join('')}</table></div></div>
   <div class="card"><h3>การลงทะเบียนล่าสุด</h3><div class="tbl-wrap"><table><tr><th>รหัส</th><th>จองเมื่อ</th><th>ผู้จอง</th><th>วันเดินป่า</th><th class="num">คน</th><th class="num">ยอด</th><th>สถานะ</th></tr>
    ${recent.map(b=>`<tr><td>${b.code}</td><td class="sm">${fmtDT(b.createdAt)}</td><td>${esc(b.name)}</td><td>${fmtDateS(b.date)} ${b.time}</td><td class="num">${b.people}</td><td class="num">${baht(b.total)}</td><td>${stB(b)}</td></tr>`).join('')}</table></div></div>`;
 }
 
 function tripButtons(b,asGuide){
-  if(b.status==='cancelled'||!b.guideId)return '';
+  if(b.status==='cancelled'||!gIds(b).length)return '';
   if(!(asGuide||can('tripAdmin')))return '';
   if(b.trip==='assigned')return (asGuide?`<button class="btn sm red" data-act="decline" data-id="${b.id}">✕ ไม่ว่าง</button> `:'')+`<button class="btn sm" data-act="tripstart" data-id="${b.id}" ${b.status!=='paid'?'disabled title="ต้องชำระเงินก่อน"':''}>▶ เริ่มเดินทาง</button>`
     +(b.status==='paid'&&b.date<=today()?` <button class="btn sm ghost" data-act="noshow" data-id="${b.id}">ลูกค้าไม่มา</button>`:'');
@@ -678,7 +696,7 @@ function pBookings(){
    <td>${stB(b)}${b.slip?` <button class="btn ghost sm" data-act="slip" data-id="${b.id}">สลิป</button>${slipTag(b)}${b.payChannel?`<div class="sm mut">ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}${b.payFee?` · รับ ${baht(b.paidAmount)} (ค่าธรรมเนียม ${baht(b.payFee)})`:''}</div>`:''}`:''}
      ${b.status==='pending'&&can('confirmPay')?`<div style="margin-top:4px"><button class="btn sm" data-act="confirmpay" data-id="${b.id}">ยืนยันรับเงิน</button></div>`:''}
      ${b.status==='paid'?`<div class="sm mut">${b.paidConfirmedBy==='ระบบอัตโนมัติ'?'⚡ ':''}โดย ${esc(b.paidConfirmedBy||'-')}</div><button class="btn ghost sm" style="margin-top:4px" data-act="receipt" data-id="${b.id}">🧾 ใบเสร็จ</button>`:''}</td>
-   <td>${b.status==='pending'?'<span class="sm mut">มอบหมายหลังชำระเงิน</span>':b.status!=='cancelled'&&can('assign')&&!isLocked({...b,manual:false})?`<select data-chg="reassign" data-id="${b.id}" style="min-width:140px"><option value="">— อัตโนมัติตามคิว —</option>${ag.map(g=>`<option value="${g.id}" ${g.id===b.guideId?'selected':''}>${g.priority}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}</select>`:esc(b.guideId?gName(DB,b.guideId):'-')}</td>
+   <td>${b.status==='pending'?'<span class="sm mut">มอบหมายหลังชำระเงิน</span>':b.status!=='cancelled'&&can('assign')&&!isLocked({...b,manual:false})?[1,...(needG(b)>1?[2]:[])].map(sl=>{const cur=sl===2?b.guide2Id:b.guideId;return `${needG(b)>1?`<div class="sm mut" style="margin:${sl===2?'6px':'0'} 0 2px">${sl===2?'ไกด์คนที่ 2':'👥 ไกด์หลัก'}</div>`:''}<select data-chg="reassign" data-id="${b.id}" data-slot="${sl}" style="min-width:140px"><option value="">— อัตโนมัติตามคิว —</option>${ag.map(g=>`<option value="${g.id}" ${g.id===cur?'selected':''}>${g.priority}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}</select>${!cur&&b.status==='paid'?'<div class="sm" style="color:var(--red)">ยังไม่มีไกด์</div>':''}`}).join(''):esc(gNames(DB,b))+(needG(b)>1?' <span class="badge b-blue">👥 2 ไกด์</span>':'')}</td>
    <td>${trB(b)}${photoLink(b)}<div style="margin-top:4px">${tripButtons(b,false)}</div>${(b.declined||[]).map(d=>`<div class="sm" style="color:var(--red)">✕ ${esc(gName(DB,d.guideId))} ไม่ว่าง: ${esc(d.reason)}</div>`).join('')}</td>
    <td>${b.status==='pending'&&can('cancel')?`<button class="btn ghost sm" data-act="cancelbk" data-id="${b.id}">ยกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('cancel')?`<button class="btn ghost sm" data-act="reschedule" data-id="${b.id}">เลื่อนวัน</button> <button class="btn ghost sm" data-act="paidcancel" data-id="${b.id}">ลูกค้ายกเลิก</button>`:''}${b.cancelReason?`<div class="sm mut">${esc(b.cancelReason)}</div>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่พบรายการ</td></tr>`}
   </table></div></div>`;
@@ -716,8 +734,8 @@ function lineLinkCard(){const s=DB.settings,by=s.lineLinkBy||'both',G=[...DB.gui
 let gTab='queue';
 function pGuides(){
   const ag=activeGuides(DB),dG=dayGuides(DB,qDate),dB=dayBookings(DB,qDate);
-  const un=DB.bookings.filter(b=>b.status==='paid'&&b.qn!=null&&b.trip==='unassigned'&&b.date>=today());
-  const up=DB.bookings.filter(b=>b.status!=='cancelled'&&b.guideId&&b.date>=today()&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,12);
+  const un=DB.bookings.filter(b=>b.status==='paid'&&b.qn!=null&&['unassigned','assigned'].includes(b.trip)&&missingG(b)&&b.date>=today());
+  const up=DB.bookings.filter(b=>b.status!=='cancelled'&&gIds(b).length&&b.date>=today()&&!isDone(b)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,12);
   const ed=can('editGuides');
   const lk=ag.filter(g=>g.lineUserId).length,svg=p=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   const TB=[['queue','คิวไกด์','<path d="M20 11a8 8 0 0 0-14.9-4"/><path d="M4 3.5V7.5h4"/><path d="M4 13a8 8 0 0 0 14.9 4"/><path d="M20 20.5v-4h-4"/>',un.length?`<span class="tb b-red">รอมอบหมาย ${un.length}</span>`:''],['line','ผูก LINE','<path d="M20.5 11.5a8.5 8 0 0 1-12.3 7.1L3.5 20l1.3-4A8.5 8 0 1 1 20.5 11.5z"/>',`<span class="tb ${ag.length&&lk===ag.length?'b-ok':'b-warn'}">${lk}/${ag.length}</span>`],['list','รายชื่อไกด์','<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 19.5a5.5 5.5 0 0 0-2.4-4.6"/>',`<span class="tb b-gray">${DB.guides.length}</span>`]];
@@ -742,12 +760,12 @@ function pGuides(){
      ${dG.map((g,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n">${i+1}</span>${esc(g.firstName+' '+g.lastName)}</div>`).join('')||'<div class="mut sm">ไม่มีไกด์ว่าง</div>'}
      ${ag.filter(g=>unavailOn(DB,g.id,qDate)).map(g=>`<div class="qitem" style="margin-bottom:6px;opacity:.6"><span class="n" style="background:var(--red)">✕</span>${esc(g.firstName)} — ไม่ว่าง</div>`).join('')}</div>
     <div><label>กลุ่มที่เดินวันนี้ (เรียงตามเวลา)</label>
-     ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?b.time:'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${b.guideId?esc(gName(DB,b.guideId)):'<span style="color:var(--red)">รอมอบหมาย</span>'}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
+     ${dB.map((b,i)=>`<div class="qitem" style="margin-bottom:6px"><span class="n" style="background:var(--blue);width:auto;padding:0 7px;border-radius:12px">${b.qn!=null?b.time:'รอชำระ'}</span><div><b>${b.code}</b> ${b.time} น. · ${esc(b.name)} (${b.people})<div class="sm">→ ${gIds(b).length?esc(gNames(DB,b)):''}${missingG(b)&&b.qn!=null?`${gIds(b).length?' · ':''}<span style="color:var(--red)">${gIds(b).length?'ขาดไกด์อีก '+missingG(b)+' คน':'รอมอบหมาย'}</span>`:!gIds(b).length?'<span style="color:var(--red)">รอมอบหมาย</span>':''}${needG(b)>1?' <span class="badge b-blue">👥 2 ไกด์</span>':''}${b.manual?' <span class="badge b-gray">กำหนดเอง</span>':''}${isLocked(b)&&!b.manual?' <span class="badge b-gray">ล็อก (เริ่มเดินทางแล้ว)</span>':''}</div></div></div>`).join('')||'<div class="mut sm">ไม่มีการจอง</div>'}</div></div></div>
   ${un.length?`<div class="card" style="border-color:#f0c9c4"><div class="hd"><h3>รอมอบหมาย (${un.length})</h3>${can('assign')?`<button class="btn sm" data-act="autoall">มอบหมายอัตโนมัติทั้งหมด</button>`:''}</div>
-   ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)</div>`).join('')}</div>`:''}
+   ${un.map(b=>`<div class="sm">${b.code} · ${fmtDateS(b.date)} ${b.time} · ${esc(b.name)} (${b.people} คน)${needG(b)>1?` · ต้องใช้ไกด์ ${needG(b)} คน${gIds(b).length?' — ขาดอีก '+missingG(b)+' คน':''}`:''}</div>`).join('')}</div>`:''}
   ${unavailSection()}
   <div class="card"><h3>งานที่มอบหมายแล้ว (กำลังจะมาถึง)</h3>${up.length?`<div class="tbl-wrap"><table><tr><th>วัน/เวลา</th><th>รหัส</th><th>ผู้จอง</th><th class="num">คน</th><th>ไกด์</th><th>ชำระ</th><th>สถานะ</th><th style="text-align:right">${can('assign')?`<button class="btn sm" data-act="notifyall">🔔 แจ้งทุกคน</button>`:'แจ้งเตือน'}</th></tr>
-   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${esc(gName(DB,b.guideId))}${(g=>g?`<div class="sm mut">${g.lineUserId?'LINE ✓':'LINE ✗'} · ${g.email?'อีเมล ✓':'อีเมล ✗'}</div>`:'')(DB.guides.find(x=>x.id===b.guideId))}</td><td>${stB(b)}</td><td>${trB(b)}</td><td style="text-align:right">${can('assign')&&b.status==='paid'&&b.guideId?`<button class="btn ghost sm" data-act="notifyone" data-id="${b.id}">🔔 แจ้ง</button>`:''}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`}`;
+   ${up.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}</td><td>${b.code}</td><td>${esc(b.name)}</td><td class="num">${b.people}</td><td>${gIds(b).map(id=>{const g=gObj(DB,id);return `${esc(gName(DB,id))}${g?`<div class="sm mut">${g.lineUserId?'LINE ✓':'LINE ✗'} · ${g.email?'อีเมล ✓':'อีเมล ✗'}</div>`:''}`}).join('')}${missingG(b)?`<div class="sm" style="color:var(--red)">ขาดไกด์อีก ${missingG(b)} คน</div>`:''}</td><td>${stB(b)}</td><td>${trB(b)}</td><td style="text-align:right">${can('assign')&&b.status==='paid'&&gIds(b).length?`<button class="btn ghost sm" data-act="notifyone" data-id="${b.id}">🔔 แจ้ง</button>`:''}</td></tr>`).join('')}</table></div>`:'<div class="empty">ไม่มีงาน</div>'}</div>`}`;
 }
 function unavailSection(){
   const L=[...DB.unavail].sort((a,b)=>b.date.localeCompare(a.date)),dec=[];
@@ -771,17 +789,17 @@ function normalizePriorities(firstId){const L=[...DB.guides].sort((a,b)=>(a.acti
 
 function pMyTrips(){
   const u=me(),g=gObj(DB,u.guideId);if(!g)return `<div class="card">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลไกด์</div>`;
-  const L=DB.bookings.filter(b=>b.guideId===g.id&&b.status!=='cancelled').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const L=DB.bookings.filter(b=>hasGuide(b,g.id)&&b.status!=='cancelled').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const act=L.filter(b=>!isDone(b)),done=L.filter(b=>isDone(b)).reverse().slice(0,10);
   const card=b=>`<div class="card"><div class="hd"><h3>${fmtDate(b.date)} · ${b.time} น.</h3>${trB(b)}</div>
-   <dl class="kv"><dt>รหัส</dt><dd>${b.code}</dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd><dt>จำนวน</dt><dd>${b.people} คน</dd><dt>การชำระ</dt><dd>${stB(b)}</dd>${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}
+   <dl class="kv"><dt>รหัส</dt><dd>${b.code}</dd><dt>ผู้จอง</dt><dd>${esc(b.name)} · ${esc(b.phone)}</dd><dt>จำนวน</dt><dd>${b.people} คน${needG(b)>1?` · 👥 ไกด์ ${needG(b)} คน<div class="sm mut">ไกด์ร่วม: ${esc(gIds(b).filter(id=>id!==g.id).map(id=>gName(DB,id)).join(', ')||'ยังไม่มี')}</div>`:''}</dd><dt>การชำระ</dt><dd>${stB(b)}</dd>${b.note?`<dt>หมายเหตุ</dt><dd>${esc(b.note)}</dd>`:''}
    ${b.startedAt?`<dt>เริ่ม</dt><dd>${fmtDT(b.startedAt)}${photoLink(b)}</dd>`:''}${b.endedAt?`<dt>สิ้นสุด</dt><dd>${fmtDT(b.endedAt)}</dd>`:''}</dl>
    <div style="margin-top:10px">${tripButtons(b,true)}</div></div>`;
-  const owed=done.filter(b=>!b.payout.paid).reduce((a,b)=>a+b.split.guide,0);
+  const owed=done.reduce((a,b)=>a+gSlots(b).filter(x=>x.gid===g.id&&!x.po.paid).reduce((s,x)=>s+x.amt,0),0);
   return `<div class="hd"><h2>งานของฉัน</h2><span class="badge b-blue">ค่าไกด์รอรับ ${baht(owed)}</span></div>
   <p class="mut sm" style="margin-top:-4px">หากไม่สะดวกรับงาน กด “ไม่ว่าง” พร้อมระบุเหตุผล ระบบจะส่งงานให้ไกด์คนถัดไปทันที และคิวของคุณจะย้ายไปลำดับสุดท้าย</p>
   ${act.map(card).join('')||'<div class="card empty">ยังไม่มีงานที่ได้รับมอบหมาย</div>'}
-  <div class="card"><h3>งานที่เสร็จแล้ว</h3>${done.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>การจ่าย</th></tr>${done.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}${b.trip!=='completed'?'<div>'+trB(b)+'</div>':''}</td><td>${b.code}</td><td class="num">${baht(b.split.guide)}</td><td>${b.payout.paid?badge(['จ่ายแล้ว','b-ok'])+`<div class="sm mut">${fmtDT(b.payout.paidAt)}</div>`:badge(['รอจ่าย','b-warn'])}</td></tr>`).join('')}</table></div>`:'<div class="empty">-</div>'}</div>`;
+  <div class="card"><h3>งานที่เสร็จแล้ว</h3>${done.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th>รหัส</th><th class="num">ค่าไกด์</th><th>การจ่าย</th></tr>${done.map(b=>`<tr><td>${fmtDateS(b.date)} ${b.time}${b.trip!=='completed'?'<div>'+trB(b)+'</div>':''}</td><td>${b.code}</td>${(x=>`<td class="num">${baht(x.amt||0)}</td><td>${x.po?.paid?badge(['จ่ายแล้ว','b-ok'])+`<div class="sm mut">${fmtDT(x.po.paidAt)}</div>`:badge(['รอจ่าย','b-warn'])}</td>`)(gSlots(b).find(x=>x.gid===g.id)||{})}</tr>`).join('')}</table></div>`:'<div class="empty">-</div>'}</div>`;
 }
 
 function accData(){const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
@@ -789,20 +807,20 @@ function accData(){const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&
 function accRange(){const t=today();if(acc.preset==='month')return monthRange(t);if(acc.preset==='last'){const d=new Date(t+'T00:00:00');d.setDate(0);return monthRange(ymd(d))}if(acc.preset==='all')return['0000-01-01','9999-12-31'];return[acc.from||'0000-01-01',acc.to||'9999-12-31']}
 function pAccounting(){
   const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(b=>b.split.guide),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal),VH=sum(b=>b.vehicleTotal||0);
-  const gPaid=L.filter(b=>b.payout.paid).reduce((a,b)=>a+b.split.guide,0);
+  const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(gTotal),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal),VH=sum(b=>b.vehicleTotal||0);
+  const gPaid=gPaidOf(L),XG=sum(b=>+b.split.guide2||0);
   return `<div class="hd"><h2>บัญชีรายรับ</h2><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="accpdf">📄 ส่งออก PDF</button><button class="btn ghost sm" data-act="acccsv">⬇ ดาวน์โหลด CSV</button><button class="btn ghost sm" data-act="csv">คัดลอก CSV</button></div></div>
   <div class="card"><div class="row"><div class="tabs">${[['month','เดือนนี้'],['last','เดือนก่อน'],['all','ทั้งหมด'],['custom','กำหนดเอง']].map(([k,l])=>`<button data-act="accp" data-k="${k}" class="${acc.preset===k?'on':''}">${l}</button>`).join('')}</div>
    ${acc.preset==='custom'?`<input type="date" style="width:auto" value="${acc.from}" data-chg="accfrom"> – <input type="date" style="width:auto" value="${acc.to}" data-chg="accto">`:''}
    <span class="mut sm">นับเฉพาะการจองที่ชำระเงินแล้ว ตามวันเดินป่า</span></div></div>
   <div class="grid4" style="margin-bottom:16px">
-   <div class="stat"><div class="k">ส่วนของไกด์</div><div class="v">${baht(G)}</div><div class="s">จ่ายแล้ว ${baht(gPaid)} · ค้างจ่าย ${baht(G-gPaid)}</div></div>
+   <div class="stat"><div class="k">ส่วนของไกด์</div><div class="v">${baht(G)}</div><div class="s">จ่ายแล้ว ${baht(gPaid)} · ค้างจ่าย ${baht(G-gPaid)}${XG?` · รวมค่าไกด์เพิ่ม (ไกด์คนที่ 2) ${baht(XG)}`:''}</div></div>
    <div class="stat"><div class="k">ส่วนกลางหมู่บ้าน</div><div class="v">${baht(V)}</div><div class="s">${L.length} กลุ่ม × ${baht(DB.settings.split.village)}</div></div>
    <div class="stat"><div class="k">ส่วนของอุทยาน</div><div class="v">${baht(P)}</div><div class="s">${L.length} กลุ่ม × ${baht(DB.settings.split.park)}</div></div>
    <div class="stat"><div class="k">ค่าเข้าพื้นที่อุทยาน</div><div class="v">${baht(E)}</div><div class="s">${sum(b=>b.people)} คน${VH?` · ค่ารถ ${baht(VH)} (รถยนต์ ${sum(b=>b.vehicles||0)} · จยย. ${sum(b=>b.motos||0)} คัน)`:''}</div></div></div>
   <div class="card"><div class="hd"><h3>รายละเอียด</h3><b>รวมทั้งหมด ${baht(G+V+P+E+VH)}</b></div><div class="tbl-wrap"><table>
    <tr><th>วันที่</th><th>รหัส</th><th>ไกด์</th><th class="num">คน</th><th class="num">ไกด์</th><th class="num">ส่วนกลางหมู่บ้าน</th><th class="num">อุทยาน</th><th class="num">ค่าเข้าอุทยาน</th><th class="num">ค่ารถ</th><th class="num">รวม</th></tr>
-   ${L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gName(DB,b.guideId))}</td><td class="num">${b.people}</td><td class="num">${baht(b.split.guide)}</td><td class="num">${baht(b.split.village)}</td><td class="num">${baht(b.split.park)}</td><td class="num">${baht(b.entryTotal)}</td><td class="num">${baht(b.vehicleTotal||0)}</td><td class="num"><b>${baht(b.total)}</b></td></tr>`).join('')||`<tr><td colspan="10" class="empty">ไม่มีรายการในช่วงนี้</td></tr>`}
+   ${L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gNames(DB,b))}</td><td class="num">${b.people}</td><td class="num">${baht(gTotal(b))}${+b.split.guide2?`<div class="sm mut">${baht(b.split.guide)}+${baht(b.split.guide2)}</div>`:''}</td><td class="num">${baht(b.split.village)}</td><td class="num">${baht(b.split.park)}</td><td class="num">${baht(b.entryTotal)}</td><td class="num">${baht(b.vehicleTotal||0)}</td><td class="num"><b>${baht(b.total)}</b></td></tr>`).join('')||`<tr><td colspan="10" class="empty">ไม่มีรายการในช่วงนี้</td></tr>`}
    <tfoot><tr><td colspan="3">รวม</td><td class="num">${sum(b=>b.people)}</td><td class="num">${baht(G)}</td><td class="num">${baht(V)}</td><td class="num">${baht(P)}</td><td class="num">${baht(E)}</td><td class="num">${baht(VH)}</td><td class="num">${baht(G+V+P+E+VH)}</td></tr></tfoot></table></div></div>`;
 }
 
@@ -822,12 +840,15 @@ function pVillage(){const v=DB.settings.villageAcct||{},sp=+DB.settings.split?.v
    ${ed?'<div style="margin-top:12px"><button class="btn" type="submit">บันทึกบัญชีหมู่บ้าน</button></div>':''}</form></div>
   <div class="card"><div class="hd"><h3>ยอดค้างโอนให้หมู่บ้าน</h3><a class="btn ghost sm" href="#admin-payouts">ไปหน้าเบิกจ่าย →</a></div>
    ${pend?`<div class="v" style="font-size:24px;font-weight:700">${baht(pend.amt)}</div><div class="sm mut">${pend.n} กลุ่ม · เดิน ${vRange(pend)}</div>`:'<span class="mut">ไม่มียอดค้างโอน 🎉</span>'}</div>`}
-function payData(){const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid'),L=done.filter(b=>payTab==='unpaid'?!b.payout.paid:b.payout.paid).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+/* รายการจ่ายไกด์: 1 งาน = 1 รายการต่อไกด์ (กลุ่มใหญ่ไกด์ 2 คน → 2 รายการ: slot 1 ค่าไกด์หลัก · slot 2 ค่าไกด์เพิ่ม) */
+const payItems=(done,tab)=>done.flatMap(b=>gSlots(b).filter(x=>x.gid).map(x=>({...b,_slot:x.slot,_gid:x.gid,_amt:x.amt,_po:x.po})))
+  .filter(i=>tab==='unpaid'?!i._po.paid:tab==='paid'?!!i._po.paid:true).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)||a._slot-b._slot);
+function payData(){const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid'),L=payItems(done,payTab);
   return {L,V:vilRows(payTab),lab:payTab==='unpaid'?{text:'รายการรอจ่าย',file:'unpaid'}:{text:'รายการจ่ายแล้ว',file:'paid'}}}
 function pPayouts(){
   const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid');
-  const L=done.filter(b=>payTab==='unpaid'?!b.payout.paid:b.payout.paid).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const owe={};done.filter(b=>!b.payout.paid).forEach(b=>owe[b.guideId]=(owe[b.guideId]||0)+b.split.guide);
+  const L=payItems(done,payTab),nU=payItems(done,'unpaid').length,nP=payItems(done,'paid').length;
+  const owe={};payItems(done,'unpaid').forEach(i=>owe[i._gid]=(owe[i._gid]||0)+i._amt);
   const logs=DB.audit.filter(a=>a.action.startsWith('payout')),va=DB.settings.villageAcct||{},VP=vilRows('unpaid')[0],VR=vilRows(payTab);
   const vrow=r=>`<tr style="background:#f2f8f4"><td>${vRange(r)}<div class="sm mut">${r.n} กลุ่ม · ${esc(r.codes.slice(0,4).join(', '))}${r.n>4?' …':''}</div></td><td><b>🏘️ บัญชีหมู่บ้าน</b>${va.accountName?`<div class="sm">${esc(va.accountName)}</div>`:''}</td>
    <td>${va.accountNo?`${esc(va.bankName)}<div><b>${esc(va.accountNo)}</b> <button class="btn ghost sm" data-act="copy" data-v="${esc(va.accountNo)}">คัดลอก</button></div>`:`<span style="color:var(--red)">ยังไม่ได้ตั้งค่าบัญชีหมู่บ้าน</span> <a href="#admin-village" class="sm">ตั้งค่า →</a>`}</td><td>-</td>
@@ -837,13 +858,13 @@ function pPayouts(){
   return `<div class="hd"><h2>เบิกจ่ายค่าไกด์ / หมู่บ้าน</h2><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="paypdf">📄 ส่งออก PDF</button><button class="btn ghost sm" data-act="paycsv">⬇ ดาวน์โหลด CSV</button></div></div>
   <div class="card"><h3>ยอดค้างจ่าย</h3><div class="queue">${VP?`<div class="qitem" style="border-color:var(--g2);background:#f2f8f4"><b>🏘️ บัญชีหมู่บ้าน</b> <span class="badge b-warn">${baht(VP.amt)}</span></div>`:''}${Object.keys(owe).map(id=>`<div class="qitem"><b>${esc(gName(DB,id))}</b> <span class="badge b-warn">${baht(owe[id])}</span></div>`).join('')||(VP?'':'<span class="mut">ไม่มียอดค้างจ่าย 🎉</span>')}</div>
    <p class="mut sm" style="margin-bottom:0">รายการจะแสดงที่นี่เมื่อไกด์กด “เริ่มการเดินทาง” และ “สิ้นสุดการเดินทาง” ครบแล้ว หรือเมื่อลูกค้าไม่มา/ยกเลิกหลังชำระเงิน (ไกด์ที่ได้รับมอบหมายยังได้ค่าไกด์ตามจำนวนในระบบ และถูกย้ายไปต่อท้ายคิว)</p></div>
-  <div class="card"><div class="hd"><div class="tabs"><button data-act="ptab" data-k="unpaid" class="${payTab==='unpaid'?'on':''}">รอจ่าย (${done.filter(b=>!b.payout.paid).length+(VP?1:0)})</button><button data-act="ptab" data-k="paid" class="${payTab==='paid'?'on':''}">จ่ายแล้ว (${done.filter(b=>b.payout.paid).length+vilRows('paid').length})</button></div></div>
+  <div class="card"><div class="hd"><div class="tabs"><button data-act="ptab" data-k="unpaid" class="${payTab==='unpaid'?'on':''}">รอจ่าย (${nU+(VP?1:0)})</button><button data-act="ptab" data-k="paid" class="${payTab==='paid'?'on':''}">จ่ายแล้ว (${nP+vilRows('paid').length})</button></div></div>
   <div class="tbl-wrap"><table><tr><th>วันที่/รหัส</th><th>ผู้รับเงิน</th><th>ธนาคาร / เลขที่บัญชี</th><th>เบอร์โทร</th><th>เวลาเดินทาง</th><th class="num">ยอด</th><th></th></tr>
-  ${VR.map(vrow).join('')}${L.map(b=>{const g=gObj(DB,b.guideId)||{};return `<tr><td>${fmtDateS(b.date)} ${b.time}<div class="sm mut">${b.code}</div></td><td><b>${esc(g.firstName)} ${esc(g.lastName)}</b></td>
+  ${VR.map(vrow).join('')}${L.map(b=>{const g=gObj(DB,b._gid)||{};return `<tr><td>${fmtDateS(b.date)} ${b.time}<div class="sm mut">${b.code}</div></td><td><b>${esc(g.firstName)} ${esc(g.lastName)}</b>${needG(b)>1?`<div class="sm mut">👥 ${b._slot===2?'ไกด์คนที่ 2 (ค่าไกด์เพิ่ม)':'ไกด์หลัก'}</div>`:''}</td>
    <td>${g.accountNo?`${esc(g.bankName)}<div><b>${esc(g.accountNo)}</b> <button class="btn ghost sm" data-act="copy" data-v="${esc(g.accountNo)}">คัดลอก</button></div>`:'<span style="color:var(--red)">ยังไม่มีเลขบัญชี — ให้ผู้จัดการไกด์เพิ่มก่อนจ่าย</span>'}</td><td>${esc(g.phone)}</td>
-   <td class="sm">${b.trip==='completed'?`เริ่ม ${fmtDT(b.startedAt)}<br>จบ ${fmtDT(b.endedAt)}`:`${trB(b)}<br>${esc(b.closeNote||'')}`}</td><td class="num"><b>${baht(b.split.guide)}</b></td>
-   <td>${b.payout.paid?`${badge(['จ่ายแล้ว','b-ok'])}<div class="sm mut">โดย ${esc(b.payout.paidByName)}<br>${fmtDT(b.payout.paidAt)}${b.payout.ref?`<br>อ้างอิง ${esc(b.payout.ref)}`:''}</div>${can('payoutUndo')?`<button class="btn ghost sm" data-act="payundo" data-id="${b.id}">ยกเลิกการยืนยัน</button>`:''}`:
-     can('payout')?`<button class="btn sm" data-act="paygd" data-id="${b.id}">ยืนยันชำระเงินให้ไกด์แล้ว</button>`:badge(['รอจ่าย','b-warn'])}</td></tr>`}).join('')}${VR.length||L.length?'':`<tr><td colspan="7" class="empty">ไม่มีรายการ</td></tr>`}</table></div></div>
+   <td class="sm">${b.trip==='completed'?`เริ่ม ${fmtDT(b.startedAt)}<br>จบ ${fmtDT(b.endedAt)}`:`${trB(b)}<br>${esc(b.closeNote||'')}`}</td><td class="num"><b>${baht(b._amt)}</b></td>
+   <td>${b._po.paid?`${badge(['จ่ายแล้ว','b-ok'])}<div class="sm mut">โดย ${esc(b._po.paidByName)}<br>${fmtDT(b._po.paidAt)}${b._po.ref?`<br>อ้างอิง ${esc(b._po.ref)}`:''}</div>${can('payoutUndo')?`<button class="btn ghost sm" data-act="payundo" data-id="${b.id}" data-slot="${b._slot}">ยกเลิกการยืนยัน</button>`:''}`:
+     can('payout')?`<button class="btn sm" data-act="paygd" data-id="${b.id}" data-slot="${b._slot}">ยืนยันชำระเงินให้ไกด์แล้ว</button>`:badge(['รอจ่าย','b-warn'])}</td></tr>`}).join('')}${VR.length||L.length?'':`<tr><td colspan="7" class="empty">ไม่มีรายการ</td></tr>`}</table></div></div>
   <div class="card"><h3>Log การยืนยันจ่ายเงิน</h3>${logs.length?`<div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ดูแลระบบ</th><th>รายละเอียด</th></tr>${logs.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td><b>${esc(a.userName)}</b></td><td class="sm">${esc(a.detail)}</td></tr>`).join('')}</table></div>`:'<div class="empty">ยังไม่มี</div>'}</div>`;
 }
 
@@ -883,6 +904,7 @@ const ONES=['','หนึ่ง','สอง','สาม','สี่','ห้า'
 function bahtText(n){n=Math.round(+n||0);if(!n)return 'ศูนย์บาทถ้วน';const g=x=>{let t='';const d=String(x).split('').reverse();d.forEach((c,i)=>{c=+c;if(!c)return;let w=ONES[c];if(i===1&&c===1)w='';if(i===1&&c===2)w='ยี่';if(i===0&&c===1&&d.length>1&&+d[1])w='เอ็ด';t=w+POS[i]+t});return t};
   let out='',m=Math.floor(n/1e6),r=n%1e6;if(m)out=bahtText(m).replace('บาทถ้วน','')+'ล้าน';out+=g(r);return out+'บาทถ้วน'}
 function receiptDoc(b,R){R=R||{};const rows=[['ค่าบริการนำเที่ยวพร้อมไกด์ (ต่อกลุ่ม)',1,b.groupFee]];
+  if(b.extraGuideTotal)rows.push(['ค่าไกด์เพิ่ม (ไกด์คนที่ 2 · กลุ่มเกิน '+((PUB||DB)?.settings?.maxGroup||6)+' คน)',Math.max(1,needG(b)-1),b.extraGuideFee||b.extraGuideTotal]);
   PAX.forEach(([k,l])=>{const q=b.pax?.[k];if(q){const rate=b.entryRates?.[k]??(q?Math.round((b.entryTotal||0)/(b.people||1)):0);rows.push([`ค่าเข้าพื้นที่อุทยาน ${l}`,q,rate])}});
   if(b.vehicles)rows.push(['ค่ารถยนต์เข้าอุทยาน (คัน)',b.vehicles,b.vehicleFee||Math.round(((b.vehicleTotal||0)-(b.motos||0)*(b.motoFee||0))/b.vehicles)]);
   if(b.motos)rows.push(['ค่ารถจักรยานยนต์เข้าอุทยาน (คัน)',b.motos,b.motoFee||20]);
@@ -919,8 +941,8 @@ function pSettings(){setTimeout(updSplit,0);const s=DB.settings,sp=s.split,sumSp
   const H=(i,t,sub='')=>`<h3 class="sh"><span class="i">${i}</span><span>${t}${sub?`<small>${sub}</small>`:''}</span></h3>`;
   return `<div class="hd"><h2>ตั้งค่าราคาและระบบ</h2></div>
   <form data-form="settings" class="set">
-  <div class="card">${H('💰','ราคาและการชำระเงิน','ค่าบริการคิดต่อกลุ่ม (1 กลุ่ม = ไกด์ 1 คน)')}
-   <div class="g" style="--c:3">${F('groupFee','ค่าบริการต่อกลุ่ม',s.groupFee,'บาท')}${F('maxGroup','จำนวนคนสูงสุดต่อกลุ่ม',s.maxGroup,'คน')}${F('payDeadlineMin','ชำระเงินภายใน',s.payDeadlineMin,'นาที',{hint:'เกินเวลา = หมดเวลาชำระเงิน คืนรอบให้ว่าง'})}</div></div>
+  <div class="card">${H('💰','ราคาและการชำระเงิน','ค่าบริการคิดต่อกลุ่ม · กลุ่มเกินจำนวนคนต่อไกด์ ใช้ไกด์ 2 คน')}
+   <div class="g" style="--c:4">${F('groupFee','ค่าบริการต่อกลุ่ม',s.groupFee,'บาท')}${F('maxGroup','จำนวนคนต่อไกด์ 1 คน',s.maxGroup,'คน',{hint:`เกินนี้ใช้ไกด์ 2 คน · รับได้สูงสุด ${(+s.maxGroup||6)*2} คน/กลุ่ม`})}${F('extraGuideFee','ค่าไกด์เพิ่ม (ไกด์คนที่ 2)',s.extraGuideFee??700,'บาท',{hint:'บวกในยอดของกลุ่มที่ใช้ไกด์ 2 คน · จ่ายให้ไกด์คนที่ 2'})}${F('payDeadlineMin','ชำระเงินภายใน',s.payDeadlineMin,'นาที',{hint:'เกินเวลา = หมดเวลาชำระเงิน คืนรอบให้ว่าง'})}</div></div>
   <div class="card">${H('🎫','ค่าเข้าอุทยาน','ปรับให้ตรงกับอัตราจริงของอุทยาน')}
    <div class="g" style="--c:4">${F('er_ta','คนไทย',s.entryRates.ta,'บาท/คน')}${F('er_fa','ชาวต่างชาติ',s.entryRates.fa,'บาท/คน')}${F('vehicleFee','รถยนต์',s.vehicleFee??30,'บาท/คัน')}${F('motoFee','รถจักรยานยนต์',s.motoFee??20,'บาท/คัน')}</div>
    <input type="hidden" name="er_tc" value="${esc(s.entryRates.tc??0)}"><input type="hidden" name="er_fc" value="${esc(s.entryRates.fc??0)}"></div>
@@ -1040,7 +1062,7 @@ function pCalendar(){
     <div class="stat"><div class="k">ชาวต่างชาติ</div><div class="v">${pax(R2,'fa')+pax(R2,'fc')}</div><div class="s">ผู้ใหญ่ ${pax(R2,'fa')} · เด็ก ${pax(R2,'fc')}</div></div></div>
    ${R2.length?`<div class="tbl-wrap"><table><tr><th>วันที่</th><th class="num">กลุ่ม</th><th class="num">คน</th><th class="num">ชำระแล้ว</th><th class="num">รอชำระ</th><th>รายการ (เวลา · รหัส · ผู้จอง · คน · ไกด์)</th></tr>
     ${Object.entries(rd).map(([d,a])=>`<tr><td><b>${fmtDate(d)}</b></td><td class="num"><b>${a.length}</b></td><td class="num">${sum(a,b=>b.people)}</td><td class="num">${a.filter(b=>b.status==='paid').length}</td><td class="num">${a.filter(b=>b.status==='pending').length||'-'}</td>
-     <td class="sm">${a.map(b=>`${b.time} · ${b.code} · ${esc(b.name)} · ${b.people} คน · ${b.guideId?esc(gName(DB,b.guideId)):b.status==='pending'?'<span style="color:var(--warn)">รอชำระ</span>':'<span style="color:var(--red)">รอมอบหมาย</span>'}`).join('<br>')}</td></tr>`).join('')}
+     <td class="sm">${a.map(b=>`${b.time} · ${b.code} · ${esc(b.name)} · ${b.people} คน · ${gIds(b).length?esc(gNames(DB,b))+(missingG(b)?' <span style="color:var(--red)">(ขาด '+missingG(b)+')</span>':''):b.status==='pending'?'<span style="color:var(--warn)">รอชำระ</span>':'<span style="color:var(--red)">รอมอบหมาย</span>'}`).join('<br>')}</td></tr>`).join('')}
     <tfoot><tr><td>รวม</td><td class="num">${R2.length}</td><td class="num">${sum(R2,b=>b.people)}</td><td class="num">${R2.filter(b=>b.status==='paid').length}</td><td class="num">${R2.filter(b=>b.status==='pending').length}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">ไม่มีลูกค้าในช่วงนี้</div>'}</div>`}
 let cTab='home',cGalCat='',draftImgs=[],draftOne=null;
 function pContent(){const S=DB.site;const tabs=[['home','หน้าหลัก'],['gallery','รวมภาพ'],['stay','บ้านพัก'],['about','เกี่ยวกับเรา / ผังผู้บริหาร']];
@@ -1115,8 +1137,9 @@ setInterval(()=>{const els=document.querySelectorAll('[data-countdown]');els.for
 const ACT={
   slot:el=>{bf.time=el.dataset.t;document.getElementById('slots').innerHTML=slotsHTML()},
   ppl:el=>{const k=el.dataset.k,d=+el.dataset.d,n=Math.max(0,bf.pax[k]+d),tot=paxCount(bf.pax)-bf.pax[k]+n;
-    if(tot>PUB.settings.maxGroup)return toast(`รวมได้ไม่เกิน ${PUB.settings.maxGroup} คนต่อกลุ่ม`);if(tot<1)return;
-    bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;
+    if(tot>maxPpl())return toast(`รวมได้ไม่เกิน ${maxPpl()} คนต่อกลุ่ม (ไกด์ 2 คน)`);if(tot<1)return;
+    const g0=guidesFor(paxCount(bf.pax));bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;const gn=document.getElementById('gnote');if(gn)gn.innerHTML=gnoteHTML();
+    if(guidesFor(tot)>g0)toast(`เกิน ${PUB.settings.maxGroup} คน — เพิ่มไกด์อีก 1 คน (รวม 2 คน) +${baht(xgFee())}`);
     // จำนวนรถรวมต้องไม่เกินจำนวนคน — ลดคนแล้วรถเกิน: ลดจักรยานยนต์ก่อน แล้วจึงรถยนต์
     let over=(bf.vehicles||0)+(bf.motos||0)-tot;if(over>0){const m=Math.min(over,bf.motos||0);bf.motos-=m;bf.vehicles=Math.max(0,(bf.vehicles||0)-(over-m));
       document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('moto_n').textContent=bf.motos;toast('ปรับจำนวนรถให้ไม่เกินจำนวนผู้เดินป่า')}
@@ -1133,20 +1156,20 @@ const ACT={
   rcptuselogo:()=>{rcptImg=PUB.site.logo;setRcptBox()},
   linkqr:el=>lineLinkModal(el.dataset.id),
   notifyone:el=>call('notifyJobs',{ids:[el.dataset.id]}),
-  notifyall:async()=>{const L=DB.bookings.filter(b=>b.status==='paid'&&b.guideId&&b.date>=today()&&!['completed','noshow','paidcancel'].includes(b.trip));if(!L.length)return toast('ไม่มีงานที่แจ้งได้');
-    const G=[...new Set(L.map(b=>gName(DB,b.guideId)))];if(await confirmBox('แจ้งเตือนไกด์ทุกคน',`ส่ง LINE + อีเมล แจ้งงาน <b>${L.length} งาน</b> ถึงไกด์ ${G.length} คน (${esc(G.join(', '))}) พร้อมลิงก์เข้าระบบไกด์`,'ส่งแจ้งเตือน'))call('notifyJobs',{ids:L.map(b=>b.id)})},
+  notifyall:async()=>{const L=DB.bookings.filter(b=>b.status==='paid'&&gIds(b).length&&b.date>=today()&&!['completed','noshow','paidcancel'].includes(b.trip));if(!L.length)return toast('ไม่มีงานที่แจ้งได้');
+    const G=[...new Set(L.flatMap(b=>gIds(b).map(id=>gName(DB,id))))];if(await confirmBox('แจ้งเตือนไกด์ทุกคน',`ส่ง LINE + อีเมล แจ้งงาน <b>${L.length} งาน</b> ถึงไกด์ ${G.length} คน (${esc(G.join(', '))}) พร้อมลิงก์เข้าระบบไกด์`,'ส่งแจ้งเตือน'))call('notifyJobs',{ids:L.map(b=>b.id)})},
   reloaddata:async(el,e)=>{if(DIRTY&&!await confirmBox('โหลดข้อมูลล่าสุด','มีข้อมูลที่กรอกไว้แต่ยังไม่บันทึก ถ้าโหลดใหม่ข้อมูลนั้นจะหาย','โหลดใหม่'))return;DIRTY=false;await loadAdmin();await loadPub();render();toast('อัปเดตข้อมูลล่าสุดแล้ว')},
   paycsv:()=>{const {L,V,lab}=payData(),va=DB.settings.villageAcct||{};const head=['วันที่','เวลา','รหัสจอง','ผู้รับเงิน','ธนาคาร','เลขที่บัญชี','เบอร์โทร','สถานะการเดินทาง','เริ่ม','สิ้นสุด','ยอด','สถานะจ่าย','ผู้ยืนยันจ่าย','เวลาจ่าย','เลขอ้างอิง'];
-    const rows=V.map(r=>[r.from===r.to?r.from:r.from+' ถึง '+r.to,'',r.codes.join(' '),'บัญชีหมู่บ้าน'+(va.accountName?' ('+va.accountName+')':''),va.bankName||'',va.accountNo||'','',`ส่วนกลางหมู่บ้าน ${r.n} กลุ่ม`,'','',r.amt,r.paid?'โอนแล้ว':'รอโอน',r.paidByName||'',r.paidAt?fmtDT(r.paidAt):'',r.ref||'']).concat(L.map(b=>{const g=gObj(DB,b.guideId)||{};return [b.date,b.time,b.code,`${g.firstName||''} ${g.lastName||''}`.trim(),g.bankName||'',g.accountNo||'',g.phone||'',({completed:'เดินเสร็จ',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||b.trip),b.startedAt?fmtDT(b.startedAt):'',b.endedAt?fmtDT(b.endedAt):'',b.split.guide,b.payout.paid?'จ่ายแล้ว':'รอจ่าย',b.payout.paidByName||'',b.payout.paidAt?fmtDT(b.payout.paidAt):'',b.payout.ref||'']}));
-    rows.push(['รวม','','','','','','','','','',L.reduce((a,b)=>a+b.split.guide,0)+V.reduce((a,r)=>a+r.amt,0),'','','','']);
+    const rows=V.map(r=>[r.from===r.to?r.from:r.from+' ถึง '+r.to,'',r.codes.join(' '),'บัญชีหมู่บ้าน'+(va.accountName?' ('+va.accountName+')':''),va.bankName||'',va.accountNo||'','',`ส่วนกลางหมู่บ้าน ${r.n} กลุ่ม`,'','',r.amt,r.paid?'โอนแล้ว':'รอโอน',r.paidByName||'',r.paidAt?fmtDT(r.paidAt):'',r.ref||'']).concat(L.map(b=>{const g=gObj(DB,b._gid)||{};return [b.date,b.time,b.code,`${g.firstName||''} ${g.lastName||''}`.trim()+(needG(b)>1?(b._slot===2?' (ไกด์คนที่ 2)':' (ไกด์หลัก)'):''),g.bankName||'',g.accountNo||'',g.phone||'',({completed:'เดินเสร็จ',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||b.trip),b.startedAt?fmtDT(b.startedAt):'',b.endedAt?fmtDT(b.endedAt):'',b._amt,b._po.paid?'จ่ายแล้ว':'รอจ่าย',b._po.paidByName||'',b._po.paidAt?fmtDT(b._po.paidAt):'',b._po.ref||'']}));
+    rows.push(['รวม','','','','','','','','','',L.reduce((a,b)=>a+b._amt,0)+V.reduce((a,r)=>a+r.amt,0),'','','','']);
     const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
     const blob=new Blob(['﻿'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`phangam-guide-payout-${lab.file}-${today()}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('ดาวน์โหลด CSV แล้ว')},
   paypdf:()=>{const {L,V,lab}=payData(),va=DB.settings.villageAcct||{},w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
-    const vtot=V.reduce((a,r)=>a+r.amt,0),tot=L.reduce((a,b)=>a+b.split.guide,0)+vtot,by={};L.forEach(b=>{const k=b.guideId;by[k]=by[k]||{n:0,s:0};by[k].n++;by[k].s+=b.split.guide});
+    const vtot=V.reduce((a,r)=>a+r.amt,0),tot=L.reduce((a,b)=>a+b._amt,0)+vtot,by={};L.forEach(b=>{const k=b._gid;by[k]=by[k]||{n:0,s:0};by[k].n++;by[k].s+=b._amt});
     const R=DB.settings.receipt||{};
     const vtr=V.map(r=>`<tr style="background:#f2f8f4"><td>${vRange(r)}<div class="m">${r.n} กลุ่ม: ${esc(r.codes.join(', '))}</div></td><td><b>บัญชีหมู่บ้าน</b>${va.accountName?'<div class="m">'+esc(va.accountName)+'</div>':''}</td><td>${va.accountNo?esc(va.bankName||'')+'<br><b>'+esc(va.accountNo)+'</b>':'<span style="color:#b42318">ยังไม่ได้ตั้งค่าบัญชี</span>'}</td><td>ส่วนกลางหมู่บ้าน</td><td class="n">${baht(r.amt)}</td><td>${r.paid?`โอนแล้ว<div class="m">${esc(r.paidByName||'')} · ${fmtDT(r.paidAt)}${r.ref?' · '+esc(r.ref):''}</div>`:'รอโอน'}</td></tr>`).join('');
-    const tr=vtr+L.map(b=>{const g=gObj(DB,b.guideId)||{};return `<tr><td>${fmtDateS(b.date)} ${b.time}<div class="m">${b.code}</div></td><td>${esc((g.firstName||'')+' '+(g.lastName||''))}</td><td>${g.accountNo?esc(g.bankName||'')+'<br><b>'+esc(g.accountNo)+'</b>':'<span style="color:#b42318">ไม่มีเลขบัญชี</span>'}</td><td>${({completed:'เดินเสร็จ',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||'')}</td><td class="n">${baht(b.split.guide)}</td><td>${b.payout.paid?`จ่ายแล้ว<div class="m">${esc(b.payout.paidByName||'')} · ${fmtDT(b.payout.paidAt)}${b.payout.ref?' · '+esc(b.payout.ref):''}</div>`:'รอจ่าย'}</td></tr>`}).join('')||'<tr><td colspan="6" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>';
+    const tr=vtr+L.map(b=>{const g=gObj(DB,b._gid)||{};return `<tr><td>${fmtDateS(b.date)} ${b.time}<div class="m">${b.code}</div></td><td>${esc((g.firstName||'')+' '+(g.lastName||''))}${needG(b)>1?`<div class="m">${b._slot===2?'ไกด์คนที่ 2':'ไกด์หลัก'}</div>`:''}</td><td>${g.accountNo?esc(g.bankName||'')+'<br><b>'+esc(g.accountNo)+'</b>':'<span style="color:#b42318">ไม่มีเลขบัญชี</span>'}</td><td>${({completed:'เดินเสร็จ',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก'}[b.trip]||'')}</td><td class="n">${baht(b._amt)}</td><td>${b._po.paid?`จ่ายแล้ว<div class="m">${esc(b._po.paidByName||'')} · ${fmtDT(b._po.paidAt)}${b._po.ref?' · '+esc(b._po.ref):''}</div>`:'รอจ่าย'}</td></tr>`}).join('')||'<tr><td colspan="6" style="text-align:center;color:#888">ไม่มีรายการ</td></tr>';
     w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>รายงานเบิกจ่ายค่าไกด์และหมู่บ้าน ${lab.text}</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>@page{size:A4 landscape;margin:12mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:12px;margin:0}h1{font-size:20px;margin:0;color:#1f5c40}.sub{color:#6b7280;margin:2px 0 12px}
 .sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.sum div{border:1px solid #d9e2dc;border-radius:8px;padding:6px 10px}.sum b{font-size:15px}
@@ -1223,10 +1246,10 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   gobk:el=>{Object.assign(bkF,{status:el.dataset.k,q:'',from:'',to:''});location.hash='admin-bookings'},
   bkclear:()=>{Object.assign(bkF,{status:'all',q:'',from:addDays(today(),-15),to:today()});render()},
   ntf:el=>{ntF=el.dataset.k;render()},
-  confirmpay:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันรับเงิน',`${b.code} · ${esc(b.name)}<br>ยอด <b>${baht(b.paidAmount||b.total)}</b>${b.payFee?` <span class="sm mut">(รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})</span>`:''}${b.payChannel?`<br>ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}`:''}${b.slip&&!b.slipQr?'<br><span style="color:var(--warn)">⚠ อ่าน QR บนสลิปไม่ได้ — ตรวจยอดเงินเข้าบัญชีจริงก่อนยืนยัน</span>':''}${b.slip?'':'<br><span style="color:var(--warn)">⚠ ลูกค้ายังไม่ได้แนบหลักฐาน — ตรวจยอดเงินเข้าบัญชีก่อนยืนยัน</span>'}`))return;call('confirmPay',{id:b.id})},
-  noshow:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันลูกค้าไม่มา',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ไกด์ ${esc(gName(DB,b.guideId))} ยังได้ค่าไกด์ <b>${baht(b.split.guide)}</b> และจะถูกย้ายไปต่อท้ายคิว`,'ยืนยันลูกค้าไม่มา','warn'))return;call('noshow',{id:b.id})},
-  paidcancel:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
-    if(!await confirmBox('ลูกค้ายกเลิก (ไม่คืนเงิน)',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ${g?`ไกด์ ${esc(g.firstName+' '+g.lastName)} ได้ค่าไกด์ <b>${baht(b.split.guide)}</b> ย้ายไปต่อท้ายคิว และว่างรับงานอื่นในเวลานั้นได้`:'<span style="color:var(--red)">ยังไม่มีไกด์ได้รับมอบหมาย — ค่าไกด์จะไม่ถูกจ่ายให้ใคร</span>'}`,'ยืนยันการยกเลิก','red'))return;call('paidcancel',{id:b.id})},
+  confirmpay:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันรับเงิน',`${b.code} · ${esc(b.name)}${needG(b)>1?` · ${b.people} คน <span class="badge b-blue">👥 ไกด์ ${needG(b)} คน</span>`:''}<br>ยอด <b>${baht(b.paidAmount||b.total)}</b>${b.payFee?` <span class="sm mut">(รวมค่าธรรมเนียม PayPal ${baht(b.payFee)})</span>`:''}${b.payChannel?`<br>ผ่าน ${(CH.find(x=>x[0]===b.payChannel)||[,'-'])[1]}`:''}${b.slip&&!b.slipQr?'<br><span style="color:var(--warn)">⚠ อ่าน QR บนสลิปไม่ได้ — ตรวจยอดเงินเข้าบัญชีจริงก่อนยืนยัน</span>':''}${b.slip?'':'<br><span style="color:var(--warn)">⚠ ลูกค้ายังไม่ได้แนบหลักฐาน — ตรวจยอดเงินเข้าบัญชีก่อนยืนยัน</span>'}`))return;call('confirmPay',{id:b.id})},
+  noshow:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยืนยันลูกค้าไม่มา',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ไกด์ ${esc(gNames(DB,b))} ยังได้ค่าไกด์${gIds(b).length>1?'ตามส่วนของแต่ละคน รวม':''} <b>${baht(gTotal(b))}</b> และจะถูกย้ายไปต่อท้ายคิว`,'ยืนยันลูกค้าไม่มา','warn'))return;call('noshow',{id:b.id})},
+  paidcancel:async el=>{const b=byId(el.dataset.id),g=gIds(b).length;
+    if(!await confirmBox('ลูกค้ายกเลิก (ไม่คืนเงิน)',`${b.code} · ${esc(b.name)} · ${fmtDate(b.date)} ${b.time}<br>ไม่คืนเงิน · ${g?`ไกด์ ${esc(gNames(DB,b))} ได้ค่าไกด์ <b>${baht(gTotal(b))}</b> ย้ายไปต่อท้ายคิว และว่างรับงานอื่นในเวลานั้นได้`:'<span style="color:var(--red)">ยังไม่มีไกด์ได้รับมอบหมาย — ค่าไกด์จะไม่ถูกจ่ายให้ใคร</span>'}`,'ยืนยันการยกเลิก','red'))return;call('paidcancel',{id:b.id})},
   reschedule:el=>{const b=byId(el.dataset.id);openModal(`<h3>เลื่อนวันเดินป่า ${b.code}</h3><p class="sm mut">ชำระแล้วไม่คืนเงิน แต่เลื่อนวันได้ · ระบบจะจัดคู่ไกด์ใหม่ตามวันที่เดินจริง</p>
     <form data-form="reschedule" data-id="${b.id}"><div class="grid2"><div class="field"><label>วันที่ใหม่</label><input type="date" name="date" value="${b.date}" min="${today()}"></div>
     <div class="field"><label>เวลา</label><select name="time">${slotList().map(t=>`<option ${t===b.time?'selected':''}>${t}</option>`).join('')}</select></div></div>
@@ -1243,16 +1266,16 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   pushon:()=>pushOn(),pushoff:()=>pushOff(),
   pushtest:async()=>{const r=await post('/api/push/test',{});toast(r.msg||r.error||'ส่งแล้ว')},
   tripend:el=>tripPhotoModal(byId(el.dataset.id),'end'),
-  paygd:async el=>{const b=byId(el.dataset.id),g=gObj(DB,b.guideId);
-    const r=await confirmBox('ยืนยันชำระเงินให้ไกด์',`<dl class="kv"><dt>ไกด์</dt><dd>${esc(g.firstName+' '+g.lastName)}</dd><dt>บัญชี</dt><dd>${esc(g.bankName)} ${esc(g.accountNo)}</dd><dt>โทร</dt><dd>${esc(g.phone)}</dd><dt>งาน</dt><dd>${b.code} · ${fmtDateS(b.date)} ${b.time}</dd><dt>ยอด</dt><dd><b>${baht(b.split.guide)}</b></dd></dl>
+  paygd:async el=>{const b=byId(el.dataset.id),sl=+el.dataset.slot||1,it=gSlots(b).find(x=>x.slot===sl)||{},g=gObj(DB,it.gid)||{};
+    const r=await confirmBox('ยืนยันชำระเงินให้ไกด์',`<dl class="kv"><dt>ไกด์</dt><dd>${esc(g.firstName+' '+g.lastName)}</dd><dt>บัญชี</dt><dd>${esc(g.bankName)} ${esc(g.accountNo)}</dd><dt>โทร</dt><dd>${esc(g.phone)}</dd><dt>งาน</dt><dd>${b.code} · ${fmtDateS(b.date)} ${b.time}${needG(b)>1?` · ${sl===2?'ไกด์คนที่ 2':'ไกด์หลัก'}`:''}</dd><dt>ยอด</dt><dd><b>${baht(it.amt||0)}</b></dd></dl>
       <div class="field" style="margin-top:10px"><label>เลขอ้างอิงการโอน (ถ้ามี)</label><input name="ref"></div><p class="sm mut">ระบบจะบันทึกว่าคุณ (${esc(me().name)}) เป็นผู้กดยืนยัน</p>`,'ยืนยันจ่ายแล้ว');
-    if(!r)return;call('payGuide',{id:b.id,ref:r===true?'':r})},
+    if(!r)return;call('payGuide',{id:b.id,slot:sl,ref:r===true?'':r})},
   payvil:async()=>{const r0=vilRows('unpaid')[0],v=DB.settings.villageAcct||{};if(!r0)return toast('ไม่มียอดค้างโอน');if(!v.accountNo)return toast('ยังไม่ได้ตั้งค่าบัญชีหมู่บ้าน');
     const r=await confirmBox('ยืนยันโอนเงินให้หมู่บ้าน',`<dl class="kv"><dt>บัญชี</dt><dd>${esc(v.bankName)} ${esc(v.accountNo)}<br>${esc(v.accountName)}</dd><dt>งาน</dt><dd>${r0.n} กลุ่ม · เดิน ${vRange(r0)}</dd><dt>ยอด</dt><dd><b>${baht(r0.amt)}</b></dd></dl>
       <div class="field" style="margin-top:10px"><label>เลขอ้างอิงการโอน (ถ้ามี)</label><input name="ref"></div><p class="sm mut">ระบบจะบันทึกว่าคุณ (${esc(me().name)}) เป็นผู้กดยืนยัน</p>`,'ยืนยันโอนแล้ว');
     if(!r)return;call('payVillage',{ids:r0.L.map(b=>b.id),ref:r===true?'':r})},
   payvilundo:async el=>{if(!await confirmBox('ยกเลิกการยืนยันโอนหมู่บ้าน?','รายการจะกลับไปเป็น “รอโอน” และถูกบันทึกใน log','ยกเลิกการยืนยัน','red'))return;call('payVillageUndo',{batch:el.dataset.b})},
-  payundo:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการยืนยันจ่าย?',`${b.code} — จะถูกบันทึกใน log`,'ยกเลิกการยืนยัน','red'))return;call('payUndo',{id:b.id})},
+  payundo:async el=>{const b=byId(el.dataset.id),sl=+el.dataset.slot||1;if(!await confirmBox('ยกเลิกการยืนยันจ่าย?',`${b.code}${needG(b)>1?` (${sl===2?'ไกด์คนที่ 2':'ไกด์หลัก'})`:''} — จะถูกบันทึกใน log`,'ยกเลิกการยืนยัน','red'))return;call('payUndo',{id:b.id,slot:sl})},
   guideform:el=>openModal(guideFormHTML(el.dataset.id&&gObj(DB,el.dataset.id))),
   gtoggle:el=>call('guideToggle',{id:el.dataset.id}),
   gup:el=>call('guideMove',{id:el.dataset.id,d:-1}),gdown:el=>call('guideMove',{id:el.dataset.id,d:1}),
@@ -1281,14 +1304,14 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   unavaildel:async el=>{const u=DB.unavail.find(x=>x.id===el.dataset.id);if(!await confirmBox('ลบวันไม่ว่าง?',`${esc(gName(DB,u.guideId))} · ${fmtDate(u.date)}<br><span class="sm mut">ลำดับคิวจะไม่ถูกย้ายกลับ (ปรับเองได้ด้วยปุ่ม ▲▼)</span>`,'ลบ','red'))return;call('unavailDel',{id:u.id})},
   userform:el=>openModal(userFormHTML(el.dataset.id&&DB.users.find(u=>u.id===el.dataset.id))),
   acccsv:()=>{const {L,label}=accData();const head=['วันที่','รหัส','ไกด์','คน','ค่าไกด์','ส่วนกลางหมู่บ้าน','อุทยาน','ค่าเข้าอุทยาน','รถยนต์ (คัน)','จักรยานยนต์ (คัน)','ค่ารถ','รวม'];
-    const rows=L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total]);
+    const rows=L.map(b=>[b.date,b.code,gNames(DB,b),b.people,gTotal(b),b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total]);
     const S=i=>rows.reduce((a,r)=>a+(+r[i]||0),0);rows.push(['รวม','','',S(3),S(4),S(5),S(6),S(7),S(8),S(9),S(10),S(11)]);
     const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
     const blob=new Blob(['﻿'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`phangam-income-${label.file}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('ดาวน์โหลด CSV แล้ว')},
   accpdf:()=>{const {L,label}=accData(),w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
-    const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(b=>b.split.guide),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal),VH=sum(b=>b.vehicleTotal||0),gPaid=L.filter(b=>b.payout?.paid).reduce((a,b)=>a+b.split.guide,0);
-    const tr=L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gName(DB,b.guideId))}</td><td class="n">${b.people}</td><td class="n">${baht(b.split.guide)}</td><td class="n">${baht(b.split.village)}</td><td class="n">${baht(b.split.park)}</td><td class="n">${baht(b.entryTotal)}</td><td class="n">${baht(b.vehicleTotal||0)}</td><td class="n"><b>${baht(b.total)}</b></td></tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:#888">ไม่มีรายการในช่วงนี้</td></tr>';
+    const sum=f=>L.reduce((a,b)=>a+f(b),0),G=sum(gTotal),V=sum(b=>b.split.village),P=sum(b=>b.split.park),E=sum(b=>b.entryTotal),VH=sum(b=>b.vehicleTotal||0),gPaid=gPaidOf(L);
+    const tr=L.map(b=>`<tr><td>${fmtDateS(b.date)}</td><td>${b.code}</td><td>${esc(gNames(DB,b))}</td><td class="n">${b.people}</td><td class="n">${baht(gTotal(b))}</td><td class="n">${baht(b.split.village)}</td><td class="n">${baht(b.split.park)}</td><td class="n">${baht(b.entryTotal)}</td><td class="n">${baht(b.vehicleTotal||0)}</td><td class="n"><b>${baht(b.total)}</b></td></tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:#888">ไม่มีรายการในช่วงนี้</td></tr>';
     w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>รายงานบัญชีรายรับ ผาแง่ม ${label.text}</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>@page{size:A4 landscape;margin:12mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:12px;margin:0}h1{font-size:20px;margin:0;color:#1f5c40}.sub{color:#6b7280;margin:2px 0 14px}
@@ -1304,7 +1327,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
 <tfoot><tr><td colspan="3">รวม</td><td class="n">${sum(b=>b.people)}</td><td class="n">${baht(G)}</td><td class="n">${baht(V)}</td><td class="n">${baht(P)}</td><td class="n">${baht(E)}</td><td class="n">${baht(VH)}</td><td class="n">${baht(G+V+P+E+VH)}</td></tr></tfoot></table>
 <div class="ft">ออกรายงานโดย ${esc(me()?.name||'')} · ${new Date().toLocaleString('th-TH')} · phangamtrail.com</div>
 <script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);w.document.close()},
-  csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','cars','motorcycles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gName(DB,b.guideId),b.people,b.split.guide,b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total])];
+  csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','cars','motorcycles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gNames(DB,b),b.people,gTotal(b),b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total])];
     navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
@@ -1326,7 +1349,7 @@ function slipBoxHTML(b){const d=slipDraft&&slipDraft.code===b.code?slipDraft:nul
    <div class="row" style="gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">${bad?'':`<button class="btn lg" data-act="sendslip"${d.scanning?' disabled':''}>📤 ส่งสลิป</button>`}<button class="btn ${bad?'':'ghost'}" data-act="slipchange">${bad?'เลือกรูปสลิปใหม่':'เปลี่ยนรูป'}</button></div></div>`}
 function setSlipBox(){const el=document.getElementById('slipbox');if(el&&VB)el.innerHTML=slipBoxHTML(VB.booking)}
 async function saveBookingImage(b){
-  const F=getComputedStyle(document.body).fontFamily||'sans-serif',W=1080,rows=[['รหัสการจอง',b.code],['วันที่',fmtDate(b.date)],['เวลาออกเดินทาง',b.time+' น.'],['จำนวน',b.people+' คน'],['',paxText(b.pax||{})],['ผู้จอง',b.name],['เบอร์โทร',b.phone],...(b.email?[['อีเมล',b.email]]:[]),['ค่าบริการกลุ่ม',baht(b.groupFee)],['ค่าเข้าอุทยาน',baht(b.entryTotal)],...(b.vehicles?[['ค่ารถเข้าอุทยาน',baht(b.vehicleTotal)+` (${b.vehicles} คัน)`]]:[]),['ยอดรวม',baht(b.total)],['สถานะ',b.status==='paid'?'จองสำเร็จ (ชำระแล้ว)':b.status==='pending'&&b.slip?'รอเจ้าหน้าที่ตรวจสอบสลิป':(ST[b.status]?.[0]||b.status)]];
+  const F=getComputedStyle(document.body).fontFamily||'sans-serif',W=1080,rows=[['รหัสการจอง',b.code],['วันที่',fmtDate(b.date)],['เวลาออกเดินทาง',b.time+' น.'],['จำนวน',b.people+' คน'+(needG(b)>1?` · ไกด์ ${needG(b)} คน`:'')],['',paxText(b.pax||{})],['ผู้จอง',b.name],['เบอร์โทร',b.phone],...(b.email?[['อีเมล',b.email]]:[]),['ค่าบริการกลุ่ม',baht(b.groupFee)],...(b.extraGuideTotal?[['ค่าไกด์เพิ่ม',baht(b.extraGuideTotal)+' (ไกด์คนที่ 2)']]:[]),['ค่าเข้าอุทยาน',baht(b.entryTotal)],...(b.vehicles||b.motos?[['ค่ารถเข้าอุทยาน',baht(b.vehicleTotal)+` (${vehText(b)})`]]:[]),['ยอดรวม',baht(b.total)],['สถานะ',b.status==='paid'?'จองสำเร็จ (ชำระแล้ว)':b.status==='pending'&&b.slip?'รอเจ้าหน้าที่ตรวจสอบสลิป':(ST[b.status]?.[0]||b.status)]];
   const H=330+rows.length*76+230,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   x.fillStyle='#f4f5f1';x.fillRect(0,0,W,H);x.fillStyle='#1f5c40';x.fillRect(0,0,W,210);
   x.fillStyle='#fff';x.font=`bold 64px ${F}`;x.fillText('ผาแง่ม Trail',60,105);x.font=`36px ${F}`;x.fillText('รายละเอียดการจองเดินป่า',60,165);
@@ -1381,7 +1404,7 @@ document.addEventListener('change',async e=>{
   if(!k)return;
   if(k==='bkstatus')bkF.status=el.value;else if(k==='bkfrom')bkF.from=el.value;else if(k==='bkto')bkF.to=el.value;else if(k==='bkq')bkF.q=el.value;else if(k==='bksort')bkF.sort=el.value;
   else if(k==='accfrom')acc.from=el.value;else if(k==='accto')acc.to=el.value;else if(k==='auf')auF=el.value;else if(k==='qdate')qDate=el.value||today();else if(k==='calfrom'){calR.from=el.value;if(calR.to<calR.from)calR.to=calR.from}else if(k==='calto')calR.to=el.value;
-  else if(k==='reassign'){call('reassign',{id:el.dataset.id,guideId:el.value});return}
+  else if(k==='reassign'){call('reassign',{id:el.dataset.id,guideId:el.value,slot:+el.dataset.slot||1});return}
   render();
 });
 function showLb(src,cap){document.querySelector('.lb')?.remove();const d=document.createElement('div');d.className='lb';d.dataset.act='lbclose';d.innerHTML=`<img src="${src}">${cap?`<p>${esc(cap)}</p>`:''}<p class="sm" style="opacity:.7">แตะเพื่อปิด</p>`;document.body.appendChild(d)}
