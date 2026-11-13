@@ -99,7 +99,8 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .slot.on{background:var(--g2);border-color:var(--g2);color:#fff}.slot.on span{color:#e0f0e5}
 .slot:disabled{background:#f2f3f1;color:#aab2ac;cursor:not-allowed}
 .stepper{display:flex;align-items:center;gap:10px}
-.stepper button{width:40px;height:40px;border-radius:10px;border:1px solid #cfd8d1;background:#fff;font-size:20px;cursor:pointer}
+.stepper button{width:40px;height:40px;border-radius:10px;border:1px solid #cfd8d1;background:#fff;font-size:20px;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+button,.slot{touch-action:manipulation}.slots.stale{opacity:.55;pointer-events:none;transition:opacity .15s}
 .stepper b{font-size:20px;min-width:30px;text-align:center}
 .price{background:var(--g3);border-radius:12px;padding:14px}
 .price .l{display:flex;justify-content:space-between;padding:3px 0}
@@ -372,7 +373,10 @@ function confirmBox(title,body,okLabel='ยืนยัน',cls=''){return new P
 
 /* ========== FRONT: booking ========== */
 let VB=null; /* การจองที่กำลังแสดง {booking, phone} */
-let AV=null,avKey=''; /* ที่ว่างจากเซิร์ฟเวอร์ */
+let AV=null,avKey='',AVOLD=null,lastTap=null; /* ที่ว่างจากเซิร์ฟเวอร์ · AVOLD = ผลก่อนหน้า (แสดงค้างไว้ระหว่างโหลดใหม่ กันหน้าจอกระโดด) */
+/* คงตำแหน่งหน้าจอ: ปุ่มที่ผู้ใช้เพิ่งแตะต้องอยู่ที่เดิมหลังเนื้อหาด้านบนเปลี่ยน (Safari ไม่มี scroll anchoring) */
+function holdView(fn,anchor){const a=anchor||(lastTap&&lastTap.el.isConnected&&Date.now()-lastTap.at<8000?lastTap.el:null);if(!a)return fn();
+  const t=a.getBoundingClientRect().top;fn();const d=a.getBoundingClientRect().top-t;if(Math.abs(d)>1)window.scrollBy(0,d)}
 const bf={date:addDays(today(),1),time:null,pax:{ta:2,tc:0,fa:0,fc:0},vehicles:1,motos:0,name:'',phone:'',email:'',line:'',note:''};
 let viewBookingId=null;
 function siteImg(src,alt=''){return `<img src="${src}" alt="${esc(alt)}" loading="lazy">`}
@@ -446,16 +450,20 @@ const closedSeason=date=>(PUB.settings.seasons||[]).find(x=>x.active&&seasonCove
 const seasonText=x=>x.kind==='date'?`${fmtDate(x.from)} – ${fmtDate(x.to)}`:`${MONTHS[x.from-1]} – ${MONTHS[x.to-1]} ของทุกปี`;
 function slotsHTML(){
   const key=bf.date+'|'+paxCount(bf.pax);
-  if(avKey!==key||!AV){if(avKey!==key){avKey=key;AV=null;loadAvail(key)}return '<div class="mut sm">กำลังตรวจสอบรอบที่ว่าง…</div>'}
+  if(avKey!==key||!AV){if(avKey!==key){avKey=key;if(AV)AVOLD=AV;AV=null;loadAvail(key)}
+    return AVOLD&&AVOLD.date===bf.date&&AVOLD.slots?.length?slotGrid(AVOLD,true):'<div class="mut sm">กำลังตรวจสอบรอบที่ว่าง…</div>'}
   if(AV.closed){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)"><b>ปิดรับจองวันนี้: ${esc(AV.closed.name)}</b><div class="sm">${esc(AV.closed.text)} · กรุณาเลือกวันอื่น</div></div>`}
   if(AV.tooFar){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)">จองล่วงหน้าได้ไม่เกิน ${PUB.settings.bookAheadDays} วัน</div>`}
   if(AV.noGuide){bf.time=null;return `<div class="price" style="background:var(--redbg);color:var(--red)"><b>วันนี้ยังไม่มีไกด์รับงาน</b><div class="sm">กรุณาเลือกวันอื่น หรือติดต่อเจ้าหน้าที่</div></div>`}
   if(!AV.slots.length)return '<div class="mut sm">ไม่มีรอบให้จอง</div>';
-  return `<div class="slots">${AV.slots.map(x=>{const past=x.reason==='lead',dis=past||x.free<=0;if(dis&&bf.time===x.t)bf.time=null;
+  return slotGrid(AV,false);
+}
+function slotGrid(av,stale){
+  return `<div class="slots${stale?' stale':''}">${av.slots.map(x=>{const past=x.reason==='lead',dis=past||x.free<=0;if(dis&&!stale&&bf.time===x.t)bf.time=null;
     return `<button type="button" class="slot ${bf.time===x.t?'on':''}" data-act="slot" data-t="${x.t}" ${dis?'disabled':''}><b>${x.t}</b><span>${past?(leadText()?'ต้องจองล่วงหน้า':'ปิดรับแล้ว'):x.free<=0?esc(x.reason||'เต็ม'):'ว่าง '+x.free+' กลุ่ม'}</span></button>`}).join('')}</div>`;
 }
 async function loadAvail(key){const [date,people]=key.split('|');const r=await post('/api/public/availability',{date,people});if(avKey!==key)return;
-  AV=r.ok?r:{slots:[],closed:{name:r.error||'โหลดไม่สำเร็จ',text:''}};const el=document.getElementById('slots');if(el)el.innerHTML=slotsHTML()}
+  AV=r.ok?r:{slots:[],closed:{name:r.error||'โหลดไม่สำเร็จ',text:''}};AVOLD=null;const el=document.getElementById('slots');if(el)holdView(()=>{el.innerHTML=slotsHTML()})}
 const POLICY=()=>`ชำระภายใน ${PUB.settings.payDeadlineMin} นาทีหลังจอง มิฉะนั้นระบบจะยกเลิกอัตโนมัติ · <b>ชำระแล้วไม่คืนเงินทุกกรณี (รวมถึงยกเลิกหรือไม่มาตามนัด)</b> แต่ขอเลื่อนวันเดินป่าได้ โดยติดต่อเจ้าหน้าที่`;
 const maxPpl=()=>(+PUB.settings.maxGroup||6)*(PUB.settings.maxGuides||2),xgFee=()=>+(PUB.settings.extraGuideFee??PUB.settings.split?.guide??700);
 function gnoteHTML(){const n=paxCount(bf.pax),gn=guidesFor(n);if(gn<2)return '';
@@ -1136,7 +1144,11 @@ setInterval(()=>{const els=document.querySelectorAll('[data-countdown]');els.for
 /* ========== events ========== */
 const ACT={
   slot:el=>{bf.time=el.dataset.t;document.getElementById('slots').innerHTML=slotsHTML()},
-  ppl:el=>{const k=el.dataset.k,d=+el.dataset.d,n=Math.max(0,bf.pax[k]+d),tot=paxCount(bf.pax)-bf.pax[k]+n;
+  /* ปุ่ม +/− : จำปุ่มที่แตะไว้ แล้วคงตำแหน่งปุ่มบนจอ (ทั้งตอนกดและตอนผลที่ว่างโหลดเสร็จ) */
+  ppl:el=>{lastTap={el,at:Date.now()};holdView(()=>ACT._ppl(el),el)},
+  moto:el=>{lastTap={el,at:Date.now()};holdView(()=>ACT._moto(el),el)},
+  veh:el=>{lastTap={el,at:Date.now()};holdView(()=>ACT._veh(el),el)},
+  _ppl:el=>{const k=el.dataset.k,d=+el.dataset.d,n=Math.max(0,bf.pax[k]+d),tot=paxCount(bf.pax)-bf.pax[k]+n;
     if(tot>maxPpl())return toast(`รวมได้ไม่เกิน ${maxPpl()} คนต่อกลุ่ม (ไกด์ 2 คน)`);if(tot<1)return;
     const g0=guidesFor(paxCount(bf.pax));bf.pax[k]=n;document.getElementById('ppl_'+k).textContent=n;const gn=document.getElementById('gnote');if(gn)gn.innerHTML=gnoteHTML();
     if(guidesFor(tot)>g0)toast(`เกิน ${PUB.settings.maxGroup} คน — เพิ่มไกด์อีก 1 คน (รวม 2 คน) +${baht(xgFee())}`);
@@ -1144,8 +1156,8 @@ const ACT={
     let over=(bf.vehicles||0)+(bf.motos||0)-tot;if(over>0){const m=Math.min(over,bf.motos||0);bf.motos-=m;bf.vehicles=Math.max(0,(bf.vehicles||0)-(over-m));
       document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('moto_n').textContent=bf.motos;toast('ปรับจำนวนรถให้ไม่เกินจำนวนผู้เดินป่า')}
     document.getElementById('price').innerHTML=priceHTML();document.getElementById('slots').innerHTML=slotsHTML()},
-  moto:el=>{const d=+el.dataset.d;if(d>0&&(bf.vehicles||0)+(bf.motos||0)+1>paxCount(bf.pax))return toast(`รถยนต์ + รถจักรยานยนต์ รวมกันได้ไม่เกินจำนวนผู้เดินป่า (${paxCount(bf.pax)} คน)`);bf.motos=Math.max(0,Math.min(10,(bf.motos||0)+d));document.getElementById('moto_n').textContent=bf.motos;document.getElementById('price').innerHTML=priceHTML()},
-  veh:el=>{const d=+el.dataset.d;if(d>0&&(bf.vehicles||0)+(bf.motos||0)+1>paxCount(bf.pax))return toast(`รถยนต์ + รถจักรยานยนต์ รวมกันได้ไม่เกินจำนวนผู้เดินป่า (${paxCount(bf.pax)} คน)`);bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+d));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
+  _moto:el=>{const d=+el.dataset.d;if(d>0&&(bf.vehicles||0)+(bf.motos||0)+1>paxCount(bf.pax))return toast(`รถยนต์ + รถจักรยานยนต์ รวมกันได้ไม่เกินจำนวนผู้เดินป่า (${paxCount(bf.pax)} คน)`);bf.motos=Math.max(0,Math.min(10,(bf.motos||0)+d));document.getElementById('moto_n').textContent=bf.motos;document.getElementById('price').innerHTML=priceHTML()},
+  _veh:el=>{const d=+el.dataset.d;if(d>0&&(bf.vehicles||0)+(bf.motos||0)+1>paxCount(bf.pax))return toast(`รถยนต์ + รถจักรยานยนต์ รวมกันได้ไม่เกินจำนวนผู้เดินป่า (${paxCount(bf.pax)} คน)`);bf.vehicles=Math.max(0,Math.min(10,(bf.vehicles||0)+d));document.getElementById('veh_n').textContent=bf.vehicles;document.getElementById('price').innerHTML=priceHTML()},
   lineunlink:async el=>{const g=DB.guides.find(x=>x.id===el.dataset.id);if(g&&await confirmBox('ยกเลิกการผูก LINE',`${esc(g.firstName+' '+g.lastName)} จะไม่ได้รับแจ้งเตือนทาง LINE จนกว่าจะผูกใหม่`))call('lineUnlink',{id:g.id})},
   logodel:async()=>{if(await confirmBox('ลบโลโก้','เว็บจะกลับไปใช้ไอคอนภูเขาแทน'))call('logoSave',{logo:''})},
   receipt:el=>{const b=byId(el.dataset.id);openReceipt(b,DB.settings.receipt)},
