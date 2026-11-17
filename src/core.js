@@ -96,7 +96,12 @@ const hasGuide = (b, gid) => !!gid && (b.guideId === gid || b.guide2Id === gid);
 const missingG = b => Math.max(0, needG(b) - gIds(b).length);
 const gNames = (db, b) => gIds(b).map(id => gName(db, id)).join(' + ') || '-';
 const byId = (db, id) => db.bookings.find(b => b.id === id) || fail('ไม่พบรายการจอง');
-export const activeGuides = db => db.guides.filter(g => g.active).sort((a, b) => a.priority - b.priority);
+export const activeGuides = db => db.guides.filter(g => g.active && !g.reserve).sort((a, b) => a.priority - b.priority); // ไกด์หลัก (อยู่ในคิววน)
+/* ===== ไกด์สำรอง: ไม่อยู่ในคิววน · เรียกทีละคนตามลำดับ (rOrder) เมื่อไกด์หลักไม่พอ/ไม่ว่าง · เปิดล่วงหน้ารายวันได้ (g.pre) ===== */
+export const reserveGuides = db => db.guides.filter(g => g.active && g.reserve).sort((a, b) => (a.rOrder || 0) - (b.rOrder || 0));
+export const RS = db => ({ mode: 'auto', waitMin: 180, nearHours: 12, nearWaitMin: 30, rotate: true, countPre: true, notifyEmpty: true, ...(db.settings.reserve || {}) });
+const preGuides = (db, date) => reserveGuides(db).filter(g => (g.pre || []).includes(date) && !unavailOn(db, g.id, date)); // สำรองที่เปิดล่วงหน้าวันนั้น
+const capGuides = (db, date) => [...activeGuides(db), ...(RS(db).countPre ? preGuides(db, date) : [])]; // ไกด์ที่นับเป็นที่ว่างให้ลูกค้าจอง
 export function slotList(db) { const s = db.settings, o = []; for (let m = toMin(s.slotStart); m <= toMin(s.slotEnd); m += Math.max(5, +s.slotStep || 15)) o.push(fromMin(m)); return o }
 function guideBusy(db, gid, date, time, exceptId) {
   const dur = db.settings.tripHours * 60, st = toMin(time);
@@ -108,15 +113,23 @@ function guideBlocked(db, gid, date, time, exceptId, b) {
   const cap = +db.settings.maxGroupsPerGuideDay || 0;
   return (cap > 0 && guideDayCount(db, gid, date, exceptId) >= cap) || guideBusy(db, gid, date, time, exceptId) || unavailOn(db, gid, date) || !!(b && (b.declined || []).some(d => d.guideId === gid));
 }
-const dayGuides = (db, date) => activeGuides(db).filter(g => !unavailOn(db, g.id, date));
+const dayGuides = (db, date) => capGuides(db, date).filter(g => !unavailOn(db, g.id, date));
 const DONE = ['completed', 'noshow', 'paidcancel'];
 const isDone = b => DONE.includes(b.trip);
 const isLocked = b => b.trip === 'started' || isDone(b) || b.manual;
 function normalizePriorities(db, firstId) {
-  const L = [...db.guides].sort((a, b) => (a.active ? 0 : 1) - (b.active ? 0 : 1) || a.priority - b.priority || (a.id === firstId ? -1 : b.id === firstId ? 1 : 0));
+  const tie = (a, b) => (a.id === firstId ? -1 : b.id === firstId ? 1 : 0);
+  const L = db.guides.filter(g => !g.reserve).sort((a, b) => (a.active ? 0 : 1) - (b.active ? 0 : 1) || a.priority - b.priority || tie(a, b));
   L.forEach((g, i) => g.priority = i + 1);
+  const R = db.guides.filter(g => g.reserve).sort((a, b) => (a.active ? 0 : 1) - (b.active ? 0 : 1) || (a.rOrder || 0) - (b.rOrder || 0) || tie(a, b));
+  R.forEach((g, i) => { g.rOrder = i + 1; g.priority = 1000 + i + 1 });
 }
-function moveToLast(db, gid) { const g = gObj(db, gid); if (!g) return; g.priority = Math.max(...db.guides.map(x => x.priority)) + 1; normalizePriorities(db, null) }
+function moveToLast(db, gid) {
+  const g = gObj(db, gid); if (!g) return;
+  if (g.reserve) g.rOrder = Math.max(0, ...db.guides.filter(x => x.reserve).map(x => x.rOrder || 0)) + 1;
+  else g.priority = Math.max(0, ...db.guides.filter(x => !x.reserve).map(x => x.priority)) + 1;
+  normalizePriorities(db, null);
+}
 
 /* ===== ฤดูกาล / จองล่วงหน้า ===== */
 function earliestBooking(db) {
@@ -133,7 +146,7 @@ const closedSeason = (db, date) => (db.settings.seasons || []).find(x => x.activ
 const seasonText = x => x.kind === 'date' ? `${fmtDate(x.from)} – ${fmtDate(x.to)}` : `${TH_MON[x.from - 1]} – ${TH_MON[x.to - 1]} ของทุกปี`;
 
 /* ===== ความจุต่อรอบ ===== */
-const freeGuides = (db, date, time) => activeGuides(db).filter(g => !guideBlocked(db, g.id, date, time)).length;
+const freeGuides = (db, date, time) => capGuides(db, date).filter(g => !guideBlocked(db, g.id, date, time)).length;
 function slotCapacity(db, date, time, people) {
   const s = db.settings, dur = s.tripHours * 60, cap = +s.maxGroupsPerGuideDay || 0;
   const live = db.bookings.filter(b => b.status !== 'cancelled' && b.trip !== 'paidcancel' && b.date === date), pend = live.filter(b => missingG(b) > 0);
@@ -202,8 +215,8 @@ function notifyCustomer(db, b, kind) {
 
 /* ===== คิวไกด์ (คิววนต่อเนื่อง ไม่นับวัน) ===== */
 function streamNext(db, ptr, b, skip) {
-  const G = activeGuides(db); if (!G.length) return null; const i = G.findIndex(g => g.id === ptr), st = i >= 0 ? i + 1 : 0;
-  for (let k = 0; k < G.length; k++) { const g = G[(st + k) % G.length]; if (g.id !== skip && (!b || !guideBlocked(db, g.id, b.date, b.time, b.id, b))) return g }
+  const G = activeGuides(db); if (!G.length) return null; const i = G.findIndex(g => g.id === ptr), st = i >= 0 ? i + 1 : 0, sk = [].concat(skip || []);
+  for (let k = 0; k < G.length; k++) { const g = G[(st + k) % G.length]; if (!sk.includes(g.id) && (!b || !guideBlocked(db, g.id, b.date, b.time, b.id, b))) return g }
   return null;
 }
 function autoAssign(db, b) {
@@ -216,15 +229,18 @@ const qKey = b => `${b.date}|${b.time}|${String(b.qn ?? 0).padStart(9, '0')}`;
 function assignOnPay(db, b) { b.qn = db.rotSeq++; rerunFrom(db, qKey(b)); return gObj(db, b.guideId) || null }
 function rerunFrom(db, startKey) {
   const all = db.bookings.filter(b => b.status !== 'cancelled' && b.qn != null).sort((a, b) => qKey(a).localeCompare(qKey(b))), t = today();
-  const lastG = b => b.guide2Id || b.guideId; // ไกด์คนสุดท้ายของงาน (กลุ่มใหญ่ใช้ 2 คน)
-  const prev = [...all].reverse().find(b => qKey(b) < startKey && b.guideId && !b.manual); let ptr = prev ? lastG(prev) : null;
-  const seg = all.filter(b => qKey(b) >= startKey), before = new Map();
-  seg.forEach(b => { if (!isLocked(b) && b.date >= t) { before.set(b.id, gIds(b)); b.guideId = null; b.guide2Id = null } });
+  const lastG = b => [b.guide2Id, b.guideId].find(id => id && !gObj(db, id)?.reserve); // ไกด์หลักคนสุดท้ายของงาน (ไม่นับไกด์สำรอง)
+  const prev = [...all].reverse().find(b => qKey(b) < startKey && lastG(b) && !b.manual); let ptr = prev ? lastG(prev) : null;
+  const seg = all.filter(b => qKey(b) >= startKey), before = new Map(), keepM = new Map();
+  seg.forEach(b => { if (!isLocked(b) && b.date >= t) { before.set(b.id, gIds(b)); keepM.set(b.id, gIds(b).filter(id => (b.rlock || []).includes(id))); b.guideId = null; b.guide2Id = null } });
   const changes = [];
   seg.forEach(b => {
-    if (!before.has(b.id)) { if (!b.manual && b.guideId) ptr = lastG(b); return }
-    const n = needG(b), got = [];
-    for (let i = 0; i < n; i++) { const g = streamNext(db, ptr, b, got[0]); if (!g) break; got.push(g.id); ptr = g.id }
+    if (!before.has(b.id)) { if (!b.manual && lastG(b)) ptr = lastG(b); return }
+    const n = needG(b), keep = (keepM.get(b.id) || []).filter(id => gObj(db, id) && !guideBlocked(db, id, b.date, b.time, b.id, b)), got = [];
+    if (b.rlock) b.rlock = keep; // ไกด์สำรองที่รับงานแล้ว = ล็อกไว้ ไม่ถูกย้ายออก
+    for (let i = keep.length; i < n; i++) { const g = streamNext(db, ptr, b, [...got, ...keep]); if (!g) break; got.push(g.id); ptr = g.id }
+    got.push(...keep);
+    for (const g of preGuides(db, b.date)) { if (got.length >= n) break; if (!got.includes(g.id) && !guideBlocked(db, g.id, b.date, b.time, b.id, b)) got.push(g.id) } // สำรองที่เปิดล่วงหน้าวันนั้น (ต่อจากไกด์หลัก)
     b.guideId = got[0] || null; b.guide2Id = got[1] || null; b.trip = got.length ? 'assigned' : 'unassigned';
     const old = before.get(b.id), rm = old.filter(x => !got.includes(x)), add = got.filter(x => !old.includes(x));
     if (rm.length || add.length || got.length < n) changes.push({ b, old, nw: got, short: got.length < n });
@@ -238,8 +254,9 @@ function rerunFrom(db, startKey) {
 }
 function markGuideUnavailable(db, gid, date, reason, bookingId) {
   const u = db.$actor, g = gObj(db, gid) || fail('ไม่พบไกด์');
-  if (bookingId) { const b = byId(db, bookingId); b.declined = b.declined || []; b.declined.push({ guideId: gid, reason, byName: u.name, at: nowISO() }); b.manual = false }
-  else { db.unavail.push({ id: uid(), guideId: gid, date, reason, byName: u.name, byRole: u.role, at: nowISO() }); db.bookings.filter(b => b.date === date && hasGuide(b, gid) && b.manual).forEach(b => b.manual = false) }
+  const unlock = b => { if (b.rlock) b.rlock = b.rlock.filter(x => x !== gid); (b.rreq || []).forEach(r => { if (r.gid === gid && r.st === 'pending') { r.st = 'declined'; r.reason = reason; r.endAt = nowISO() } }) };
+  if (bookingId) { const b = byId(db, bookingId); b.declined = b.declined || []; b.declined.push({ guideId: gid, reason, byName: u.name, at: nowISO() }); b.manual = false; unlock(b) }
+  else { db.unavail.push({ id: uid(), guideId: gid, date, reason, byName: u.name, byRole: u.role, at: nowISO() }); db.bookings.filter(b => b.date === date && (hasGuide(b, gid) || (b.rreq || []).some(r => r.gid === gid))).forEach(b => { if (b.manual && hasGuide(b, gid)) b.manual = false; unlock(b) }) }
   moveToLast(db, gid);
   if (u.role === 'guide') notifyManagers(db, '🙅 ไกด์แจ้งไม่ว่าง', `${g.firstName} ${g.lastName} · ${fmtDateS(date)}${bookingId ? ' งาน ' + byId(db, bookingId).code : ' ทั้งวัน'} — ${reason}`, bookingId);
   log(db, u.role === 'guide' ? 'decline' : 'unavail', `${g.firstName} ${g.lastName} ไม่ว่าง ${bookingId ? 'งาน ' + byId(db, bookingId).code : 'ทั้งวัน'} ${fmtDate(date)} — เหตุผล: ${reason} · ย้ายไปลำดับสุดท้าย (${g.priority})`);
@@ -248,6 +265,58 @@ function markGuideUnavailable(db, gid, date, reason, bookingId) {
   res.filter(c => c.short).forEach(c => notifyManagers(db, '⚠️ มีงานที่ยังไม่มีไกด์', `${c.b.code} · ${fmtDateS(c.b.date)} ${c.b.time} น. · ${c.b.people} คน${c.nw.length ? ` · ยังขาดไกด์ ${needG(c.b) - c.nw.length} คน` : ''}`, c.b.id));
   return res;
 }
+
+/* ===== ไกด์สำรอง: ส่งคำขอทีละคน · หมดเวลา/ไม่สะดวก → คนถัดไป ===== */
+const pendReq = b => (b.rreq || []).filter(r => r.st === 'pending');
+const hhmm = iso => new Date(new Date(iso).getTime() + 7 * 3600e3).toISOString().slice(11, 16);
+const dayOf = iso => new Date(new Date(iso).getTime() + 7 * 3600e3).toISOString().slice(0, 10);
+const needsReserve = b => b.status === 'paid' && b.qn != null && !isDone(b) && b.trip !== 'started' && missingG(b) > 0 && atBKK(b.date, b.time) > new Date();
+const slotFee = b => !b.guideId ? +b.split?.guide || 0 : +(b.split?.guide2 ?? b.split?.guide) || 0; // ค่าไกด์ของตำแหน่งที่ว่าง
+function reqBusy(db, gid, b) { // มีคำขอค้างอยู่กับงานอื่นที่เวลาทับกัน
+  const dur = db.settings.tripHours * 60;
+  return db.bookings.some(x => x.id !== b.id && x.date === b.date && Math.abs(toMin(x.time) - toMin(b.time)) < dur && pendReq(x).some(r => r.gid === gid));
+}
+function nextReserve(db, b) {
+  const asked = new Set((b.rreq || []).filter(r => r.st !== 'cancelled').map(r => r.gid));
+  return reserveGuides(db).find(g => !asked.has(g.id) && !hasGuide(b, g.id) && !guideBlocked(db, g.id, b.date, b.time, b.id, b) && !reqBusy(db, g.id, b));
+}
+function askReserve(db, b, g) {
+  const s = RS(db), now = Date.now(), start = atBKK(b.date, b.time).getTime(), near = start - now < s.nearHours * 3600e3;
+  const exp = Math.max(now + 5 * 60e3, Math.min(now + (near ? s.nearWaitMin : s.waitMin) * 60e3, start - 15 * 60e3));
+  const r = { id: uid(), gid: g.id, at: nowISO(), exp: new Date(exp).toISOString(), st: 'pending', by: db.$actor?.role === 'system' ? 'ระบบ' : db.$actor?.name || 'ระบบ' };
+  (b.rreq = b.rreq || []).push(r); b.rempty = false;
+  const expTxt = `${dayOf(r.exp) === today() ? '' : fmtDateS(dayOf(r.exp)) + ' '}${hhmm(r.exp)} น.`;
+  const msg = `[ผาแง่ม] 🙋 คำขอเปิดใช้ไกด์สำรอง\nไกด์หลักไม่พอในรอบนี้ ขอให้ช่วยนำทาง\nรหัสจอง ${b.code}\nวันที่ ${fmtDate(b.date)} เวลา ${b.time} น.\nกลุ่ม ${b.people} คน · ค่าไกด์ ${baht(slotFee(b))}\nกรุณาตอบภายใน ${expTxt} (ไม่ตอบ = ส่งต่อไกด์สำรองคนถัดไป)\n\nกดรับงาน / ไม่สะดวก:\n${SITE_URL}/#admin-today`;
+  const base = { at: nowISO(), guideId: g.id, bookingId: b.id, kind: 'reserve', message: msg, status: 'pending' };
+  db.$notify.push({ ...base, id: uid(), channel: 'line', to: g.lineUserId || '', toLabel: g.line || '' });
+  if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] คำขอเปิดใช้ไกด์สำรอง ${b.code} ${fmtDateS(b.date)} ${b.time} น.` });
+  db.$notify.push({ ...base, id: uid(), channel: 'push', to: 'guide:' + g.id, toLabel: 'แอป', title: '🙋 คำขอเปิดใช้ไกด์สำรอง', body: `${b.code} · ${fmtDateS(b.date)} ${b.time} น. · ${b.people} คน — ตอบภายใน ${expTxt}`, url: '/#admin-today' });
+  notifyManagers(db, '🧭 ส่งคำขอถึงไกด์สำรอง', `${b.code} · ${fmtDateS(b.date)} ${b.time} น. → S${g.rOrder} ${g.firstName} ${g.lastName} (ตอบภายใน ${expTxt})`, b.id);
+  log(db, 'reserve', `ส่งคำขอถึงไกด์สำรอง S${g.rOrder} ${g.firstName} ${g.lastName} — ${b.code} (${fmtDateS(b.date)} ${b.time} น.) ตอบภายใน ${expTxt}`);
+  return r;
+}
+/* เรียกหลังทุกคำสั่ง + cron: ปิดคำขอที่หมดเวลา/ไม่จำเป็นแล้ว แล้วส่งคำขอถึงสำรองคนถัดไป (โหมดอัตโนมัติ) */
+export function reserveTick(db) {
+  if (!db.bookings.some(b => (b.rreq || []).length) && !reserveGuides(db).length) return 0;
+  const s = RS(db), now = nowISO(), hasRes = reserveGuides(db).length > 0; let n = 0;
+  db.bookings.forEach(b => {
+    pendReq(b).forEach(r => {
+      if (!needsReserve(b)) { r.st = 'cancelled'; r.endAt = now; n++ }
+      else if (r.exp < now) { r.st = 'expired'; r.endAt = now; n++; log(db, 'reserve', `หมดเวลาตอบรับ — ${gName(db, r.gid)} · ${b.code}`) }
+    });
+    if (s.mode !== 'auto' || !hasRes || !needsReserve(b)) return;
+    for (let k = missingG(b) - pendReq(b).length; k > 0; k--) {
+      const g = nextReserve(db, b);
+      if (!g) {
+        if (!pendReq(b).length && !b.rempty) { b.rempty = true; if (s.notifyEmpty) notifyManagers(db, '⚠️ ไกด์สำรองหมดแล้ว', `${b.code} · ${fmtDateS(b.date)} ${b.time} น. · ${b.people} คน — ยังขาดไกด์ ${missingG(b)} คน กรุณาเลือกไกด์เองหรือติดต่อลูกค้า`, b.id); log(db, 'reserve', `ไกด์สำรองหมด — ${b.code} ยังขาดไกด์ ${missingG(b)} คน`) }
+        break;
+      }
+      askReserve(db, b, g); n++;
+    }
+  });
+  return n;
+}
+const reruns = (db, L) => { const k = L.filter(b => b.status !== 'cancelled' && b.qn != null && !isLocked(b)).map(qKey).sort(); return k.length ? rerunFrom(db, k[0]) : [] };
 
 /* ===== ชำระเงิน ===== */
 function paypalCharge(db, total) {
@@ -353,6 +422,7 @@ export function adminState(db, actor) {
         .map(id => gObj(db, id)).filter(Boolean).map(g => ({ id: g.id, firstName: g.firstName, lastName: g.lastName, phone: g.phone || '' })), // ไกด์ร่วมงาน (กลุ่มใหญ่ 2 ไกด์)
       unavail: db.unavail.filter(u => u.guideId === actor.guideId),
       bookings: db.bookings.filter(b => hasGuide(b, actor.guideId) && b.status !== 'cancelled'), audit: [],
+      reqs: db.bookings.filter(b => pendReq(b).some(r => r.gid === actor.guideId)).map(b => { const r = pendReq(b).find(x => x.gid === actor.guideId); return { id: b.id, code: b.code, date: b.date, time: b.time, people: b.people, two: needG(b) > 1, fee: slotFee(b), exp: r.exp, at: r.at } }), // คำขอเปิดใช้ไกด์สำรองที่รอตอบ
       notifications: db.notifications.filter(n => n.guideId === actor.guideId && n.channel === 'push').slice(0, 100).map(n => ({ id: n.id, at: n.at, title: n.title, body: n.body, message: n.message, kind: n.kind || '', from: n.fromName || '', url: n.url || '' })),
     };
   }
@@ -593,9 +663,12 @@ export const adminActions = {
     if (!acc && p.createAcct) { if (pw.length < 8) fail('รหัสผ่านบัญชีไกด์ต้องมีอย่างน้อย 8 ตัว'); if (db.users.some(u => u.username === uname)) fail(`ชื่อผู้ใช้ "${uname}" มีคนใช้แล้ว`) }
     if (acc && pw && pw.length < 8) fail('รหัสผ่านต้องมีอย่างน้อย 8 ตัว');
     if (isNew) { g = { id: 'g' + uid(), lineUserId: '' }; db.guides.push(g) }
-    Object.assign(g, { firstName: str(p.firstName, 60), lastName: str(p.lastName, 60), bankName: str(p.bankName, 60), accountNo: str(p.accountNo, 40), email: str(p.email, 120), phone: str(p.phone, 20), line: str(p.line, 60), priority: +p.priority || db.guides.length, active: !!p.active });
+    const wasRes = !!g.reserve, res = 'reserve' in p ? !!p.reserve : wasRes;
+    Object.assign(g, { firstName: str(p.firstName, 60), lastName: str(p.lastName, 60), bankName: str(p.bankName, 60), accountNo: str(p.accountNo, 40), email: str(p.email, 120), phone: str(p.phone, 20), line: str(p.line, 60), active: !!p.active, reserve: res });
+    if (res) g.rOrder = +p.rOrder || (wasRes ? g.rOrder : 0) || 999; else g.priority = +p.priority || (wasRes || isNew ? 999 : g.priority);
     if ('lineUserId' in p && can(db.$actor, 'markUnavail')) g.lineUserId = str(p.lineUserId, 64);
-    normalizePriorities(db, g.id); log(db, 'guide', `${isNew ? 'เพิ่ม' : 'แก้ไข'}ไกด์ ${g.firstName} ${g.lastName} (ลำดับ ${g.priority})`);
+    normalizePriorities(db, g.id); log(db, 'guide', `${isNew ? 'เพิ่ม' : 'แก้ไข'}${res ? 'ไกด์สำรอง' : 'ไกด์'} ${g.firstName} ${g.lastName} (ลำดับ ${res ? 'S' + g.rOrder : g.priority})${!isNew && wasRes !== res ? ` · เปลี่ยนเป็น${res ? 'ไกด์สำรอง' : 'ไกด์หลัก'}` : ''}`);
+    if (!isNew && wasRes !== res) reruns(db, db.bookings.filter(b => hasGuide(b, g.id) && b.date >= today() && !(b.rlock || []).includes(g.id)));
     let msg = 'บันทึกแล้ว';
     if (!acc && p.createAcct) { db.users.push({ id: 'u' + uid(), username: uname, pw: await ctx.hash(pw), name: g.firstName + ' ' + g.lastName, role: 'guide', guideId: g.id, active: true }); log(db, 'user', `สร้างบัญชีไกด์ ${uname} ให้ ${g.firstName} ${g.lastName}`); msg = `บันทึกแล้ว · ไกด์เข้าระบบด้วย ${uname}` }
     if (acc && pw) { acc.pw = await ctx.hash(pw); log(db, 'user', `ตั้งรหัสผ่านใหม่ให้บัญชีไกด์ ${acc.username}`) }
@@ -603,9 +676,93 @@ export const adminActions = {
   },
   guideToggle(db, p) { need(db.$actor, 'editGuides'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'); g.active = !g.active; normalizePriorities(db, null); log(db, 'guide', `${g.active ? 'เปิด' : 'ปิด'}ใช้งานไกด์ ${g.firstName}`); return {} },
   guideMove(db, p) {
-    need(db.$actor, 'editGuides'); const L = [...db.guides].sort((a, b) => a.priority - b.priority), i = L.findIndex(g => g.id === p.id), j = i + (+p.d);
-    if (i < 0 || j < 0 || j >= L.length) return {}; [L[i].priority, L[j].priority] = [L[j].priority, L[i].priority];
-    log(db, 'guide', `ปรับลำดับ ${L[i].firstName} ↔ ${L[j].firstName}`); return {};
+    need(db.$actor, 'editGuides'); const me = gObj(db, p.id) || fail('ไม่พบไกด์'), k = me.reserve ? 'rOrder' : 'priority';
+    const L = db.guides.filter(g => !!g.reserve === !!me.reserve).sort((a, b) => (a[k] || 0) - (b[k] || 0)), i = L.indexOf(me), j = i + (+p.d);
+    if (i < 0 || j < 0 || j >= L.length) return {}; [L[i][k], L[j][k]] = [L[j][k], L[i][k]]; normalizePriorities(db, null);
+    log(db, 'guide', `ปรับลำดับ${me.reserve ? 'ไกด์สำรอง' : ''} ${L[i].firstName} ↔ ${L[j].firstName}`); return {};
+  },
+  guideType(db, p) { // ย้ายเป็นไกด์หลัก ↔ ไกด์สำรอง (ต่อท้ายลำดับ)
+    need(db.$actor, 'editGuides'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'), res = !!p.reserve; if (!!g.reserve === res) return {};
+    g.reserve = res; if (res) g.rOrder = 999; else { g.priority = 999; g.pre = [] } normalizePriorities(db, null);
+    log(db, 'guide', `${g.firstName} ${g.lastName} → ${res ? 'ไกด์สำรอง (S' + g.rOrder + ')' : 'ไกด์หลัก (ลำดับ ' + g.priority + ')'}`);
+    reruns(db, db.bookings.filter(b => hasGuide(b, g.id) && b.date >= today() && !(b.rlock || []).includes(g.id)));
+    return { msg: res ? `ย้ายเป็นไกด์สำรอง S${g.rOrder} แล้ว` : `ย้ายเป็นไกด์หลักลำดับ ${g.priority} แล้ว` };
+  },
+  /* ----- ไกด์สำรอง ----- */
+  reserveSettings(db, p) {
+    need(db.$actor, 'markUnavail'); const n = (v, lo, hi, d) => { const x = Math.round(+v); return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : d };
+    db.settings.reserve = { mode: p.mode === 'manual' ? 'manual' : 'auto', waitMin: n(p.waitMin, 5, 1440, 180), nearHours: n(p.nearHours, 0, 72, 12), nearWaitMin: n(p.nearWaitMin, 5, 600, 30), rotate: !!p.rotate, countPre: !!p.countPre, notifyEmpty: !!p.notifyEmpty };
+    const r = db.settings.reserve; log(db, 'settings', `ตั้งค่าไกด์สำรอง: ${r.mode === 'auto' ? 'อัตโนมัติ' : 'แอดมินกดเอง'} · รอตอบ ${r.waitMin} นาที (ใกล้เวลา ${r.nearWaitMin} นาที เมื่อเหลือ <${r.nearHours} ชม.) · หมุนลำดับ ${r.rotate ? 'เปิด' : 'ปิด'} · นับที่ว่างวันเปิดล่วงหน้า ${r.countPre ? 'เปิด' : 'ปิด'}`);
+    return { msg: 'บันทึกการตั้งค่าไกด์สำรองแล้ว' };
+  },
+  reserveAsk(db, p) { // ส่งคำขอถึงสำรองคนถัดไป (หรือคนที่เลือก)
+    need(db.$actor, 'assign'); const b = byId(db, p.id); if (!needsReserve(b)) fail('งานนี้ไม่ได้ขาดไกด์แล้ว');
+    if (pendReq(b).length >= missingG(b)) fail('กำลังรอคำตอบจากไกด์สำรองอยู่ — กด "ข้ามไปคนถัดไป" ก่อน');
+    let g;
+    if (p.guideId) { g = gObj(db, p.guideId) || fail('ไม่พบไกด์'); if (!g.reserve || !g.active) fail('ไกด์คนนี้ไม่ใช่ไกด์สำรอง'); if (hasGuide(b, g.id) || guideBlocked(db, g.id, b.date, b.time, b.id, b) || reqBusy(db, g.id, b)) fail('ไกด์สำรองคนนี้ไม่ว่างในรอบนั้น') }
+    else g = nextReserve(db, b) || fail('ไม่มีไกด์สำรองที่ว่างและยังไม่เคยถามสำหรับงานนี้');
+    askReserve(db, b, g); return { msg: `ส่งคำขอถึง ${g.firstName} แล้ว` };
+  },
+  reserveSkip(db, p) {
+    need(db.$actor, 'assign'); const b = byId(db, p.id), L = pendReq(b); if (!L.length) fail('ไม่มีคำขอที่รอตอบ');
+    L.forEach(r => { r.st = 'skipped'; r.endAt = nowISO(); r.by = db.$actor.name });
+    log(db, 'reserve', `ข้ามไกด์สำรอง ${L.map(r => gName(db, r.gid)).join(', ')} — ${b.code}`);
+    return { msg: RS(db).mode === 'auto' ? 'ข้ามแล้ว — ส่งคำขอถึงคนถัดไป' : 'ข้ามแล้ว' };
+  },
+  reservePre(db, p) { // เปิดใช้สำรองล่วงหน้า (รายวัน) — นับเป็นไกด์ของวันนั้นต่อจากไกด์หลัก
+    need(db.$actor, 'editGuides'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'); if (!g.reserve) fail('ไกด์คนนี้ไม่ใช่ไกด์สำรอง');
+    const D = /^\d{4}-\d{2}-\d{2}$/; if (!D.test(p.from || '') || !D.test(p.to || p.from)) fail('กรุณาเลือกวันที่'); const to = p.to || p.from;
+    if (to < p.from) fail('วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม'); const days = []; for (let d = p.from; d <= to && days.length < 62; d = addDays(d, 1)) if (d >= today()) days.push(d);
+    if (!days.length) fail('เลือกได้เฉพาะวันนี้เป็นต้นไป');
+    g.pre = [...new Set([...(g.pre || []).filter(d => d >= today()), ...days])].sort();
+    const txt = days.length > 1 ? `${fmtDateS(days[0])} – ${fmtDateS(days[days.length - 1])}` : fmtDate(days[0]);
+    const msg = `[ผาแง่ม] 📅 คุณถูกเปิดใช้เป็นไกด์สำรองล่วงหน้า
+วันที่ ${txt}
+วันดังกล่าวคุณจะได้รับงานต่อจากไกด์หลัก ถ้าไม่สะดวกวันไหน กด "แจ้งไม่ว่าง" ในแอปได้
+
+${SITE_URL}/#admin-today`;
+    const base = { at: nowISO(), guideId: g.id, bookingId: '', kind: 'reserve', message: msg, status: 'pending' };
+    db.$notify.push({ ...base, id: uid(), channel: 'line', to: g.lineUserId || '', toLabel: g.line || '' });
+    if (g.email) db.$notify.push({ ...base, id: uid(), channel: 'email', to: g.email, toLabel: g.email, subject: `[ผาแง่ม] เปิดใช้ไกด์สำรองล่วงหน้า ${txt}` });
+    db.$notify.push({ ...base, id: uid(), channel: 'push', to: 'guide:' + g.id, toLabel: 'แอป', title: '📅 เปิดใช้ไกด์สำรองล่วงหน้า', body: txt, url: '/#admin-today' });
+    log(db, 'reserve', `เปิดใช้ไกด์สำรองล่วงหน้า ${g.firstName} ${g.lastName}: ${txt}`);
+    reruns(db, db.bookings.filter(b => days.includes(b.date) && missingG(b) > 0));
+    return { msg: `เปิดใช้ ${g.firstName} ล่วงหน้า ${days.length} วันแล้ว` };
+  },
+  reservePreDel(db, p) {
+    need(db.$actor, 'editGuides'); const g = gObj(db, p.id) || fail('ไม่พบไกด์'); g.pre = (g.pre || []).filter(d => d !== p.date);
+    log(db, 'reserve', `ยกเลิกเปิดใช้ล่วงหน้า ${g.firstName} ${g.lastName} วันที่ ${fmtDate(p.date)}`);
+    reruns(db, db.bookings.filter(b => b.date === p.date && hasGuide(b, g.id) && !(b.rlock || []).includes(g.id)));
+    return { msg: 'ยกเลิกแล้ว' };
+  },
+  reserveAccept(db, p) { // ไกด์สำรองกดรับงาน
+    const me = db.$actor.guideId; if (db.$actor.role !== 'guide' || !me) fail('สำหรับไกด์เท่านั้น');
+    const b = byId(db, p.id), r = pendReq(b).find(x => x.gid === me) || fail('คำขอนี้หมดเวลาหรือถูกยกเลิกแล้ว'), g = gObj(db, me);
+    if (!needsReserve(b)) { r.st = 'cancelled'; r.endAt = nowISO(); return { msg: 'งานนี้ได้ไกด์ครบแล้ว ขอบคุณครับ' } }
+    if (guideBlocked(db, me, b.date, b.time, b.id, b)) fail('คุณติดงานอื่นในช่วงเวลานี้');
+    if (!b.guideId) b.guideId = me; else b.guide2Id = me;
+    b.rlock = [...new Set([...(b.rlock || []), me])]; r.st = 'accepted'; r.endAt = nowISO(); b.trip = 'assigned'; b.rempty = false;
+    if (RS(db).rotate) moveToLast(db, me);
+    notifyGuide(db, g, b, 'new');
+    notifyManagers(db, '✅ ไกด์สำรองรับงานแล้ว', `${g.firstName} ${g.lastName} · ${b.code} · ${fmtDateS(b.date)} ${b.time} น.${missingG(b) ? ` · ยังขาดอีก ${missingG(b)} คน` : ''}`, b.id);
+    log(db, 'reserve', `ไกด์สำรอง ${g.firstName} ${g.lastName} รับงาน ${b.code} (${fmtDateS(b.date)} ${b.time} น.)${RS(db).rotate ? ` · ย้ายไปลำดับ S${g.rOrder}` : ''}`);
+    return { msg: 'รับงานแล้ว — งานนี้เป็นของคุณ' };
+  },
+  myUnavail(db, p) { // ไกด์แจ้งวันที่ไม่สะดวกเอง (ใช้กับไกด์สำรองที่ยังไม่มีงาน)
+    const me = db.$actor.guideId; if (db.$actor.role !== 'guide' || !me) fail('สำหรับไกด์เท่านั้น');
+    const reason = str(p.reason, 300); if (!reason) fail('กรุณาระบุเหตุผล');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date || '') || p.date < today()) fail('กรุณาเลือกวันที่ตั้งแต่วันนี้');
+    if (unavailOn(db, me, p.date)) fail('คุณแจ้งไม่สะดวกวันนั้นไว้แล้ว');
+    const res = markGuideUnavailable(db, me, p.date, reason);
+    return { msg: `แจ้งไม่สะดวก ${fmtDate(p.date)} แล้ว${res.length ? ` — จัดไกด์ใหม่ ${res.length} งาน` : ''}` };
+  },
+  reserveDecline(db, p) {
+    const me = db.$actor.guideId; if (db.$actor.role !== 'guide' || !me) fail('สำหรับไกด์เท่านั้น');
+    const b = byId(db, p.id), r = pendReq(b).find(x => x.gid === me) || fail('คำขอนี้หมดเวลาหรือถูกยกเลิกแล้ว'), g = gObj(db, me);
+    r.st = 'declined'; r.reason = str(p.reason, 300); r.endAt = nowISO();
+    notifyManagers(db, '🙅 ไกด์สำรองไม่สะดวก', `${g.firstName} ${g.lastName} · ${b.code} · ${fmtDateS(b.date)} ${b.time} น.${r.reason ? ' — ' + r.reason : ''}`, b.id);
+    log(db, 'reserve', `ไกด์สำรอง ${g.firstName} ${g.lastName} ไม่สะดวก ${b.code}${r.reason ? ' — ' + r.reason : ''}`);
+    return { msg: 'แจ้งไม่สะดวกแล้ว — ระบบส่งต่อให้ไกด์สำรองคนถัดไป' };
   },
   notifyJobs(db, p) {
     need(db.$actor, 'assign'); const ids = new Set(Array.isArray(p.ids) ? p.ids : []);

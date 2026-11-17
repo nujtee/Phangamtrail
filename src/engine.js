@@ -1,6 +1,6 @@
 // Durable Object: ทุกคำสั่งถูกประมวลผลทีละคำสั่ง (ไม่มีการจองชนกัน) และบันทึกลง SQLite ของ Durable Object
 import { DurableObject } from 'cloudflare:workers';
-import { seedState, publicState, adminState, publicActions, adminActions, expirePending, sendReminders, lateStartAlerts, UserError, uid, nowISO, ROLES } from './core.js';
+import { seedState, publicState, adminState, publicActions, adminActions, expirePending, sendReminders, lateStartAlerts, reserveTick, UserError, uid, nowISO, ROLES } from './core.js';
 
 const COLLS = ['guides', 'users', 'bookings', 'unavail'];
 const COUNTERS = ['rotSeq', 'lastGuideId', 'seq', 'lastReminder'];
@@ -37,6 +37,7 @@ export class Engine extends DurableObject {
   async expireDue() {
     const db = await this.load(), now = nowISO();
     if (db.bookings.some(b => b.status === 'pending' && !b.slip && b.expiresAt && b.expiresAt < now)) await this.run({ id: '-', name: 'ระบบ', role: 'system' }, d => expirePending(d));
+    else if (db.bookings.some(b => (b.rreq || []).some(r => r.st === 'pending' && r.exp < now))) await this.run({ id: '-', name: 'ระบบ', role: 'system' }, () => 0); // คำขอไกด์สำรองหมดเวลา → ส่งต่อคนถัดไปทันที
   }
   stateFor(db, actor) {
     const st = { ...adminState(db, actor), lineReady: !!(this.env.LINE_CHANNEL_TOKEN && this.env.LINE_CHANNEL_SECRET), slipProvider: this.env.EASYSLIP_API_KEY ? 'EasySlip' : (this.env.SLIPOK_API_KEY && this.env.SLIPOK_BRANCH_ID) ? 'SlipOK' : '' };
@@ -94,6 +95,7 @@ export class Engine extends DurableObject {
     const db = await this.load(); db.$actor = actor; db.$audit = []; db.$notify = [];
     try {
       const out = await fn(db);
+      if (db.$actor) { const a = db.$actor; db.$actor = { id: '-', name: 'ระบบ', role: 'system' }; try { reserveTick(db) } catch (e) { console.error('reserveTick', e) } finally { db.$actor = a } } // ไกด์สำรอง: หมดเวลา/ส่งคำขอคนถัดไป
       this.persist(); const pending = db.$notify; db.$audit = []; db.$notify = [];
       if (pending.length) this.ctx.waitUntil(this.deliver(pending));
       return out;
