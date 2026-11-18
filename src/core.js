@@ -20,9 +20,9 @@ export const uid = () => crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 
 /* ===== บทบาทและสิทธิ์ ===== */
 export const ROLES = {
-  superadmin: { label: 'ผู้ดูแลระบบสูงสุด', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'accounting', 'payouts', 'payments', 'village', 'notifications', 'users', 'settings', 'audit'] },
-  admin: { label: 'ผู้ดูแลระบบ', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'accounting', 'payouts', 'payments', 'village', 'notifications', 'settings', 'audit'] },
-  finance: { label: 'เจ้าหน้าที่บัญชี/การเงิน', pages: ['dashboard', 'calendar', 'bookings', 'accounting', 'payouts', 'payments', 'village', 'audit'] },
+  superadmin: { label: 'ผู้ดูแลระบบสูงสุด', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'fin', 'accounting', 'journal', 'payouts', 'park', 'expense', 'payments', 'village', 'notifications', 'users', 'settings', 'audit'] },
+  admin: { label: 'ผู้ดูแลระบบ', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'fin', 'accounting', 'journal', 'payouts', 'park', 'expense', 'payments', 'village', 'notifications', 'settings', 'audit'] },
+  finance: { label: 'เจ้าหน้าที่บัญชี/การเงิน', pages: ['dashboard', 'calendar', 'bookings', 'fin', 'accounting', 'journal', 'payouts', 'park', 'expense', 'payments', 'village', 'audit'] },
   guidemgr: { label: 'ผู้จัดการไกด์', pages: ['dashboard', 'calendar', 'bookings', 'guides', 'notifications', 'audit'] },
   staff: { label: 'เจ้าหน้าที่ประสานงาน', pages: ['dashboard', 'calendar', 'content', 'bookings', 'guides', 'notifications'] },
   guide: { label: 'ไกด์', pages: ['mytrips'] },
@@ -40,6 +40,10 @@ export const PERM = {
   settings: ['superadmin', 'admin'],
   payments: ['superadmin', 'admin', 'finance'],
   content: ['superadmin', 'admin', 'staff'],
+  acctView: ['superadmin', 'admin', 'finance'], // ดูภาพรวม/สมุดรายวัน/รายงาน
+  acctPost: ['superadmin', 'admin', 'finance'], // นำส่งอุทยาน · บันทึกรายจ่าย/รายรับอื่น
+  acctSetup: ['superadmin', 'finance'], // เปิดใช้สมุดบัญชี (ยอดยกมา) · ตั้งค่าบัญชี
+  acctRev: ['superadmin'], // กลับรายการ · ล้างสมุดบัญชี
 };
 const can = (actor, p) => !!actor && PERM[p].includes(actor.role);
 
@@ -416,7 +420,7 @@ export function adminState(db, actor) {
   const base = { settings: db.settings, site: db.site, rotSeq: db.rotSeq, lastGuideId: db.lastGuideId, me: safeUser(actor), today: today(), notifSeenAt: db.users.find(u => u.id === actor.id)?.notifSeenAt || '' };
   if (actor.role === 'guide') {
     return {
-      ...base, settings: { ...db.settings, channels: {}, villageAcct: {} }, site: undefined,
+      ...base, settings: { ...db.settings, channels: {}, villageAcct: {}, acct: undefined }, site: undefined,
       guides: db.guides.filter(g => g.id === actor.guideId), users: [],
       coGuides: [...new Set(db.bookings.filter(b => hasGuide(b, actor.guideId) && b.status !== 'cancelled').flatMap(gIds))].filter(id => id !== actor.guideId)
         .map(id => gObj(db, id)).filter(Boolean).map(g => ({ id: g.id, firstName: g.firstName, lastName: g.lastName, phone: g.phone || '' })), // ไกด์ร่วมงาน (กลุ่มใหญ่ 2 ไกด์)
@@ -429,6 +433,7 @@ export function adminState(db, actor) {
   return {
     ...base, guides: db.guides, users: db.users.map(safeUser), unavail: db.unavail, bookings: db.bookings,
     audit: db.audit, notifications: db.notifications,
+    acct: can(actor, 'acctView') ? { ...(db.acct || { on: false }), preview: db.acct?.on ? null : openPreview(db) } : null, // สมุดบัญชี: ยอดกระเป๋า (รายการดึงแยกที่ /api/admin/ledger)
   };
 }
 
@@ -509,6 +514,99 @@ export const publicActions = {
     return { booking: bookingView(b), verified: false, verifyMsg: v && !v.ok ? b.slipVerify.msg : '' };
   },
 };
+
+/* ===== บัญชี: สมุดรายวัน (บัญชีคู่ แสดงผลเป็น "กระเป๋าเงิน") =====
+   กระเป๋า: bank เงินในบัญชีรับชำระ · dep เงินรับล่วงหน้า · gd ค้างจ่ายไกด์ · vil ค้างโอนหมู่บ้าน · park ค้างนำส่งอุทยาน · ref ค้างคืนลูกค้า · fund กองทุนดำเนินงาน
+   กฎ: ทุกรายการต้องสมดุล (ธนาคารเปลี่ยนเท่ากับผลรวมกระเป๋าอื่นที่เปลี่ยน) → ธนาคาร = ผลรวมกระเป๋าอื่น เสมอ
+   รายการที่บันทึกแล้วลบไม่ได้ ผิด → "กลับรายการ" · รายการจากการจองลงอัตโนมัติด้วย ledgerSync:
+   เทียบ "ข้อเท็จจริง" ของการจองตอนนี้ (factsOf) กับที่ลงไว้แล้ว (b.lk) → ลงส่วนที่เพิ่ม / กลับรายการส่วนที่หายไปหรือเปลี่ยน */
+export const WAL = ['bank', 'dep', 'gd', 'vil', 'park', 'ref', 'fund'];
+const SIGN_ROLES = ['ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ประธาน'];
+export const AS = db => ({
+  start: '2026-12-01', bankLabel: '',
+  cats: ['ค่าธรรมเนียมธนาคาร', 'ค่าตรวจสลิป EasySlip', 'ค่าเว็บไซต์/ระบบ', 'อุปกรณ์/ปฐมพยาบาล', 'อบรมไกด์', 'อื่นๆ'],
+  icats: ['เงินบริจาค', 'ดอกเบี้ยธนาคาร', 'อื่นๆ'],
+  signers: SIGN_ROLES.map(role => ({ role, name: '', pos: '' })), ...(db.settings.acct || {}),
+});
+const r2 = x => Math.round((+x || 0) * 100) / 100;
+const ymOf = d => String(+d.slice(0, 4) + 543).slice(2) + d.slice(5, 7);
+const clean = L => { const o = {}; for (const w of WAL) { const v = r2(L?.[w]); if (v) o[w] = v } return o };
+const sameL = (a, b) => { a = clean(a); b = clean(b); return WAL.every(w => (a[w] || 0) === (b[w] || 0)) };
+const negL = L => Object.fromEntries(Object.entries(clean(L)).map(([k, v]) => [k, -v]));
+const addL = (a, b) => { const o = { ...a }; for (const [k, v] of Object.entries(clean(b))) o[k] = r2((o[k] || 0) + v); return clean(o) };
+const balanced = L => { L = clean(L); return Math.abs((L.bank || 0) - WAL.slice(1).reduce((s, w) => s + (L[w] || 0), 0)) < 0.005 };
+/* ค่าอุทยานของกลุ่มที่ลูกค้าไม่มา/ยกเลิก: ค่าเข้า + ค่ารถ "รอถามอุทยาน" ก่อน (b.phold: 'park' นำส่งตามปกติ · 'fund' ไม่ต้องนำส่ง → กองทุน) */
+const holdAmt = b => ['noshow', 'paidcancel'].includes(b.trip) ? (+b.entryTotal || 0) + (+b.vehicleTotal || 0) : 0;
+const parkWait = b => holdAmt(b) > 0 && !b.phold;
+const parkDue = b => r2((+b.split?.park || 0) + (b.phold === 'fund' ? 0 : (+b.entryTotal || 0) + (+b.vehicleTotal || 0)));
+const parkOpen = b => b.status === 'paid' && isDone(b) && !!b.lk?.done && !b.ppay; // จบงานหลังเปิดใช้สมุด และยังไม่นำส่ง
+function factsOf(b) {
+  const F = {}; if (b.status !== 'paid') return F;
+  const T = +b.total || 0; F.pay = { bank: T, dep: T };
+  if (!isDone(b)) return F;
+  const g1 = b.guideId ? +b.split?.guide || 0 : 0, g2 = needG(b) > 1 && b.guide2Id ? +b.split?.guide2 || 0 : 0; // ตำแหน่งไกด์ที่ไม่มีคน → กองทุน
+  const V = +b.split?.village || 0, P = (+b.split?.park || 0) + (+b.entryTotal || 0) + (+b.vehicleTotal || 0);
+  F.done = { dep: -T, gd: g1 + g2, vil: V, park: P, fund: r2(T - g1 - g2 - V - P) };
+  if (b.payout?.paid && g1) F.g1 = { gd: -g1, bank: -g1 };
+  if (b.payout2?.paid && g2) F.g2 = { gd: -g2, bank: -g2 };
+  if (b.vpay?.paid && V) F.vil = { vil: -V, bank: -V };
+  const h = holdAmt(b); if (b.phold === 'fund' && h) F.hfund = { park: -h, fund: h };
+  return F;
+}
+const KLAB = { pay: 'รับชำระ', done: 'จบงาน', g1: 'จ่ายไกด์', g2: 'จ่ายไกด์คนที่ 2', vil: 'โอนหมู่บ้าน', hfund: 'ค่าอุทยานเข้ากองทุน' };
+const CH_LAB = { bank: 'โอนบัญชี', promptpay: 'พร้อมเพย์', paypal: 'PayPal', alipay: 'Alipay', truemoney: 'TrueMoney' };
+function post(db, e) {
+  const A = db.acct, L = clean(e.lines); if (!Object.keys(L).length) return null;
+  if (!balanced(L)) throw new Error('ledger unbalanced ' + JSON.stringify(L));
+  const date = e.date || today(), ym = ymOf(date); A.seq[ym] = (A.seq[ym] || 0) + 1; A.n = (A.n || 0) + 1;
+  const a = db.$actor || {};
+  const row = { no: `JV-${ym}-${String(A.seq[ym]).padStart(4, '0')}`, date, at: nowISO(), type: e.type, desc: e.desc || '', ref: e.ref || '', bids: e.bids || [], lines: L, by: a.name || 'ระบบ', byId: a.id || '-', auto: !!e.auto };
+  for (const k of ['proof', 'note', 'cat', 'party', 'revOf', 'meta']) if (e[k] != null && e[k] !== '') row[k] = e[k];
+  for (const w of WAL) A.bal[w] = r2((A.bal[w] || 0) + (L[w] || 0));
+  (db.$ledger ||= []).push(row); return row;
+}
+function factEntry(db, k, b, g) {
+  const how = { completed: 'จบงาน', noshow: 'ลูกค้าไม่มา', paidcancel: 'ลูกค้ายกเลิก (ไม่คืนเงิน)' }[b.trip] || 'จบงาน', l = g.lines;
+  if (k === 'pay') return { type: 'pay', ref: b.code, proof: b.slip || '', desc: `รับชำระ ${b.code} · ${b.people} คน · เดิน ${fmtDateS(b.date)} ${b.time}${b.payChannel ? ' · ' + (CH_LAB[b.payChannel] || b.payChannel) : ''}` };
+  if (k === 'done') return { type: 'done', ref: b.code, desc: `${how} ${b.code} → ไกด์ ${baht(l.gd || 0)} · หมู่บ้าน ${baht(l.vil || 0)} · อุทยาน ${baht(l.park || 0)}${l.fund ? ` · กองทุน ${baht(l.fund)}` : ''}` };
+  if (k === 'g1' || k === 'g2') { const po = k === 'g1' ? b.payout : b.payout2; return { type: 'gpay', ref: b.code, note: po?.ref ? 'อ้างอิงการโอน ' + po.ref : '', desc: `จ่ายค่าไกด์ ${gName(db, k === 'g1' ? b.guideId : b.guide2Id)} · ${b.code}${k === 'g2' ? ' (ไกด์คนที่ 2)' : ''}` } }
+  if (k === 'vil') return { type: 'vpay', ref: b.vpay?.ref || '', desc: `โอนส่วนกลางหมู่บ้าน ${g.codes.length} กลุ่ม (${g.codes.slice(0, 6).join(', ')}${g.codes.length > 6 ? ' …' : ''})`, meta: { codes: g.codes.slice(0, 300) } };
+  return { type: 'hold', ref: b.code, desc: `ค่าเข้า/ค่ารถอุทยานที่ไม่ต้องนำส่ง ${b.code} → กองทุนดำเนินงาน` };
+}
+/* ลงรายการอัตโนมัติจากสถานะการจอง (เรียกหลังทุกคำสั่งใน engine.run) */
+export function ledgerSync(db) {
+  const A = db.acct; if (!A?.on) return 0;
+  const G = new Map(), add = (key, o, b, k, l) => { let g = G.get(key); if (!g) G.set(key, g = { ...o, lines: {}, bids: [], codes: [], marks: [] }); g.lines = addL(g.lines, l); g.bids.push(b.id); g.codes.push(b.code); g.marks.push([b, k, clean(l)]) };
+  for (const b of db.bookings) {
+    const F = factsOf(b), lk = b.lk || {};
+    for (const [k, v] of Object.entries(lk)) if (!F[k] || !sameL(F[k], v.l)) add(`r:${v.no}:${k}`, { rev: true, k, revOf: v.no }, b, k, negL(v.l));
+    for (const [k, l] of Object.entries(F)) if ((!lk[k] || !sameL(l, lk[k].l)) && Object.keys(clean(l)).length) add(k === 'vil' ? `vil:${b.vpay.batch || b.id}` : `${k}:${b.id}`, { k }, b, k, l);
+  }
+  const L = [...G.values()].filter(g => balanced(g.lines) || (console.error('ledgerSync unbalanced', g.k, g.codes), false)).sort((x, y) => (y.rev ? 1 : 0) - (x.rev ? 1 : 0)); // กลับรายการก่อน
+  for (const g of L) {
+    const b0 = g.marks[0][0];
+    const e = g.rev ? { type: 'rev', revOf: g.revOf, ref: g.codes.length === 1 ? b0.code : '', desc: `กลับรายการ ${KLAB[g.k] || g.k} ${g.codes.slice(0, 6).join(', ')}${g.codes.length > 6 ? ' …' : ''} (ของ ${g.revOf}) — ยกเลิกการยืนยัน/ข้อมูลการจองเปลี่ยน` } : factEntry(db, g.k, b0, g);
+    const row = post(db, { ...e, lines: g.lines, bids: g.bids, auto: true }); if (!row) continue;
+    for (const [b, k, l] of g.marks) { b.lk = b.lk || {}; if (g.rev) { if (b.lk[k]?.no === g.revOf) delete b.lk[k] } else b.lk[k] = { no: row.no, l } }
+    if (g.rev && g.revOf !== A.openNo) (db.$ledgerUpd ||= []).push({ no: g.revOf, revBy: row.no });
+  }
+  return L.length;
+}
+/* ตัวอย่างยอดยกมา (คำนวณจากสถานะการจองตอนนี้) */
+export function openPreview(db) {
+  const o = { dep: 0, gd: 0, vil: 0, parkAll: 0, paid: 0, done: 0 };
+  for (const b of db.bookings) {
+    const F = factsOf(b); if (!F.pay) continue; o.paid++; if (F.done) o.done++;
+    for (const l of Object.values(F)) { o.dep += l.dep || 0; o.gd += l.gd || 0; o.vil += l.vil || 0; o.parkAll += l.park || 0 }
+  }
+  for (const k of Object.keys(o)) o[k] = r2(o[k]); return o;
+}
+const acctOn = db => db.acct?.on || fail('ยังไม่ได้เปิดใช้สมุดบัญชี — ไปที่ บัญชี → ภาพรวมการเงิน');
+const acctDate = (db, d) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d || '')) fail('กรุณาเลือกวันที่'); if (d > today()) fail('บันทึกวันที่ล่วงหน้าไม่ได้');
+  if (d < db.acct.start) fail(`วันที่ต้องไม่ก่อนวันเริ่มใช้สมุดบัญชี (${fmtDate(db.acct.start)})`); return d;
+};
+const proofOk = v => { const u = String(v || '').trim().slice(0, 200); if (u && !/^\/img\/acct\/[\w.-]+$/.test(u)) fail('ไฟล์หลักฐานไม่ถูกต้อง'); return u };
 
 /* ===== คำสั่งหลังบ้าน (ต้องเข้าสู่ระบบ + ตรวจสิทธิ์) ===== */
 const ownTrip = (db, b) => db.$actor.role === 'guide' && hasGuide(b, db.$actor.guideId);
@@ -886,4 +984,99 @@ ${SITE_URL}/#admin-today`;
     log(db, 'content', `${isNew ? 'เพิ่ม' : 'แก้ไข'}ผังผู้บริหาร: ${o.pos} ${o.name}`); return { msg: 'บันทึกแล้ว' };
   },
   orgDel(db, p) { need(db.$actor, 'content'); const S = db.site, o = S.org.find(x => x.id === p.id) || fail('ไม่พบ'); S.org.filter(x => x.parent === o.id).forEach(k => k.parent = o.parent || ''); S.org = S.org.filter(x => x !== o); log(db, 'content', `ลบ "${o.pos}" ออกจากผังผู้บริหาร`); return {} },
+  /* ----- บัญชี: สมุดรายวัน ----- */
+  acctSettings(db, p) {
+    need(db.$actor, 'acctSetup'); const cur = AS(db);
+    const list = (v, d) => { const L = String(v ?? '').split(/\n/).map(x => str(x, 60)).filter(Boolean).slice(0, 40); return L.length ? [...new Set(L)] : d };
+    const start = db.acct?.on ? cur.start : /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : cur.start;
+    db.settings.acct = { start, bankLabel: str(p.bankLabel, 120), cats: list(p.cats, cur.cats), icats: list(p.icats, cur.icats),
+      signers: SIGN_ROLES.map((role, i) => ({ role, name: str(p['sg' + i], 80), pos: str(p['sp' + i], 80) })) };
+    log(db, 'acct', `ตั้งค่าบัญชี: วันเริ่ม ${fmtDate(start)} · หมวดรายจ่าย ${db.settings.acct.cats.length} · ผู้ลงชื่อ ${db.settings.acct.signers.map(x => x.name || '-').join(' / ')}`);
+    return { msg: 'บันทึกการตั้งค่าบัญชีแล้ว' };
+  },
+  acctOpen(db, p) { // เปิดใช้สมุดบัญชี: ยอดยกมา = ยอดธนาคารที่กรอก + สถานะการจองปัจจุบัน
+    need(db.$actor, 'acctSetup'); if (db.acct?.on) fail('เปิดใช้สมุดบัญชีแล้ว');
+    const S = AS(db); if (today() < S.start) fail(`เปิดใช้ได้ตั้งแต่ ${fmtDate(S.start)} (เปลี่ยนวันเริ่มได้ที่ ⚙️ ตั้งค่าบัญชี)`);
+    if (p.bank === '' || p.bank == null || !Number.isFinite(+p.bank)) fail('กรุณากรอกยอดเงินในบัญชีธนาคาร');
+    const B = r2(p.bank), P = r2(p.park || 0); if (P < 0) fail('ค่าอุทยานค้างนำส่งต้องไม่ติดลบ');
+    const pv = openPreview(db);
+    db.acct = { on: true, start: today(), openAt: nowISO(), bal: Object.fromEntries(WAL.map(w => [w, 0])), seq: {}, n: 0, openPark: P, pr: [] };
+    const lines = { bank: B, dep: pv.dep, gd: pv.gd, vil: pv.vil, park: P, fund: r2(B - pv.dep - pv.gd - pv.vil - P) };
+    const row = post(db, { type: 'open', desc: `ยอดยกมา — เปิดใช้สมุดบัญชี (การจองที่ชำระแล้ว ${pv.paid} รายการ · จบงานแล้ว ${pv.done})`, lines, note: str(p.note, 300), meta: { ...pv, bank: B, park: P } });
+    db.acct.openNo = row.no;
+    for (const b of db.bookings) {
+      const F = factsOf(b); if (!F.pay) continue;
+      b.lk = Object.fromEntries(Object.entries(F).map(([k, l]) => [k, { no: row.no, l: clean(l) }]));
+      if (isDone(b) && !b.ppay) b.ppay = { paid: true, opening: true }; // งานที่จบก่อนเปิดใช้: ค่าอุทยานรวมอยู่ในยอดยกมา
+    }
+    log(db, 'acct', `เปิดใช้สมุดบัญชี ${row.no}: ธนาคาร ${baht(B)} · รับล่วงหน้า ${baht(pv.dep)} · ค้างจ่ายไกด์ ${baht(pv.gd)} · ค้างโอนหมู่บ้าน ${baht(pv.vil)} · ค้างนำส่งอุทยาน ${baht(P)} · กองทุน ${baht(lines.fund)}`);
+    return { msg: `เปิดใช้สมุดบัญชีแล้ว (${row.no})` };
+  },
+  acctReset(db, p) { // ล้างสมุดบัญชีทั้งหมด (ใช้ช่วงทดลองก่อนใช้งานจริง)
+    need(db.$actor, 'acctRev'); if (!db.acct?.on) fail('ยังไม่ได้เปิดใช้สมุดบัญชี');
+    if (String(p.confirm || '').trim() !== 'ล้างสมุดบัญชี') fail('พิมพ์คำว่า “ล้างสมุดบัญชี” เพื่อยืนยัน');
+    const n = db.acct.n || 0; db.acct = null; db.$ledgerReset = true; db.$ledger = []; db.$ledgerUpd = [];
+    db.bookings.forEach(b => { delete b.lk; delete b.ppay });
+    log(db, 'acct', `ล้างสมุดบัญชี (ลบ ${n} รายการ) — ต้องเปิดใช้ใหม่พร้อมยอดยกมา`); return { msg: 'ล้างสมุดบัญชีแล้ว' };
+  },
+  acctEntry(db, p) { // รายจ่ายอื่น (จ่ายจากกองทุน/ส่วนกลางหมู่บ้าน) · รายรับอื่น (เข้ากองทุน)
+    need(db.$actor, 'acctPost'); acctOn(db); const A = db.acct, exp = p.kind === 'exp';
+    const amt = r2(p.amt); if (!(amt > 0) || amt > 1e7) fail('กรุณากรอกจำนวนเงินให้ถูกต้อง');
+    const date = acctDate(db, p.date), cat = str(p.cat, 60) || 'อื่นๆ', party = str(p.party, 120), note = str(p.note, 300), proof = proofOk(p.proof);
+    let row;
+    if (exp) {
+      const from = p.from === 'vil' ? 'vil' : 'fund';
+      if (from === 'vil' && amt > r2(A.bal.vil)) fail(`ยอดค้างโอนหมู่บ้านมี ${baht(A.bal.vil)} — จ่ายจากส่วนกลางหมู่บ้านเกินยอดไม่ได้`);
+      row = post(db, { type: 'exp', date, cat, party, note, proof, desc: `${cat}${party ? ' · ' + party : ''}`, lines: { bank: -amt, [from]: -amt }, meta: { from } });
+    } else row = post(db, { type: 'inc', date, cat, party, note, proof, desc: `${cat}${party ? ' · จาก ' + party : ''}`, lines: { bank: amt, fund: amt } });
+    log(db, 'acct', `บันทึก${exp ? 'รายจ่าย' : 'รายรับ'} ${row.no} ${baht(amt)} · ${row.desc}`);
+    return { msg: `บันทึก${exp ? 'รายจ่าย' : 'รายรับ'}แล้ว (${row.no})`, no: row.no };
+  },
+  parkPay(db, p) { // นำส่งเงินให้อุทยานเป็นรอบ: เลือกช่วงวันเดินป่า (+ ยอดยกมา)
+    need(db.$actor, 'acctPost'); acctOn(db); const A = db.acct;
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(p.from || '') ? p.from : '0000-01-01', to = /^\d{4}-\d{2}-\d{2}$/.test(p.to || '') ? p.to : '9999-12-31';
+    const L = db.bookings.filter(b => parkOpen(b) && !parkWait(b) && b.date >= from && b.date <= to).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const lump = p.open ? r2(A.openPark || 0) : 0, amts = L.map(parkDue), tot = r2(amts.reduce((a, x) => a + x, 0) + lump);
+    if (!(tot > 0)) fail('ไม่มียอดค้างนำส่งในช่วงนี้');
+    if (p.total != null && r2(p.total) !== tot) fail(`ยอดเปลี่ยนไประหว่างทำรายการ (ล่าสุด ${baht(tot)}) — กรุณาตรวจอีกครั้ง`);
+    const date = acctDate(db, p.date || today()), ref = str(p.ref, 80), proof = proofOk(p.proof), note = str(p.note, 300);
+    const S = f => L.reduce((a, b) => a + f(b), 0), noFee = b => b.phold === 'fund';
+    const meta = { n: L.length, from: L[0]?.date || '', to: L.at(-1)?.date || '', ta: S(b => noFee(b) ? 0 : +b.pax?.ta || 0), fa: S(b => noFee(b) ? 0 : +b.pax?.fa || 0), cars: S(b => noFee(b) ? 0 : +b.vehicles || 0), motos: S(b => noFee(b) ? 0 : +b.motos || 0),
+      svc: r2(S(b => +b.split?.park || 0)), entry: r2(S(b => noFee(b) ? 0 : +b.entryTotal || 0)), veh: r2(S(b => noFee(b) ? 0 : +b.vehicleTotal || 0)), open: lump };
+    const rg = meta.n ? (meta.from === meta.to ? ` (เดิน ${fmtDateS(meta.from)})` : ` (เดิน ${fmtDateS(meta.from)} – ${fmtDateS(meta.to)})`) : '';
+    const row = post(db, { type: 'ppay', date, ref, proof, note, desc: `นำส่งอุทยาน ${meta.n} กลุ่ม${rg}${lump ? ` + ยอดยกมา ${baht(lump)}` : ''}`, lines: { park: -tot, bank: -tot }, bids: L.map(b => b.id), meta });
+    L.forEach((b, i) => { b.ppay = { paid: true, no: row.no, amt: amts[i], date, at: row.at } });
+    A.openPark = r2((A.openPark || 0) - lump);
+    A.pr = [{ no: row.no, date, amt: tot, ref, proof, by: row.by, at: row.at, ...meta }, ...(A.pr || [])].slice(0, 300);
+    log(db, 'acct', `นำส่งอุทยาน ${row.no} ${baht(tot)} · ${meta.n} กลุ่ม${rg}${ref ? ' · ใบเสร็จ ' + ref : ''}`);
+    return { msg: `บันทึกนำส่งอุทยาน ${baht(tot)} แล้ว (${row.no})`, no: row.no };
+  },
+  parkHold(db, p) { // ลูกค้าไม่มา/ยกเลิก: ค่าเข้า+ค่ารถ → นำส่งอุทยานตามปกติ หรือ ไม่ต้องนำส่ง (เข้ากองทุน)
+    need(db.$actor, 'acctPost'); acctOn(db); const b = byId(db, p.id);
+    if (!(b.status === 'paid' && isDone(b) && holdAmt(b) > 0)) fail('รายการนี้ไม่มีค่าอุทยานที่รอตัดสินใจ'); if (b.ppay) fail('รายการนี้นำส่งอุทยานแล้ว');
+    if (!['park', 'fund'].includes(p.to)) fail('กรุณาเลือกวิธีจัดการ'); if (b.phold) fail('ตัดสินใจรายการนี้ไปแล้ว');
+    b.phold = p.to; b.pholdBy = db.$actor.name; b.pholdAt = nowISO();
+    log(db, 'acct', `${b.code} ค่าเข้า/ค่ารถอุทยาน ${baht(holdAmt(b))}: ${p.to === 'park' ? 'นำส่งอุทยานตามปกติ' : 'อุทยานไม่เก็บ → เข้ากองทุนดำเนินงาน'}`);
+    return { msg: p.to === 'park' ? 'ย้ายไปรายการรอนำส่งแล้ว' : 'ย้ายเข้ากองทุนดำเนินงานแล้ว' };
+  },
+  parkHoldUndo(db, p) {
+    need(db.$actor, 'acctRev'); const b = byId(db, p.id); if (!b.phold) fail('ยังไม่ได้ตัดสินใจรายการนี้'); if (b.ppay) fail('นำส่งอุทยานแล้ว — กลับรายการนำส่งก่อน');
+    log(db, 'acct', `${b.code} ยกเลิกการตัดสินใจค่าอุทยาน (เดิม: ${b.phold === 'park' ? 'นำส่ง' : 'เข้ากองทุน'})`); delete b.phold; delete b.pholdBy; delete b.pholdAt;
+    return { msg: 'กลับไปสถานะรอถามอุทยานแล้ว' };
+  },
+  acctReverse(db, p, ctx) { // กลับรายการที่บันทึกเอง (รายจ่าย/รายรับ/นำส่งอุทยาน) — รายการอัตโนมัติให้ยกเลิกที่ต้นทาง
+    need(db.$actor, 'acctRev'); acctOn(db); const A = db.acct;
+    const e = ctx?.ledgerGet?.(String(p.no || '')) || fail('ไม่พบรายการ');
+    if (e.auto) fail('รายการนี้ลงอัตโนมัติจากการจอง — ยกเลิกที่ต้นทาง (เช่น “ยกเลิกการยืนยัน” ในหน้าเบิกจ่าย) แล้วระบบจะกลับรายการให้เอง');
+    if (e.type === 'open') fail('ยอดยกมากลับรายการไม่ได้ (ถ้าต้องเริ่มใหม่ ใช้ “ล้างสมุดบัญชี”)'); if (e.type === 'rev') fail('รายการกลับ กลับซ้ำไม่ได้');
+    if (e.revBy) fail(`กลับรายการไปแล้ว (${e.revBy})`);
+    const reason = str(p.reason, 200) || fail('กรุณาใส่เหตุผล');
+    const row = post(db, { type: 'rev', revOf: e.no, ref: e.ref, note: reason, desc: `กลับรายการ ${e.no} (${e.desc}) — ${reason}`, lines: negL(e.lines), bids: e.bids || [] });
+    (db.$ledgerUpd ||= []).push({ no: e.no, revBy: row.no, revReason: reason });
+    if (e.type === 'ppay') {
+      db.bookings.forEach(b => { if (b.ppay?.no === e.no) delete b.ppay });
+      A.openPark = r2((A.openPark || 0) + (+e.meta?.open || 0)); const r = (A.pr || []).find(x => x.no === e.no); if (r) r.rev = row.no;
+    }
+    log(db, 'acct', `กลับรายการ ${e.no} → ${row.no} · ${reason}`); return { msg: `กลับรายการแล้ว (${row.no})` };
+  },
 };

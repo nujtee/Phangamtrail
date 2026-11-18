@@ -1,6 +1,6 @@
 // Durable Object: ทุกคำสั่งถูกประมวลผลทีละคำสั่ง (ไม่มีการจองชนกัน) และบันทึกลง SQLite ของ Durable Object
 import { DurableObject } from 'cloudflare:workers';
-import { seedState, publicState, adminState, publicActions, adminActions, expirePending, sendReminders, lateStartAlerts, reserveTick, UserError, uid, nowISO, ROLES } from './core.js';
+import { seedState, publicState, adminState, publicActions, adminActions, expirePending, sendReminders, lateStartAlerts, reserveTick, ledgerSync, UserError, uid, nowISO, ROLES, PERM } from './core.js';
 
 const COLLS = ['guides', 'users', 'bookings', 'unavail'];
 const COUNTERS = ['rotSeq', 'lastGuideId', 'seq', 'lastReminder'];
@@ -29,7 +29,9 @@ export class Engine extends DurableObject {
       CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, json TEXT);
       CREATE TABLE IF NOT EXISTS audit(n INTEGER PRIMARY KEY AUTOINCREMENT, json TEXT);
       CREATE TABLE IF NOT EXISTS notif(id TEXT PRIMARY KEY, n INTEGER, json TEXT);
-      CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, userId TEXT, exp INTEGER);`);
+      CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, userId TEXT, exp INTEGER);
+      CREATE TABLE IF NOT EXISTS ledger(n INTEGER PRIMARY KEY AUTOINCREMENT, no TEXT UNIQUE, date TEXT, type TEXT, json TEXT);
+      CREATE INDEX IF NOT EXISTS ledger_date ON ledger(date);`); // สมุดรายวัน (บันทึกต่อท้ายเท่านั้น · ผิด → กลับรายการ)
   }
 
   /* ----- โหลด / บันทึก ----- */
@@ -54,8 +56,8 @@ export class Engine extends DurableObject {
       if (this.env.ADMIN_PASSWORD) db.users.push({ id: 'u' + uid(), username: this.env.ADMIN_USERNAME || 'admin', pw: await hashPw(this.env.ADMIN_PASSWORD), name: 'ผู้ดูแลระบบ', role: 'superadmin', active: true });
       this.db = db; this.cache = { meta: {}, docs: {} }; COLLS.forEach(c => this.cache.docs[c] = new Map()); this.persist(); return this.db;
     }
-    const db = { settings: meta.settings, site: meta.site, ...meta.counters };
-    this.cache = { meta: { settings: JSON.stringify(meta.settings), site: JSON.stringify(meta.site), counters: JSON.stringify(meta.counters) }, docs: {} };
+    const db = { settings: meta.settings, site: meta.site, acct: meta.acct || null, ...meta.counters };
+    this.cache = { meta: { settings: JSON.stringify(meta.settings), site: JSON.stringify(meta.site), counters: JSON.stringify(meta.counters), acct: JSON.stringify(meta.acct ?? null) }, docs: {} };
     COLLS.forEach(c => { db[c] = []; this.cache.docs[c] = new Map() });
     for (const r of this.sql.exec('SELECT coll,id,json FROM docs')) { if (db[r.coll]) { db[r.coll].push(JSON.parse(r.json)); this.cache.docs[r.coll].set(r.id, r.json) } }
     db.bookings.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -74,7 +76,7 @@ export class Engine extends DurableObject {
     const db = this.db, c = this.cache;
     { let m = Math.max(0, ...db.users.map(u => +u.no || 0)); db.users.forEach(u => { if (!u.no) u.no = ++m }) } // รหัสผู้ใช้ (ID) เรียงตามลำดับที่สร้าง
     const counters = Object.fromEntries(COUNTERS.map(k => [k, db[k] ?? null]));
-    for (const [k, v] of [['settings', db.settings], ['site', db.site], ['counters', counters]]) {
+    for (const [k, v] of [['settings', db.settings], ['site', db.site], ['counters', counters], ['acct', db.acct ?? null]]) {
       const s = JSON.stringify(v); if (c.meta[k] !== s) { this.sql.exec('INSERT OR REPLACE INTO meta(k,json) VALUES(?,?)', k, s); c.meta[k] = s }
     }
     for (const coll of COLLS) {
@@ -82,20 +84,26 @@ export class Engine extends DurableObject {
       for (const o of db[coll]) { const s = JSON.stringify(o); seen.add(o.id); if (c.docs[coll].get(o.id) !== s) { this.sql.exec('INSERT OR REPLACE INTO docs(coll,id,json) VALUES(?,?,?)', coll, o.id, s); c.docs[coll].set(o.id, s) } }
       for (const id of [...c.docs[coll].keys()]) if (!seen.has(id)) { this.sql.exec('DELETE FROM docs WHERE coll=? AND id=?', coll, id); c.docs[coll].delete(id) }
     }
+    if (db.$ledgerReset) this.sql.exec('DELETE FROM ledger');
+    for (const e of db.$ledger || []) this.sql.exec('INSERT INTO ledger(no,date,type,json) VALUES(?,?,?,?)', e.no, e.date, e.type, JSON.stringify(e));
+    for (const u of db.$ledgerUpd || []) { const r = this.ledgerGet(u.no); if (r) { Object.assign(r, u); this.sql.exec('UPDATE ledger SET json=? WHERE no=?', JSON.stringify(r), u.no) } }
+    db.$ledger = []; db.$ledgerUpd = []; db.$ledgerReset = false;
     for (const a of db.$audit || []) { this.sql.exec('INSERT INTO audit(json) VALUES(?)', JSON.stringify(a)); db.audit.unshift(a) }
     for (const n of db.$notify || []) { this.saveNotif(n, true); db.notifications.unshift(n) }
     db.audit.length = Math.min(db.audit.length, KEEP); db.notifications.length = Math.min(db.notifications.length, KEEP);
   }
+  ledgerGet(no) { const r = this.sql.exec('SELECT json FROM ledger WHERE no=?', no).toArray()[0]; return r ? JSON.parse(r.json) : null }
   saveNotif(n, insert) {
     if (insert) { const m = this.sql.exec('SELECT COALESCE(MAX(n),0)+1 AS m FROM notif').one().m; n._n = m; this.sql.exec('INSERT INTO notif(id,n,json) VALUES(?,?,?)', n.id, m, JSON.stringify(n)) }
     else this.sql.exec('UPDATE notif SET json=? WHERE id=?', JSON.stringify(n), n.id);
   }
   /* รันคำสั่งแบบ all-or-nothing: ถ้าผิดพลาดกลางทาง ทิ้งสถานะในหน่วยความจำแล้วโหลดใหม่จาก SQLite */
   async run(actor, fn) {
-    const db = await this.load(); db.$actor = actor; db.$audit = []; db.$notify = [];
+    const db = await this.load(); db.$actor = actor; db.$audit = []; db.$notify = []; db.$ledger = []; db.$ledgerUpd = []; db.$ledgerReset = false;
     try {
       const out = await fn(db);
       if (db.$actor) { const a = db.$actor; db.$actor = { id: '-', name: 'ระบบ', role: 'system' }; try { reserveTick(db) } catch (e) { console.error('reserveTick', e) } finally { db.$actor = a } } // ไกด์สำรอง: หมดเวลา/ส่งคำขอคนถัดไป
+      if (db.acct?.on) try { ledgerSync(db) } catch (e) { console.error('ledgerSync', e) } // สมุดรายวัน: ลงรายการจากการจองอัตโนมัติ
       this.persist(); const pending = db.$notify; db.$audit = []; db.$notify = [];
       if (pending.length) this.ctx.waitUntil(this.deliver(pending));
       return out;
@@ -223,9 +231,18 @@ export class Engine extends DurableObject {
           }
           return json(this.esq.v);
         }
+        if (path === '/api/admin/ledger') { // สมุดรายวัน: ค้นตามช่วงวันที่ / ประเภท / รหัสจอง
+          if (!PERM.acctView.includes(actor.role)) return json({ error: 'ไม่มีสิทธิ์' }, 403);
+          const p = await req.json().catch(() => ({})), d = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null;
+          const types = Array.isArray(p.types) ? p.types.map(String) : [], q = String(p.q || '').trim().toLowerCase();
+          let rows = this.sql.exec('SELECT json FROM ledger WHERE date>=? AND date<=? ORDER BY n DESC LIMIT 5000', d(p.from) || '0000-01-01', d(p.to) || '9999-12-31').toArray().map(r => JSON.parse(r.json));
+          if (types.length) rows = rows.filter(r => types.includes(r.type));
+          if (q) rows = rows.filter(r => [r.no, r.ref, r.desc, r.by, r.cat, r.party, r.note].some(x => String(x || '').toLowerCase().includes(q)));
+          return json({ rows: rows.slice(0, +p.limit > 0 ? Math.min(+p.limit, 5000) : 2000), total: rows.length });
+        }
         const name = path.slice(11), fn = adminActions[name]; if (!fn || req.method !== 'POST') return json({ error: 'not found' }, 404);
         const p = await req.json().catch(() => ({}));
-        const out = await this.run(actor, db => fn(db, p, { hash: hashPw, verify: verifyPw }));
+        const out = await this.run(actor, db => fn(db, p, { hash: hashPw, verify: verifyPw, ledgerGet: no => this.ledgerGet(no) }));
         const db = await this.load(); return json({ ...out, state: this.stateFor(db, actor) });
       }
       if (path === '/internal/can') { // worker ถามสิทธิ์ก่อนอัปโหลดรูป

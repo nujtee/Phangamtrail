@@ -231,6 +231,13 @@ body.mob .savebar{bottom:calc(76px + env(safe-area-inset-bottom))}
 .login{max-width:420px;margin:30px auto}
 .demo-acc button{margin:3px}
 .slipimg{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+/* บัญชี: กระเป๋าเงิน / สมุดรายวัน */
+.walbank{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px}@media(max-width:700px){.walbank{grid-template-columns:1fr}}
+.walbank .stat .v{font-size:30px}.wals{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}.wal .v{font-size:21px}
+.rule{border-radius:14px;padding:14px;display:flex;align-items:center;font-size:15px}.rule.ok{background:#eef7f0;color:#1d6b3a;border:1px solid #cfe6d6}.rule.bad{background:var(--redbg);color:var(--red);border:1px solid #f0c9c4}
+.lchs{display:flex;flex-wrap:wrap;gap:4px}.lch{font-size:12px;padding:2px 8px;border-radius:999px;white-space:nowrap;border:1px solid var(--line)}.lch.up{background:#eef7f0;color:#1d6b3a;border-color:#cfe6d6}.lch.dn{background:#fff5f3;color:#a3362a;border-color:#f3d3cd}
+tr.lrv td{opacity:.55}tr.lrv .ldesc{text-decoration:line-through}.ldesc{min-width:190px}.lact{white-space:nowrap}.lact .btn{margin:2px 0 2px 4px}
+.todo{display:flex;flex-direction:column;gap:8px}.todo a{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:inherit;background:#fff}.todo a:hover{border-color:var(--g2)}
 </style>
 </head>
 <body>
@@ -283,14 +290,14 @@ function promptpayPayload(id,amount){
 
 /* ========== roles & pages ========== */
 const ROLES={
-  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','village','notifications','users','settings','audit','me']},
-  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','accounting','payouts','payments','village','notifications','settings','audit','me']},
-  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','accounting','payouts','payments','village','audit','me']},
+  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','fin','accounting','journal','payouts','park','expense','payments','village','notifications','users','settings','audit','me']},
+  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','fin','accounting','journal','payouts','park','expense','payments','village','notifications','settings','audit','me']},
+  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','fin','accounting','journal','payouts','park','expense','payments','village','audit','me']},
   guidemgr:{label:'ผู้จัดการไกด์',pages:['today','dashboard','calendar','bookings','guides','notifications','audit','me']},
   staff:{label:'เจ้าหน้าที่ประสานงาน',pages:['dashboard','calendar','content','bookings','guides','notifications','me']},
   guide:{label:'ไกด์',pages:['today','mytrips','inbox','earn','me']}
 };
-const PAGES={inbox:'🔔 แจ้งเตือน',village:'🏘️ บัญชีหมู่บ้าน',today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
+const PAGES={fin:'📊 ภาพรวมการเงิน',journal:'📒 สมุดรายวัน',park:'🌲 นำส่งอุทยาน',expense:'🧾 รายจ่าย/รายรับอื่น',inbox:'🔔 แจ้งเตือน',village:'🏘️ บัญชีหมู่บ้าน',today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
 const PERM={
   confirmPay:['superadmin','admin','finance'],
   assign:['superadmin','admin','guidemgr','staff'],
@@ -301,6 +308,7 @@ const PERM={
   payoutUndo:['superadmin'],
   editGuides:['superadmin','admin','guidemgr','staff'],
   payments:['superadmin','admin','finance'],
+  acctView:['superadmin','admin','finance'],acctPost:['superadmin','admin','finance'],acctSetup:['superadmin','finance'],acctRev:['superadmin'],
 };
 const me=()=>DB?.me||null;
 const can=a=>{const u=me();return !!u&&PERM[a].includes(u.role)};
@@ -646,11 +654,11 @@ function renderAdmin(sub){
   const u=me();if(!u)return renderLogin();
   const pages=ROLES[u.role].pages;if(sub&&pages.includes(sub))page=sub;if(!pages.includes(page))page=pages[0];
   /* เมนูรวมกลุ่ม: แสดงรายการเดียวในเมนูซ้าย + แท็บย่อยด้านบนหน้า */
-  const GROUPS=[{label:'💰 บัญชี',pages:['accounting','payouts','payments','village']},{label:'⚙️ ตั้งค่า',pages:['settings','content']}]
+  const GROUPS=[{label:'💰 บัญชี',pages:['fin','accounting','journal','payouts','park','expense','payments','village']},{label:'⚙️ ตั้งค่า',pages:['settings','content']}]
     .map(g=>({...g,inn:g.pages.filter(p=>pages.includes(p))})).filter(g=>g.inn.length>1);
   const grpOf=p=>GROUPS.find(g=>g.inn.includes(p)),cur=grpOf(page);
   const accBar=cur?`<div class="tabs" style="margin-bottom:14px;display:inline-flex;max-width:100%;overflow-x:auto">${cur.inn.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="text-decoration:none;padding:7px 14px">${PAGES[p]}</a>`).join('')}</div>`:'';
-  const body=accBar+{village:pVillage,inbox:pInbox,today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
+  const body=accBar+{village:pVillage,inbox:pInbox,today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,fin:pFin,journal:pJournal,park:pPark,expense:pExpense,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
    ${pages.filter(p=>{const g=grpOf(p);return !g||p===g.inn[0]}).map(p=>{const g=grpOf(p);return g?`<a href="#admin-${g.inn[0]}" class="${g===cur?'on':''}">${g.label}</a>`:`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`}).join('')}
    <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>
@@ -944,6 +952,217 @@ function pPayouts(){
   <div class="card"><h3>Log การยืนยันจ่ายเงิน</h3>${logs.length?`<div class="tbl-wrap"><table><tr><th>เวลา</th><th>ผู้ดูแลระบบ</th><th>รายละเอียด</th></tr>${logs.map(a=>`<tr><td class="sm">${fmtDT(a.at)}</td><td><b>${esc(a.userName)}</b></td><td class="sm">${esc(a.detail)}</td></tr>`).join('')}</table></div>`:'<div class="empty">ยังไม่มี</div>'}</div>`;
 }
 
+/* ========== บัญชี: สมุดรายวัน — ภาพรวมการเงิน · สมุดรายวัน · นำส่งอุทยาน · รายจ่าย/รายรับอื่น ========== */
+const WALS=[['bank','🏦','เงินในบัญชีธนาคาร','ธนาคาร','เงินที่ควรอยู่ในบัญชีรับชำระตอนนี้'],['dep','⏳','เงินรับล่วงหน้า','รับล่วงหน้า','ลูกค้าจ่ายแล้ว ยังไม่ถึงวันเดิน'],['gd','🧭','ค้างจ่ายไกด์','ค้างจ่ายไกด์','ค่าไกด์ของงานที่จบแล้ว'],['vil','🏘️','ค้างโอนหมู่บ้าน','ค้างโอนหมู่บ้าน','ส่วนกลางหมู่บ้านที่ยังไม่โอน'],['park','🌲','ค้างนำส่งอุทยาน','ค้างนำส่งอุทยาน','ส่วนอุทยาน + ค่าเข้า + ค่ารถ ที่ยังไม่ส่ง'],['ref','↩️','ค้างคืนลูกค้า','ค้างคืนลูกค้า','อนุมัติคืนแล้ว ยังไม่ได้โอน (ใช้ในระยะที่ 2)'],['fund','💼','กองทุนดำเนินงาน','กองทุน','เงินของกลุ่ม ไว้จ่ายค่าใช้จ่ายส่วนกลาง']];
+const WSH=Object.fromEntries(WALS.map(w=>[w[0],w[3]]));
+const LTYPE={open:'ยอดยกมา',pay:'รับชำระ',done:'จบงาน/แบ่งเงิน',gpay:'จ่ายไกด์',vpay:'โอนหมู่บ้าน',ppay:'นำส่งอุทยาน',hold:'ค่าอุทยาน → กองทุน',exp:'รายจ่ายอื่น',inc:'รายรับอื่น',rev:'กลับรายการ'};
+const LCLS={open:'b-blue',pay:'b-ok',done:'b-gray',gpay:'b-warn',vpay:'b-warn',ppay:'b-warn',hold:'b-gray',exp:'b-red',inc:'b-ok',rev:'b-gray'};
+const r2c=x=>Math.round((+x||0)*100)/100;
+const bt=n=>{n=r2c(n);return (n<0?'−':'')+'฿'+Math.abs(n).toLocaleString('th-TH',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})};
+const acS=()=>({start:'2026-12-01',bankLabel:'',cats:['ค่าธรรมเนียมธนาคาร','ค่าตรวจสลิป EasySlip','ค่าเว็บไซต์/ระบบ','อุปกรณ์/ปฐมพยาบาล','อบรมไกด์','อื่นๆ'],icats:['เงินบริจาค','ดอกเบี้ยธนาคาร','อื่นๆ'],signers:['ผู้จัดทำ','ผู้ตรวจสอบ','ประธาน'].map(role=>({role,name:'',pos:''})),...(DB.settings.acct||{})});
+const holdAmtC=b=>['noshow','paidcancel'].includes(b.trip)?(+b.entryTotal||0)+(+b.vehicleTotal||0):0;
+const parkWaitC=b=>holdAmtC(b)>0&&!b.phold;
+const parkDueC=b=>r2c((+b.split?.park||0)+(b.phold==='fund'?0:(+b.entryTotal||0)+(+b.vehicleTotal||0)));
+const parkOpenC=b=>b.status==='paid'&&isDone(b)&&!!b.lk?.done&&!b.ppay;
+const lchips=L=>WALS.filter(([k])=>+L?.[k]).map(([k])=>`<span class="lch ${L[k]>0?'up':'dn'}">${WSH[k]} ${L[k]>0?'+':'−'}${bt(Math.abs(L[k]))}</span>`).join('');
+const thMonth=ym=>new Date(ym+'-01T00:00:00').toLocaleDateString('th-TH',{month:'long',year:'numeric'});
+/* รายการในสมุดรายวันดึงจากเซิร์ฟเวอร์แยก (ไม่ส่งมากับข้อมูลหลัก) — แคชตามตัวกรอง โหลดใหม่เมื่อมีรายการเพิ่ม (acct.n เปลี่ยน) */
+let LG={};const LGI={};
+function lgFetch(key,q){const n=DB.acct?.n||0,c=LG[key];if(c&&c.n===n&&(c.rows||c.busy))return c.rows?c:null;
+  LG[key]={...(c||{}),busy:true,n};
+  post('/api/admin/ledger',q).then(r=>{(r.rows||[]).forEach(e=>LGI[e.no]=e);LG[key]={rows:r.ok?r.rows:[],total:r.total||0,n,err:r.ok?'':(r.error||'โหลดไม่สำเร็จ')};
+    if(!DIRTY&&!document.getElementById('modal').classList.contains('show'))render()});
+  return c&&c.rows?c:null}
+const notOn=t=>`<h2>${t}</h2><div class="card"><b>ยังไม่ได้เปิดใช้สมุดบัญชี</b><p class="sm mut">หน้านี้ใช้ได้หลังเปิดใช้สมุดบัญชี</p><a class="btn sm" href="#admin-fin">ไปหน้าภาพรวมการเงิน →</a></div>`;
+const walletGuide=()=>`<div class="card"><h3>กระเป๋าเงิน 7 ใบที่ระบบติดตาม</h3><p class="sm mut" style="margin-top:-4px">กฎข้อเดียว: <b>เงินในธนาคารตามระบบ = ผลรวมกระเป๋า 2–7 เสมอ</b> ถ้าไม่ตรงแปลว่ามีรายการที่ยังไม่ได้บันทึก</p>
+  <div class="tbl-wrap"><table><tr><th>#</th><th>กระเป๋า</th><th>ความหมาย</th></tr>${WALS.map(([k,i,l,,d],x)=>`<tr><td>${x+1}</td><td>${i} <b>${l}</b></td><td class="sm">${d}</td></tr>`).join('')}</table></div></div>`;
+function finCheck(A){const B=A.bal||{},done=DB.bookings.filter(b=>b.status==='paid'&&isDone(b));
+  const exp={dep:DB.bookings.filter(b=>b.status==='paid'&&!isDone(b)).reduce((s,b)=>s+(+b.total||0),0),
+    gd:done.reduce((s,b)=>s+gSlots(b).filter(x=>x.gid&&!x.po.paid).reduce((a,x)=>a+x.amt,0),0),
+    vil:done.reduce((s,b)=>s+(b.vpay?.paid?0:+b.split?.village||0),0),
+    park:DB.bookings.filter(parkOpenC).reduce((s,b)=>s+parkDueC(b),0)+(+A.openPark||0)};
+  return Object.entries(exp).filter(([k,v])=>Math.abs(r2c(v)-r2c(B[k]))>=.01).map(([k,v])=>({k,sys:B[k]||0,exp:r2c(v)}))}
+const lrow=e=>{const rv=e.revBy,canRev=can('acctRev')&&!e.auto&&!rv&&['exp','inc','ppay'].includes(e.type);
+  return `<tr class="${rv?'lrv':''}"><td class="sm" style="white-space:nowrap"><b>${esc(e.no)}</b><div>${fmtDateS(e.date)}</div><div class="mut">${esc(e.by)}<br>${fmtDT(e.at)}</div></td>
+  <td><span class="badge ${LCLS[e.type]||'b-gray'}">${LTYPE[e.type]||esc(e.type)}</span>${e.auto?' <span class="sm mut">อัตโนมัติ</span>':''}<div class="ldesc">${esc(e.desc)}</div>${e.ref?`<div class="sm mut">อ้างอิง ${esc(e.ref)}</div>`:''}${e.note?`<div class="sm mut">${esc(e.note)}</div>`:''}${rv?`<div class="sm" style="color:var(--red)">กลับรายการแล้ว → ${esc(rv)}${e.revReason?' · '+esc(e.revReason):''}</div>`:''}</td>
+  <td><div class="lchs">${lchips(e.lines)}</div></td>
+  <td class="lact">${e.proof?`<a class="btn ghost sm" href="${esc(e.proof)}" target="_blank" rel="noopener">📎 หลักฐาน</a>`:''}${canRev?`<button class="btn ghost sm" data-act="lrev" data-no="${esc(e.no)}">กลับรายการ</button>`:''}</td></tr>`};
+const ltable=(rows,empty)=>`<div class="tbl-wrap"><table><tr><th>เลขที่ / ผู้บันทึก</th><th>รายการ</th><th>กระเป๋าที่เปลี่ยน</th><th></th></tr>${rows.map(lrow).join('')||`<tr><td colspan="4" class="empty">${empty||'ไม่มีรายการ'}</td></tr>`}</table></div>`;
+const bankFlow=rows=>{let i=0,o=0;rows.forEach(e=>{if(e.type==='open')return;const v=+e.lines?.bank||0;if(v>0)i+=v;else o-=v});return {i:r2c(i),o:r2c(o)}}; // ไม่นับยอดยกมา
+
+function pFin(){const A=DB.acct||{on:false},S=acS(),t=today();
+  const setBtn=can('acctSetup')?`<button class="btn ghost sm" data-act="fset">⚙️ ตั้งค่าบัญชี</button>`:'';
+  if(!A.on){const pv=A.preview||{},days=Math.round((new Date(S.start+'T00:00:00')-new Date(t+'T00:00:00'))/864e5),ready=days<=0;
+    return `<div class="hd"><h2>ภาพรวมการเงิน</h2><div class="row" style="gap:6px">${setBtn}</div></div>
+    <div class="card"><h3>📒 ยังไม่ได้เปิดใช้สมุดบัญชี</h3>
+     <p style="margin-top:0">วันเริ่มใช้: <b>${fmtDate(S.start)}</b> ${ready?'<span class="badge b-ok">เปิดใช้ได้แล้ว</span>':`<span class="badge b-blue">อีก ${days} วัน</span>`}</p>
+     <p class="sm mut">เมื่อเปิดใช้ ระบบจะลงสมุดรายวันให้เองทุกครั้งที่ยืนยันรับเงิน จบงาน จ่ายไกด์ และโอนหมู่บ้าน — ทุกหน้าที่ใช้อยู่ตอนนี้ทำงานเหมือนเดิม</p>
+     <h4 style="margin:14px 0 6px">ยอดยกมาที่ระบบคำนวณจากการจองตอนนี้</h4>
+     <div class="tbl-wrap"><table>
+      <tr><td>⏳ เงินรับล่วงหน้า<div class="sm mut">ชำระแล้ว ${pv.paid-pv.done||0} รายการ ยังไม่ถึงวันเดิน</div></td><td class="num"><b>${bt(pv.dep)}</b></td></tr>
+      <tr><td>🧭 ค้างจ่ายไกด์<div class="sm mut">ตรงกับหน้าเบิกจ่าย</div></td><td class="num"><b>${bt(pv.gd)}</b></td></tr>
+      <tr><td>🏘️ ค้างโอนหมู่บ้าน</td><td class="num"><b>${bt(pv.vil)}</b></td></tr>
+      <tr><td>🏦 เงินในบัญชีธนาคาร · 🌲 ค่าอุทยานที่ยังไม่ได้นำส่ง</td><td class="num mut">กรอกตอนกดเปิดใช้</td></tr></table></div>
+     <div class="mact" style="justify-content:flex-start">${can('acctSetup')?(ready?`<button class="btn" data-act="fopen">เปิดใช้สมุดบัญชี</button>`:`<button class="btn" disabled>เปิดใช้ได้ตั้งแต่ ${fmtDateS(S.start)}</button>`):'<span class="sm mut">ผู้ดูแลระบบสูงสุด หรือเจ้าหน้าที่บัญชี/การเงิน เป็นผู้กดเปิดใช้</span>'}</div></div>
+    ${walletGuide()}`}
+  const B=A.bal||{},sumO=r2c(WALS.slice(1).reduce((s,[k])=>s+(+B[k]||0),0)),okRule=Math.abs((+B.bank||0)-sumO)<.01,chk=finCheck(A);
+  const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid'),gU=payItems(done,'unpaid'),vU=vilRows('unpaid')[0];
+  const po=DB.bookings.filter(parkOpenC),wait=po.filter(parkWaitC),pReady=r2c(po.filter(b=>!parkWaitC(b)).reduce((s,b)=>s+parkDueC(b),0)+(+A.openPark||0));
+  const mr=monthRange(t),M=lgFetch('m|'+mr[0],{from:mr[0],to:mr[1]}),RC=lgFetch('recent',{limit:8}),fl=M?bankFlow(M.rows):null;
+  const todo=[gU.length?[`🧭 จ่ายค่าไกด์ ${gU.length} รายการ`,gU.reduce((s,i)=>s+i._amt,0),'payouts']:null,vU?[`🏘️ โอนส่วนกลางหมู่บ้าน ${vU.n} กลุ่ม`,vU.amt,'payouts']:null,
+    pReady>0?['🌲 นำส่งเงินให้อุทยาน',pReady,'park']:null,wait.length?[`❓ รอถามอุทยาน ${wait.length} กลุ่ม (ลูกค้าไม่มา/ยกเลิก)`,wait.reduce((s,b)=>s+holdAmtC(b),0),'park']:null].filter(Boolean);
+  const wc=([k,i,l,,d])=>`<div class="stat wal"><div class="k">${i} ${l}</div><div class="v"${+B[k]<0?' style="color:var(--red)"':''}>${bt(B[k])}</div><div class="s">${d}</div></div>`;
+  return `<div class="hd"><h2>ภาพรวมการเงิน</h2><div class="row" style="gap:6px">${can('acctPost')?'<a class="btn ghost sm" href="#admin-expense">🧾 รายจ่าย/รายรับอื่น</a>':''}${setBtn}</div></div>
+  <div class="walbank">${wc(WALS[0])}<div class="rule ${okRule?'ok':'bad'}"><div><b>${okRule?'✓ สมดุล':'⚠️ ไม่สมดุล'}</b><div class="sm">เงินในธนาคาร = ผลรวมกระเป๋า 2–7 (${bt(sumO)})</div>${chk.length?'':'<div class="sm">ยอดค้างตรงกับหน้าเบิกจ่ายและรายการจอง</div>'}</div></div></div>
+  ${chk.length?`<div class="rwarn" style="margin-bottom:12px">⚠️ ยอดในสมุดไม่ตรงกับรายการจอง: ${chk.map(c=>`${WSH[c.k]} ในสมุด ${bt(c.sys)} · ตามรายการจอง ${bt(c.exp)}`).join(' — ')}</div>`:''}
+  <div class="wals">${WALS.slice(1).map(wc).join('')}</div>
+  <div class="grid2" style="margin-bottom:16px;align-items:start">
+   <div class="card" style="margin:0"><h3>สิ่งที่ต้องทำ</h3>${todo.length?`<div class="todo">${todo.map(([l,a,p])=>`<a href="#admin-${p}"><span>${l}</span><b>${bt(a)} →</b></a>`).join('')}</div>`:'<div class="empty">ไม่มียอดค้าง 🎉</div>'}</div>
+   <div class="card" style="margin:0"><h3>เดือนนี้ (${thMonth(t.slice(0,7))})</h3>${fl?`<div class="grid2"><div><div class="sm mut">เงินเข้าบัญชี</div><div style="font-size:20px;font-weight:700;color:#1d6b3a">${bt(fl.i)}</div></div><div><div class="sm mut">เงินออกจากบัญชี</div><div style="font-size:20px;font-weight:700;color:#a3362a">${bt(fl.o)}</div></div></div><div class="sm mut" style="margin-top:6px">${M.rows.length} รายการในสมุดรายวัน · สุทธิ ${bt(fl.i-fl.o)}</div>`:'<div class="empty">กำลังโหลด…</div>'}</div></div>
+  <div class="card"><div class="hd"><h3>รายการล่าสุด</h3><a class="btn ghost sm" href="#admin-journal">เปิดสมุดรายวัน →</a></div>${RC?ltable(RC.rows):'<div class="empty">กำลังโหลด…</div>'}</div>
+  <p class="sm mut">เปิดใช้สมุดบัญชีเมื่อ ${fmtDT(A.openAt)} · ยอดยกมา ${esc(A.openNo||'')}${A.openPark>0?` · ค่าอุทยานยกมาที่ยังไม่นำส่ง ${bt(A.openPark)}`:''}${can('acctRev')?` · <a href="#admin-fin" data-act="freset" style="color:var(--red)">ล้างสมุดบัญชี (ช่วงทดลอง)</a>`:''}</p>`}
+
+let jr={preset:'month',from:'',to:'',type:'',q:''};
+function jrRange(){const t=today();if(jr.preset==='month')return monthRange(t);if(jr.preset==='last'){const d=new Date(t+'T00:00:00');d.setDate(0);return monthRange(ymd(d))}if(jr.preset==='all')return['',''];return[jr.from||t,jr.to||t]}
+function jrData(){const r=jrRange(),q={from:r[0],to:r[1],types:jr.type?[jr.type]:[],q:jr.q};return {r,q,D:lgFetch('j|'+JSON.stringify(q),q)}}
+function pJournal(){const A=DB.acct||{};if(!A.on)return notOn('สมุดรายวัน');
+  const {r,D}=jrData(),rows=D?.rows,fl=rows?bankFlow(rows):null;
+  return `<div class="hd"><h2>สมุดรายวัน</h2><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="jrpdf">📄 ส่งออก PDF</button><button class="btn ghost sm" data-act="jrcsv">⬇ ดาวน์โหลด CSV</button></div></div>
+  <div class="card"><div class="row" style="flex-wrap:wrap;gap:8px"><div class="tabs">${[['month','เดือนนี้'],['last','เดือนก่อน'],['all','ทั้งหมด'],['custom','กำหนดเอง']].map(([k,l])=>`<button data-act="jrp" data-k="${k}" class="${jr.preset===k?'on':''}">${l}</button>`).join('')}</div>
+   ${jr.preset==='custom'?`<input type="date" style="width:auto" value="${jr.from||today()}" data-chg="jrfrom"> – <input type="date" style="width:auto" value="${jr.to||today()}" data-chg="jrto">`:''}
+   <select style="width:auto" data-chg="jrtype"><option value="">ทุกประเภท</option>${Object.entries(LTYPE).map(([k,l])=>`<option value="${k}"${jr.type===k?' selected':''}>${l}</option>`).join('')}</select>
+   <input type="search" style="width:auto;min-width:160px" placeholder="ค้นหา รหัสจอง / เลขที่" value="${esc(jr.q)}" data-chg="jrq"></div>
+   <p class="sm mut" style="margin:8px 0 0">รายการที่บันทึกแล้วลบไม่ได้ · ถ้าผิด ให้กลับรายการ (รายการเดิมยังเห็นแบบขีดฆ่า) · รายการ “อัตโนมัติ” ให้ยกเลิกที่ต้นทาง เช่น ยกเลิกการยืนยันจ่ายในหน้าเบิกจ่าย</p></div>
+  ${fl?`<div class="grid4" style="margin-bottom:16px"><div class="stat"><div class="k">จำนวนรายการ</div><div class="v">${rows.length}${D.total>rows.length?'+':''}</div><div class="s">${r[0]?vRange({from:r[0],to:r[1]}):'ทั้งหมด'}</div></div><div class="stat"><div class="k">เงินเข้าบัญชี</div><div class="v" style="color:#1d6b3a">${bt(fl.i)}</div></div><div class="stat"><div class="k">เงินออกจากบัญชี</div><div class="v" style="color:#a3362a">${bt(fl.o)}</div></div><div class="stat"><div class="k">ยอดธนาคารตามระบบตอนนี้</div><div class="v">${bt(A.bal?.bank)}</div></div></div>`:''}
+  <div class="card">${rows?ltable(rows,'ไม่มีรายการในช่วงนี้'):'<div class="empty">กำลังโหลด…</div>'}</div>`}
+
+let pk={from:'',to:'',open:true};
+function parkDays(L){const by={};L.forEach(b=>{const d=by[b.date]=by[b.date]||{date:b.date,n:0,ta:0,fa:0,cars:0,motos:0,svc:0,entry:0,veh:0,tot:0},nf=b.phold==='fund';
+  d.n++;d.svc+=+b.split?.park||0;if(!nf){d.ta+=+b.pax?.ta||0;d.fa+=+b.pax?.fa||0;d.cars+=+b.vehicles||0;d.motos+=+b.motos||0;d.entry+=+b.entryTotal||0;d.veh+=+b.vehicleTotal||0}d.tot=r2c(d.svc+d.entry+d.veh)});
+  return Object.values(by).sort((a,b)=>a.date.localeCompare(b.date))}
+const pkSum=D=>['n','ta','fa','cars','motos','svc','entry','veh','tot'].reduce((o,k)=>(o[k]=r2c(D.reduce((s,d)=>s+d[k],0)),o),{});
+function pkSel(){const A=DB.acct||{},L=DB.bookings.filter(b=>parkOpenC(b)&&!parkWaitC(b)&&(!pk.from||b.date>=pk.from)&&(!pk.to||b.date<=pk.to)),D=parkDays(L),lump=pk.open?r2c(A.openPark||0):0;
+  return {L,D,S:pkSum(D),lump,tot:r2c(pkSum(D).tot+lump)}}
+const pkTable=(D,S,lump,print)=>{const c=print?'n':'num';return `<table><thead><tr><th>วันที่เดินป่า</th><th class="${c}">กลุ่ม</th><th class="${c}">คนไทย</th><th class="${c}">ต่างชาติ</th><th class="${c}">รถยนต์</th><th class="${c}">จยย.</th><th class="${c}">ส่วนอุทยาน</th><th class="${c}">ค่าเข้า</th><th class="${c}">ค่ารถ</th><th class="${c}">รวม</th></tr></thead><tbody>
+  ${D.map(d=>`<tr><td>${print?fmtDate(d.date):fmtDateS(d.date)}</td><td class="${c}">${d.n}</td><td class="${c}">${d.ta}</td><td class="${c}">${d.fa}</td><td class="${c}">${d.cars}</td><td class="${c}">${d.motos}</td><td class="${c}">${bt(d.svc)}</td><td class="${c}">${bt(d.entry)}</td><td class="${c}">${bt(d.veh)}</td><td class="${c}"><b>${bt(d.tot)}</b></td></tr>`).join('')}
+  ${lump?`<tr><td colspan="9">ยอดยกมา (ค่าอุทยานที่เก็บไว้ก่อนเปิดใช้สมุดบัญชี)</td><td class="${c}"><b>${bt(lump)}</b></td></tr>`:''}
+  ${D.length||lump?'':`<tr><td colspan="10" class="empty">ไม่มียอดค้างนำส่งในช่วงนี้</td></tr>`}</tbody>
+  <tfoot><tr><td>รวม</td><td class="${c}">${S.n}</td><td class="${c}">${S.ta}</td><td class="${c}">${S.fa}</td><td class="${c}">${S.cars}</td><td class="${c}">${S.motos}</td><td class="${c}">${bt(S.svc)}</td><td class="${c}">${bt(S.entry)}</td><td class="${c}">${bt(S.veh)}</td><td class="${c}">${bt(S.tot+lump)}</td></tr></tfoot></table>`};
+function parkCover(D,S,lump,info){const g=+DB.settings.split?.park||0;
+  printDoc('ใบปะหน้านำส่งเงินอุทยาน ผาแง่ม',`<h1>ใบปะหน้าการนำส่งเงินให้อุทยานแห่งชาติ — ผาแง่ม Trail</h1><div class="sub">${info.no?`เลขที่รายการ ${esc(info.no)} · `:''}${info.date?`วันที่นำส่ง ${fmtDate(info.date)}`:'ร่าง (ยังไม่ได้บันทึกนำส่ง)'}${info.ref?` · ใบเสร็จอุทยานเลขที่ ${esc(info.ref)}`:''}</div>
+  <div class="info"><div>ช่วงวันเดินป่า: <b>${D.length?vRange({from:D[0].date,to:D[D.length-1].date}):'-'}</b></div><div>จำนวน: <b>${S.n} กลุ่ม · คนไทย ${S.ta} · ต่างชาติ ${S.fa} คน · รถยนต์ ${S.cars} · จยย. ${S.motos} คัน</b></div>
+  <div>ส่วนอุทยานจากค่าบริการ: <b>${bt(S.svc)}</b> (${S.n} กลุ่ม × ${bt(g)})</div><div>ค่าเข้าอุทยาน ${bt(S.entry)} · ค่ารถ ${bt(S.veh)}</div><div style="grid-column:1/-1;font-size:15px">ยอดนำส่งรวม: <b>${bt(S.tot+lump)}</b></div></div>
+  ${pkTable(D,S,lump,true)}<div class="sig" style="--c:2"><div>ผู้นำส่ง<br><br>(${esc(info.by||me()?.name||'')})</div><div>ผู้รับเงิน (เจ้าหน้าที่อุทยาน)<br><br>(.............................................)</div></div>`)}
+function pPark(){const A=DB.acct||{};if(!A.on)return notOn('นำส่งอุทยาน');
+  const {D,S,lump,tot}=pkSel(),po=DB.bookings.filter(parkOpenC).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)),wait=po.filter(parkWaitC),dec=po.filter(b=>b.phold&&holdAmtC(b)>0),PR=A.pr||[];
+  const hrow=b=>`<tr><td>${fmtDateS(b.date)} ${b.time}<div class="sm mut">${esc(b.code)}</div></td><td>${trB(b)}</td><td class="num">${b.people} คน${vehText(b)?`<div class="sm mut">${vehText(b)}</div>`:''}</td><td class="num"><b>${bt(holdAmtC(b))}</b><div class="sm mut">ค่าเข้า ${bt(b.entryTotal)} · ค่ารถ ${bt(b.vehicleTotal||0)}</div></td>
+   <td>${b.phold?`${badge(b.phold==='park'?['นำส่งตามปกติ','b-blue']:['ไม่ต้องนำส่ง → กองทุน','b-gray'])}<div class="sm mut">โดย ${esc(b.pholdBy||'')}</div>${can('acctRev')?`<button class="btn ghost sm" data-act="pholdundo" data-id="${b.id}">ยกเลิก</button>`:''}`
+     :can('acctPost')?`<div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="phold" data-id="${b.id}" data-to="park">อุทยานเก็บ → นำส่ง</button><button class="btn ghost sm" data-act="phold" data-id="${b.id}" data-to="fund">อุทยานไม่เก็บ → กองทุน</button></div>`:badge(['รอถามอุทยาน','b-warn'])}</td></tr>`;
+  return `<div class="hd"><h2>นำส่งเงินให้อุทยาน</h2><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="pkcover">🖨 ใบปะหน้า (ร่าง)</button></div></div>
+  <div class="card"><div class="hd"><h3>ยอดค้างนำส่ง</h3><b style="font-size:20px">${bt(tot)}</b></div>
+   <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px"><span class="sm">วันที่เดินป่า</span><input type="date" style="width:auto" value="${pk.from}" data-chg="pkfrom"> – <input type="date" style="width:auto" value="${pk.to}" data-chg="pkto">${pk.from||pk.to?'<button class="btn ghost sm" data-act="pkclr">ทั้งหมด</button>':''}
+    ${A.openPark>0?`<label class="sm" style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" style="width:auto" data-act="pkopen" ${pk.open?'checked':''}> รวมยอดยกมา ${bt(A.openPark)}</label>`:''}</div>
+   <div class="tbl-wrap">${pkTable(D,S,lump)}</div>
+   <p class="sm mut">นับเฉพาะงานที่จบแล้วหลังเปิดใช้สมุดบัญชี · ส่วนอุทยานจากค่าบริการ ${bt(DB.settings.split?.park)} ต่อกลุ่ม + ค่าเข้าอุทยาน + ค่ารถ</p>
+   ${can('acctPost')?`<div class="mact" style="justify-content:flex-start"><button class="btn" data-act="pkpay"${tot>0?'':' disabled'}>บันทึกนำส่งอุทยาน ${tot>0?bt(tot):''}</button></div>`:''}</div>
+  <div class="card"><h3>❓ รอถามอุทยาน — ลูกค้าไม่มา / ยกเลิกหลังชำระ ${wait.length?`<span class="badge b-warn">${wait.length}</span>`:''}</h3>
+   <p class="sm mut" style="margin-top:-4px">ค่าเข้าและค่ารถของคนที่ไม่ได้เข้าอุทยานพักไว้ก่อน (ส่วนอุทยานจากค่าบริการยังนำส่งตามปกติ) ถามอุทยานแล้วเลือกว่าต้องนำส่งหรือไม่</p>
+   <div class="tbl-wrap"><table><tr><th>วันที่/รหัส</th><th>สถานะ</th><th class="num">คน/รถ</th><th class="num">ค่าเข้า + ค่ารถ</th><th></th></tr>${[...wait,...dec].map(hrow).join('')||'<tr><td colspan="5" class="empty">ไม่มีรายการ</td></tr>'}</table></div></div>
+  <div class="card"><h3>ประวัติการนำส่ง</h3><div class="tbl-wrap"><table><tr><th>เลขที่/วันที่</th><th>รายละเอียด</th><th class="num">ยอด</th><th>ผู้บันทึก</th><th></th></tr>
+   ${PR.map(r=>`<tr class="${r.rev?'lrv':''}"><td class="sm"><b>${esc(r.no)}</b><div class="mut">${fmtDate(r.date)}</div></td><td class="sm"><div class="ldesc">${r.n} กลุ่ม${r.from?` · เดิน ${vRange({from:r.from,to:r.to})}`:''}${r.open?` · ยอดยกมา ${bt(r.open)}`:''}</div>${r.ref?`ใบเสร็จ ${esc(r.ref)}`:''}${r.rev?`<div style="color:var(--red)">กลับรายการแล้ว → ${esc(r.rev)}</div>`:''}</td><td class="num"><b>${bt(r.amt)}</b></td><td class="sm">${esc(r.by)}<div class="mut">${fmtDT(r.at)}</div></td>
+    <td class="lact">${r.proof?`<a class="btn ghost sm" href="${esc(r.proof)}" target="_blank" rel="noopener">📎</a>`:''}${r.rev?'':`<button class="btn ghost sm" data-act="pkcov" data-no="${esc(r.no)}">🖨 ใบปะหน้า</button>${can('acctRev')?`<button class="btn ghost sm" data-act="lrev" data-no="${esc(r.no)}">กลับรายการ</button>`:''}`}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">ยังไม่มี</td></tr>'}</table></div></div>`}
+
+let ex={m:''};
+function pExpense(){const A=DB.acct||{};if(!A.on)return notOn('รายจ่าย/รายรับอื่น');
+  if(!ex.m)ex.m=today().slice(0,7);const [from,to]=monthRange(ex.m+'-01'),D=lgFetch('x|'+ex.m,{from,to,types:['exp','inc']}),rows=D?.rows;
+  const live=(rows||[]).filter(e=>!e.revBy),E=live.filter(e=>e.type==='exp'),I=live.filter(e=>e.type==='inc'),amt=e=>Math.abs(+e.lines?.bank||0),sum=L=>r2c(L.reduce((s,e)=>s+amt(e),0));
+  const by={};E.forEach(e=>by[e.cat||'อื่นๆ']=r2c((by[e.cat||'อื่นๆ']||0)+amt(e)));const fromV=sum(E.filter(e=>e.meta?.from==='vil'));
+  return `<div class="hd"><h2>รายจ่าย / รายรับอื่น</h2><div class="row" style="gap:6px">${can('acctPost')?'<button class="btn sm" data-act="exadd" data-k="exp">+ บันทึกรายจ่าย</button><button class="btn ghost sm" data-act="exadd" data-k="inc">+ บันทึกรายรับ</button>':''}</div></div>
+  <div class="card"><div class="row" style="gap:8px;align-items:center"><button class="btn ghost sm" data-act="exm" data-d="-1">‹</button><b style="min-width:150px;text-align:center">${thMonth(ex.m)}</b><button class="btn ghost sm" data-act="exm" data-d="1"${ex.m>=today().slice(0,7)?' disabled':''}>›</button></div></div>
+  ${rows?`<div class="grid4" style="margin-bottom:16px"><div class="stat"><div class="k">รายจ่ายอื่นเดือนนี้</div><div class="v" style="color:#a3362a">${bt(sum(E))}</div><div class="s">${E.length} รายการ${fromV?` · จากส่วนกลางหมู่บ้าน ${bt(fromV)}`:''}</div></div>
+   <div class="stat"><div class="k">รายรับอื่นเดือนนี้</div><div class="v" style="color:#1d6b3a">${bt(sum(I))}</div><div class="s">${I.length} รายการ</div></div>
+   <div class="stat"><div class="k">💼 กองทุนดำเนินงานคงเหลือ</div><div class="v">${bt(A.bal?.fund)}</div></div><div class="stat"><div class="k">🏘️ ค้างโอนหมู่บ้าน</div><div class="v">${bt(A.bal?.vil)}</div></div></div>
+   ${Object.keys(by).length?`<div class="card"><h3>รายจ่ายแยกหมวด</h3><div class="queue">${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<div class="qitem"><b>${esc(c)}</b> <span class="badge b-gray">${bt(v)}</span></div>`).join('')}</div></div>`:''}
+   <div class="card">${ltable(rows,'ยังไม่มีรายการในเดือนนี้')}</div>`:'<div class="card empty">กำลังโหลด…</div>'}`}
+
+const proofField=()=>`<div class="field"><label>หลักฐาน (รูปใบเสร็จ / สลิป)</label><input type="file" accept="image/*" data-acctup><input type="hidden" name="proof" value=""><div class="sm mut" id="acctupst">ถ่ายรูปหรือเลือกรูปจากเครื่อง (ไม่บังคับ)</div></div>`;
+const defBankLabel=()=>{const c=DB.settings.channels?.bank||{};return [c.bankName,c.accountName].filter(Boolean).join(' · ')};
+function acctSetForm(){const S=acS(),A=DB.acct||{};return `<h3>⚙️ ตั้งค่าบัญชี</h3><form data-form="fset">
+  <div class="grid2"><div class="field"><label>วันเริ่มใช้สมุดบัญชี</label><input type="date" name="start" value="${S.start}"${A.on?' disabled':''}>${A.on?`<div class="sm mut">เปิดใช้แล้วเมื่อ ${fmtDate(A.start)}</div>`:''}</div>
+  <div class="field"><label>บัญชีธนาคารรับชำระ (ชื่อที่แสดงในรายงาน)</label><input name="bankLabel" value="${esc(S.bankLabel||defBankLabel())}" placeholder="เช่น ธ.กรุงไทย · กลุ่มท่องเที่ยวผาแง่ม"></div></div>
+  <h4 style="margin:12px 0 6px">ผู้ลงชื่อท้ายรายงานการเงิน</h4>
+  ${S.signers.map((x,i)=>`<div class="grid2"><div class="field"><label>${esc(x.role)} — ชื่อ-นามสกุล</label><input name="sg${i}" value="${esc(x.name)}"></div><div class="field"><label>ตำแหน่ง</label><input name="sp${i}" value="${esc(x.pos)}" placeholder="${['เช่น เหรัญญิก','เช่น กรรมการตรวจสอบ','เช่น ประธานกลุ่ม'][i]}"></div></div>`).join('')}
+  <div class="grid2"><div class="field"><label>หมวดรายจ่าย (บรรทัดละ 1 หมวด)</label><textarea name="cats" rows="6">${esc(S.cats.join('\n'))}</textarea></div><div class="field"><label>หมวดรายรับอื่น (บรรทัดละ 1 หมวด)</label><textarea name="icats" rows="6">${esc(S.icats.join('\n'))}</textarea></div></div>
+  <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
+function acctOpenForm(){const pv=DB.acct?.preview||{};return `<h3>📒 เปิดใช้สมุดบัญชี</h3><form data-form="fopen">
+  <p class="sm" style="margin-top:0">ระบบใช้สถานะการจองตอนนี้เป็นยอดยกมา: รับล่วงหน้า <b>${bt(pv.dep)}</b> · ค้างจ่ายไกด์ <b>${bt(pv.gd)}</b> · ค้างโอนหมู่บ้าน <b>${bt(pv.vil)}</b></p>
+  <div class="field"><label>ยอดเงินในบัญชีธนาคารตอนนี้ (ตามแอปธนาคาร / statement) *</label><input name="bank" inputmode="decimal" required data-fopen placeholder="เช่น 25000"></div>
+  <div class="field"><label>ค่าอุทยานที่เก็บไว้แล้ว แต่ยังไม่ได้นำส่ง</label><input name="park" inputmode="decimal" value="0" data-fopen><div class="sm mut">ค่าอุทยานของงานที่จบแล้วทั้งหมดในระบบ ${bt(pv.parkAll)} — ยังไม่เคยนำส่งเลยให้ใส่ยอดนี้ · นำส่งครบแล้วใส่ 0</div></div>
+  <div class="field"><label>หมายเหตุ</label><input name="note"></div>
+  <div class="price" id="fopenpv" style="text-align:left;margin:0">กรอกยอดเงินในบัญชีธนาคาร แล้วระบบจะคำนวณกองทุนดำเนินงานให้</div>
+  <p class="sm mut">หลังเปิดใช้ รายการในสมุดลบไม่ได้ (บันทึกผิดใช้การกลับรายการ)</p>
+  <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">เปิดใช้สมุดบัญชี</button></div></form>`}
+function fopenPv(){const f=document.querySelector('form[data-form=fopen]'),el=document.getElementById('fopenpv');if(!f||!el)return;const pv=DB.acct?.preview||{},n=v=>+String(v||'').replace(/,/g,'');
+  const B=n(f.bank.value),P=n(f.park.value);if(f.bank.value===''||!Number.isFinite(B)){el.innerHTML='กรอกยอดเงินในบัญชีธนาคาร แล้วระบบจะคำนวณกองทุนดำเนินงานให้';return}
+  const F=r2c(B-pv.dep-pv.gd-pv.vil-(Number.isFinite(P)?P:0));
+  el.innerHTML=`💼 กองทุนดำเนินงาน (ส่วนที่เหลือเป็นของกลุ่ม) = <b${F<0?' style="color:var(--red)"':''}>${bt(F)}</b>${F<0?'<div class="sm" style="color:var(--red)">ติดลบ: ยอดในธนาคารน้อยกว่าเงินที่ต้องจ่ายผู้อื่น — ตรวจตัวเลขอีกครั้ง</div>':''}`}
+document.addEventListener('input',e=>{if(e.target.dataset?.fopen!==undefined)fopenPv()});
+function entryForm(kind){const S=acS(),A=DB.acct,exp=kind==='exp',cats=exp?S.cats:S.icats;
+  return `<h3>${exp?'🧾 บันทึกรายจ่ายอื่น':'💵 บันทึกรายรับอื่น'}</h3><form data-form="fentry" data-k="${kind}">
+  <div class="grid2"><div class="field"><label>วันที่ *</label><input type="date" name="date" value="${today()}" min="${A.start}" max="${today()}" required></div>
+  <div class="field"><label>จำนวนเงิน (บาท) *</label><input name="amt" inputmode="decimal" required placeholder="0.00"></div></div>
+  <div class="field"><label>หมวด *</label><select name="cat">${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+  <div class="field"><label>${exp?'จ่ายให้':'รับจาก'}</label><input name="party" placeholder="${exp?'เช่น ธนาคาร / ร้านค้า':'เช่น ชื่อผู้บริจาค'}"></div>
+  ${exp?`<div class="field"><label>จ่ายจากกระเป๋า *</label><div class="gtype"><label><input type="radio" name="from" value="fund" checked><span><b>💼 กองทุนดำเนินงาน</b><br><span class="sm mut">คงเหลือ ${bt(A.bal.fund)}</span></span></label><label><input type="radio" name="from" value="vil"><span><b>🏘️ ส่วนกลางหมู่บ้าน</b><br><span class="sm mut">ค้างโอนหมู่บ้าน ${bt(A.bal.vil)} — หักจากยอดที่ต้องโอนให้หมู่บ้าน</span></span></label></div></div>`:'<p class="sm mut">รายรับอื่นเข้ากระเป๋า 💼 กองทุนดำเนินงาน</p>'}
+  <div class="field"><label>หมายเหตุ</label><input name="note"></div>${proofField()}
+  <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`}
+document.addEventListener('change',async e=>{const el=e.target;if(el.dataset?.acctup===undefined)return;const f=el.files[0];if(!f)return;
+  const form=el.closest('form'),h=form.querySelector('input[name=proof]'),st=document.getElementById('acctupst'),btn=form.querySelector('button[type=submit]');
+  h.value='';st.innerHTML='⏳ กำลังอัปโหลดรูป…';if(btn)btn.disabled=true;
+  try{const d=await shrinkTo(f,1600,.8),blob=d&&await (await fetch(d)).blob(),r=blob?await api('/api/admin/acct-photo',{method:'POST',body:blob,headers:{'content-type':'image/jpeg'}}):{error:'อ่านรูปไม่ได้'};
+    if(r.ok){h.value=r.url;st.innerHTML=`<img src="${esc(r.url)}" style="max-width:140px;border-radius:8px;border:1px solid var(--line);vertical-align:middle"> ✅ แนบแล้ว`}else st.innerHTML=`<span style="color:var(--red)">❌ ${esc(r.error||'อัปโหลดไม่สำเร็จ')} — เลือกรูปใหม่อีกครั้ง</span>`}
+  finally{if(btn)btn.disabled=false}});
+function printDoc(title,body,land){const w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
+  w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>@page{size:A4 ${land?'landscape':'portrait'};margin:12mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:12px;margin:0}h1{font-size:18px;margin:0;color:#1f5c40}.sub{color:#6b7280;margin:2px 0 12px}
+table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}th{background:#eef4f0;font-weight:600}.n{text-align:right}tfoot td{font-weight:700;border-top:2px solid #1f5c40;background:#f6f8f6}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin:0 0 12px}.sig{display:grid;grid-template-columns:repeat(var(--c,2),1fr);gap:28px;margin-top:46px;text-align:center}.sig div{border-top:1px dotted #555;padding-top:6px}.rv{text-decoration:line-through;color:#9ca3af}
+.ft{margin-top:14px;color:#9ca3af;font-size:10px}.bar{margin:0 0 12px}.bar button{font:inherit;padding:6px 14px;border-radius:8px;border:0;background:#1f5c40;color:#fff;cursor:pointer}@media print{.bar{display:none}}@media screen{body{padding:18px;max-width:1100px;margin:auto}}</style></head><body>
+<div class="bar"><button onclick="print()">🖨 พิมพ์ / บันทึกเป็น PDF</button></div>${body}<div class="ft">ออกรายงานโดย ${esc(me()?.name||'')} · ${new Date().toLocaleString('th-TH')} · phangamtrail.com</div>
+<script>document.fonts&&document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);w.document.close()}
+function dlCSV(name,head,rows){const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const blob=new Blob(['﻿'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast('ดาวน์โหลด CSV แล้ว')}
+const ACCT_ACT={
+  fset:()=>openModal(acctSetForm()),
+  fopen:()=>openModal(acctOpenForm()),
+  freset:()=>openModal(`<h3 style="color:var(--red)">ล้างสมุดบัญชี</h3><form data-form="freset"><p>ลบรายการทั้งหมดในสมุดรายวัน (${DB.acct?.n||0} รายการ) และประวัตินำส่งอุทยาน แล้วกลับไปสถานะยังไม่เปิดใช้ — ใช้เฉพาะช่วงทดลองก่อนใช้งานจริง</p><p class="sm mut">ข้อมูลการจอง การจ่ายไกด์ และการโอนหมู่บ้านไม่ถูกลบ · การล้างถูกบันทึกในบันทึกการใช้งาน</p>
+    <div class="field"><label>พิมพ์คำว่า “ล้างสมุดบัญชี” เพื่อยืนยัน</label><input name="confirm" autocomplete="off"></div><div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">ล้างสมุดบัญชี</button></div></form>`),
+  jrp:el=>{jr.preset=el.dataset.k;render()},
+  jrcsv:()=>{const {D}=jrData();if(!D)return toast('กำลังโหลด…');dlCSV(`phangam-journal-${jrRange().join('_')||'all'}.csv`,['เลขที่','วันที่','ประเภท','รายการ','อ้างอิง',...WALS.map(w=>w[3]),'ผู้บันทึก','เวลาบันทึก','หมายเหตุ','สถานะ'],
+    D.rows.map(e=>[e.no,e.date,LTYPE[e.type]||e.type,e.desc,e.ref||'',...WALS.map(([k])=>e.lines?.[k]||0),e.by,e.at,e.note||'',e.revBy?'กลับรายการแล้ว '+e.revBy:'']))},
+  jrpdf:()=>{const {r,D}=jrData();if(!D)return toast('กำลังโหลด…');const fl=bankFlow(D.rows);
+    printDoc('สมุดรายวัน ผาแง่ม',`<h1>สมุดรายวัน — ผาแง่ม Trail</h1><div class="sub">ช่วง: ${r[0]?vRange({from:r[0],to:r[1]}):'ทั้งหมด'}${jr.type?' · '+LTYPE[jr.type]:''}${jr.q?' · ค้นหา “'+esc(jr.q)+'”':''} · ${D.rows.length} รายการ · เงินเข้า ${bt(fl.i)} · เงินออก ${bt(fl.o)}</div>
+    <table><thead><tr><th>เลขที่</th><th>วันที่</th><th>รายการ</th>${WALS.map(w=>`<th class="n">${w[3]}</th>`).join('')}<th>ผู้บันทึก</th></tr></thead><tbody>${D.rows.map(e=>`<tr class="${e.revBy?'rv':''}"><td>${esc(e.no)}</td><td>${fmtDateS(e.date)}</td><td>${esc(e.desc)}${e.revBy?' (กลับรายการแล้ว '+esc(e.revBy)+')':''}</td>${WALS.map(([k])=>`<td class="n">${e.lines?.[k]?bt(e.lines[k]):''}</td>`).join('')}<td>${esc(e.by)}</td></tr>`).join('')}</tbody></table>`,true)},
+  lrev:el=>{const no=el.dataset.no,e=LGI[no],pr=(DB.acct?.pr||[]).find(x=>x.no===no);
+    openModal(`<h3>กลับรายการ ${esc(no)}</h3><div class="sm">${esc(e?.desc||(pr?`นำส่งอุทยาน ${bt(pr.amt)}`:''))}</div>${e?`<div class="lchs" style="margin:6px 0">${lchips(e.lines)}</div>`:''}
+    <form data-form="lrev" data-no="${esc(no)}"><div class="field"><label>เหตุผล *</label><input name="reason" required></div><p class="sm mut">ระบบจะสร้างรายการกลับ (ยอดตรงข้าม) · รายการเดิมยังอยู่ในสมุดแบบขีดฆ่า${pr?' · กลุ่มที่อยู่ในรอบนี้จะกลับไปเป็นยอดค้างนำส่ง':''}</p>
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">กลับรายการ</button></div></form>`)},
+  pkclr:()=>{pk.from='';pk.to='';render()},
+  pkopen:el=>{pk.open=el.checked;render()},
+  pkcover:()=>{const {D,S,lump}=pkSel();parkCover(D,S,lump,{})},
+  pkcov:el=>{const r=(DB.acct?.pr||[]).find(x=>x.no===el.dataset.no);if(!r)return;const L=DB.bookings.filter(b=>b.ppay?.no===r.no),D=parkDays(L);parkCover(D,pkSum(D),+r.open||0,r)},
+  pkpay:()=>{const {S,lump,tot}=pkSel();if(!(tot>0))return toast('ไม่มียอดค้างนำส่งในช่วงนี้');
+    openModal(`<h3>🌲 บันทึกนำส่งเงินให้อุทยาน</h3><div class="price" style="text-align:left;margin:0 0 10px"><b style="font-size:20px">${bt(tot)}</b><div class="sm">${S.n} กลุ่ม${S.n?` · ส่วนอุทยาน ${bt(S.svc)} · ค่าเข้า ${bt(S.entry)} · ค่ารถ ${bt(S.veh)}`:''}${lump?` · ยอดยกมา ${bt(lump)}`:''}</div></div>
+    <form data-form="pkpay" data-total="${tot}" data-open="${lump?1:0}"><div class="grid2"><div class="field"><label>วันที่นำส่ง *</label><input type="date" name="date" value="${today()}" min="${DB.acct.start}" max="${today()}" required></div>
+    <div class="field"><label>เลขที่ใบเสร็จของอุทยาน</label><input name="ref" placeholder="เช่น เล่ม 12 เลขที่ 345"></div></div>
+    <div class="field"><label>หมายเหตุ</label><input name="note"></div>${proofField()}
+    <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึกนำส่ง ${bt(tot)}</button></div></form>`)},
+  phold:async el=>{const b=byId(el.dataset.id),to=el.dataset.to;if(!await confirmBox(to==='park'?'อุทยานเก็บค่าเข้า — นำส่งตามปกติ?':'อุทยานไม่เก็บค่าเข้า — ย้ายเข้ากองทุน?',`${esc(b.code)} · ค่าเข้า + ค่ารถ <b>${bt(holdAmtC(b))}</b><br><span class="sm mut">${to==='park'?'ยอดนี้จะรวมในการนำส่งรอบถัดไป':'ยอดนี้ไม่ต้องนำส่ง และเข้ากระเป๋า 💼 กองทุนดำเนินงาน'}</span>`,'ยืนยัน'))return;call('parkHold',{id:b.id,to})},
+  pholdundo:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการตัดสินใจ?',`${esc(b.code)} จะกลับไปสถานะ “รอถามอุทยาน”`,'ยืนยัน'))return;call('parkHoldUndo',{id:b.id})},
+  exadd:el=>openModal(entryForm(el.dataset.k)),
+  exm:el=>{const d=new Date(ex.m+'-01T00:00:00');d.setMonth(d.getMonth()+ +el.dataset.d);ex.m=ymd(d).slice(0,7);render()},
+};
 function pNotifications(){
   const L=DB.notifications.filter(n=>ntF==='all'||n.channel===ntF).slice(0,80);
   return `<div class="hd"><h2>การแจ้งเตือน</h2><div class="tabs">${[['all','ทั้งหมด'],['line','LINE'],['email','อีเมล'],['push','แอป']].map(([k,l])=>`<button data-act="ntf" data-k="${k}" class="${ntF===k?'on':''}">${l}</button>`).join('')}</div></div>
@@ -1055,7 +1274,7 @@ function pSettings(){setTimeout(updSplit,0);const s=DB.settings,sp=s.split,sumSp
     <td>${x.active?badge(['ปิดรับจอง','b-red']):badge(['ไม่ใช้งาน','b-gray'])}</td><td>${hit.length?`<span style="color:var(--warn)">${hit.length} รายการ</span><div class="sm mut">${hit.slice(0,4).map(b=>b.code).join(', ')}${hit.length>4?' …':''} — เลื่อนวันหรือติดต่อลูกค้า</div>`:'<span class="mut">-</span>'}</td>
     <td style="white-space:nowrap"><button class="btn ghost sm" data-act="seasontoggle" data-id="${x.id}">${x.active?'ปิดใช้':'เปิดใช้'}</button> <button class="btn ghost sm" data-act="seasonform" data-id="${x.id}">แก้ไข</button> <button class="btn ghost sm" data-act="seasondel" data-id="${x.id}">ลบ</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">ยังไม่มีช่วงปิด — เปิดรับจองตลอดปี</div>'}</div>`;
 }
-const AUL={login:'เข้าสู่ระบบ',content:'เนื้อหาเว็บไซต์',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก',reschedule:'เลื่อนวัน',decline:'ไกด์แจ้งไม่ว่าง',unavail:'แจ้งไกด์ไม่ว่าง',confirm_payment:'ยืนยันรับเงิน',assign:'มอบหมายไกด์',cancel:'ยกเลิกการจอง',trip_start:'เริ่มเดินทาง',trip_end:'สิ้นสุดเดินทาง',payout_confirm:'ยืนยันจ่ายไกด์',payout_village:'ยืนยันโอนหมู่บ้าน',payout_undo:'ยกเลิกยืนยันจ่าย',guide:'ข้อมูลไกด์',user:'ผู้ใช้',settings:'ตั้งค่า'};
+const AUL={acct:'บัญชี/สมุดรายวัน',login:'เข้าสู่ระบบ',content:'เนื้อหาเว็บไซต์',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก',reschedule:'เลื่อนวัน',decline:'ไกด์แจ้งไม่ว่าง',unavail:'แจ้งไกด์ไม่ว่าง',confirm_payment:'ยืนยันรับเงิน',assign:'มอบหมายไกด์',cancel:'ยกเลิกการจอง',trip_start:'เริ่มเดินทาง',trip_end:'สิ้นสุดเดินทาง',payout_confirm:'ยืนยันจ่ายไกด์',payout_village:'ยืนยันโอนหมู่บ้าน',payout_undo:'ยกเลิกยืนยันจ่าย',guide:'ข้อมูลไกด์',user:'ผู้ใช้',settings:'ตั้งค่า'};
 const CH=[['promptpay','พร้อมเพย์','📱'],['bank','โอนเข้าบัญชีธนาคาร','🏦'],['paypal','PayPal','🅿️'],['alipay','Alipay','🅰️'],['truemoney','TrueMoney Wallet','🟠']];
 const chOn=()=>CH.filter(([k])=>PUB.settings.channels[k]?.on);
 let chImgDraft={};
@@ -1434,6 +1653,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','cars','motorcycles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gNames(DB,b),b.people,gTotal(b),b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total])];
     navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
 };
+Object.assign(ACT,ACCT_ACT);
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
 /* ปิดหน้าต่างเมื่อคลิกพื้นหลัง — เฉพาะหน้าต่างที่ไม่มีฟอร์ม และต้องกดเริ่ม+ปล่อยบนพื้นหลังจริง (กันหน้าต่างกรอกข้อมูลปิดเองระหว่างพิมพ์/ลากเลือกข้อความ) */
 let mdownBg=false;const MD=document.getElementById('modal');
@@ -1508,6 +1728,7 @@ document.addEventListener('change',async e=>{
   if(!k)return;
   if(k==='bkstatus')bkF.status=el.value;else if(k==='bkfrom')bkF.from=el.value;else if(k==='bkto')bkF.to=el.value;else if(k==='bkq')bkF.q=el.value;else if(k==='bksort')bkF.sort=el.value;
   else if(k==='accfrom')acc.from=el.value;else if(k==='accto')acc.to=el.value;else if(k==='auf')auF=el.value;else if(k==='qdate')qDate=el.value||today();else if(k==='calfrom'){calR.from=el.value;if(calR.to<calR.from)calR.to=calR.from}else if(k==='calto')calR.to=el.value;
+  else if(k==='jrfrom')jr.from=el.value;else if(k==='jrto')jr.to=el.value;else if(k==='jrtype')jr.type=el.value;else if(k==='jrq')jr.q=el.value.trim();else if(k==='pkfrom')pk.from=el.value;else if(k==='pkto')pk.to=el.value;
   else if(k==='reassign'){call('reassign',{id:el.dataset.id,guideId:el.value,slot:+el.dataset.slot||1});return}
   render();
 });
@@ -1558,6 +1779,13 @@ document.addEventListener('submit',async e=>{
   if(kind==='linelink'){call('lineLinkSave',{lineLinkBy:'both',lineOa:fd.lineOa});return}
   if(kind==='receipt'){const p={...fd,image:rcptImg??(DB.settings.receipt||{}).image??''};if(await call('receiptSave',p)){rcptImg=null;setRcptBox()}return}
   if(kind==='settings'){call('settingsSave',fd);return}
+  if(kind==='fset'){if(await call('acctSettings',fd))closeModal();return}
+  if(kind==='fopen'){const n=v=>String(v||'').replace(/,/g,'').trim();if(await call('acctOpen',{bank:n(fd.bank),park:n(fd.park)||'0',note:fd.note}))closeModal();return}
+  if(kind==='freset'){if(await call('acctReset',{confirm:fd.confirm}))closeModal();return}
+  if(kind==='fentry'){const amt=+String(fd.amt||'').replace(/,/g,'');if(!(amt>0))return toast('กรุณากรอกจำนวนเงินให้ถูกต้อง');
+    if(await call('acctEntry',{kind:f.dataset.k,date:fd.date,amt,cat:fd.cat,party:fd.party,from:fd.from,note:fd.note,proof:fd.proof}))closeModal();return}
+  if(kind==='pkpay'){if(await call('parkPay',{from:pk.from,to:pk.to,open:f.dataset.open==='1',total:+f.dataset.total,date:fd.date,ref:fd.ref,proof:fd.proof,note:fd.note}))closeModal();return}
+  if(kind==='lrev'){if(await call('acctReverse',{no:f.dataset.no,reason:fd.reason}))closeModal();return}
   if(kind==='village'){call('villageAcctSave',{bankName:fd.bankName,accountName:fd.accountName,accountNo:fd.accountNo});return}
   }finally{if(btn&&document.body.contains(btn))btn.disabled=false}
 });
