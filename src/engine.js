@@ -64,6 +64,10 @@ export class Engine extends DurableObject {
     db.audit = this.sql.exec(`SELECT json FROM audit ORDER BY n DESC LIMIT ${KEEP}`).toArray().map(r => JSON.parse(r.json));
     db.notifications = this.sql.exec(`SELECT json FROM notif ORDER BY n DESC LIMIT ${KEEP}`).toArray().map(r => JSON.parse(r.json));
     this.db = db;
+    if (db.acct?.on && !db.acct.mon) { // สมุดบัญชีที่เปิดก่อนมียอดรายเดือน → คำนวณจากตาราง ledger ครั้งเดียว
+      const mon = {}; for (const r of this.sql.exec('SELECT json FROM ledger').toArray()) { const e = JSON.parse(r.json), M = (mon[e.date.slice(0, 7)] ||= {}); for (const [w, v] of Object.entries(e.lines || {})) M[w] = Math.round(((M[w] || 0) + v) * 100) / 100 }
+      db.acct.mon = mon; db.acct.per = db.acct.per || {}; this.persist();
+    }
     if (db.settings.vehicleFee === undefined) { db.settings.vehicleFee = 30; this.persist() } // ค่ารถเข้าอุทยาน (ค่าเริ่มต้น)
     if (db.settings.motoFee === undefined) { db.settings.motoFee = 20; this.persist() } // ค่ารถจักรยานยนต์เข้าอุทยาน (ค่าเริ่มต้น)
     if (db.settings.extraGuideFee === undefined) { db.settings.extraGuideFee = +db.settings.split?.guide || 700; this.persist() } // ค่าไกด์เพิ่ม (กลุ่มเกินจำนวนต่อไกด์)

@@ -290,14 +290,14 @@ function promptpayPayload(id,amount){
 
 /* ========== roles & pages ========== */
 const ROLES={
-  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','fin','accounting','journal','payouts','park','expense','payments','village','notifications','users','settings','audit','me']},
-  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','fin','accounting','journal','payouts','park','expense','payments','village','notifications','settings','audit','me']},
-  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','fin','accounting','journal','payouts','park','expense','payments','village','audit','me']},
+  superadmin:{label:'ผู้ดูแลระบบสูงสุด',pages:['dashboard','calendar','content','bookings','guides','fin','accounting','journal','payouts','park','refund','expense','close','payments','village','notifications','users','settings','audit','me']},
+  admin:{label:'ผู้ดูแลระบบ',pages:['dashboard','calendar','content','bookings','guides','fin','accounting','journal','payouts','park','refund','expense','close','payments','village','notifications','settings','audit','me']},
+  finance:{label:'เจ้าหน้าที่บัญชี/การเงิน',pages:['dashboard','calendar','bookings','fin','accounting','journal','payouts','park','refund','expense','close','payments','village','audit','me']},
   guidemgr:{label:'ผู้จัดการไกด์',pages:['today','dashboard','calendar','bookings','guides','notifications','audit','me']},
   staff:{label:'เจ้าหน้าที่ประสานงาน',pages:['dashboard','calendar','content','bookings','guides','notifications','me']},
   guide:{label:'ไกด์',pages:['today','mytrips','inbox','earn','me']}
 };
-const PAGES={fin:'📊 ภาพรวมการเงิน',journal:'📒 สมุดรายวัน',park:'🌲 นำส่งอุทยาน',expense:'🧾 รายจ่าย/รายรับอื่น',inbox:'🔔 แจ้งเตือน',village:'🏘️ บัญชีหมู่บ้าน',today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
+const PAGES={refund:'↩️ คืนเงิน',close:'🔒 ปิดงวด/รายงาน',fin:'📊 ภาพรวมการเงิน',journal:'📒 สมุดรายวัน',park:'🌲 นำส่งอุทยาน',expense:'🧾 รายจ่าย/รายรับอื่น',inbox:'🔔 แจ้งเตือน',village:'🏘️ บัญชีหมู่บ้าน',today:'📍 งานวันนี้',earn:'💵 รายได้',me:'📱 แอปและแจ้งเตือน',content:'🌐 จัดการเนื้อหาเว็บไซต์',calendar:'📅 ปฏิทิน',payments:'💳 ช่องทางรับชำระเงิน',dashboard:'📊 แดชบอร์ด',bookings:'📋 รายการจอง',guides:'🧭 มอบหมายงานไกด์',mytrips:'🥾 งานของฉัน',accounting:'💰 บัญชีรายรับ',payouts:'🏦 เบิกจ่ายไกด์',notifications:'🔔 การแจ้งเตือน',users:'👥 จัดการผู้ใช้',settings:'⚙️ ตั้งค่าราคา/ระบบ',audit:'🗂️ บันทึกการใช้งาน'};
 const PERM={
   confirmPay:['superadmin','admin','finance'],
   assign:['superadmin','admin','guidemgr','staff'],
@@ -308,7 +308,7 @@ const PERM={
   payoutUndo:['superadmin'],
   editGuides:['superadmin','admin','guidemgr','staff'],
   payments:['superadmin','admin','finance'],
-  acctView:['superadmin','admin','finance'],acctPost:['superadmin','admin','finance'],acctSetup:['superadmin','finance'],acctRev:['superadmin'],
+  acctView:['superadmin','admin','finance'],acctPost:['superadmin','admin','finance'],acctSetup:['superadmin','finance'],acctRev:['superadmin'],acctClose:['superadmin','finance'],refundApprove:['superadmin','admin'],refundPay:['superadmin','admin','finance'],
 };
 const me=()=>DB?.me||null;
 const can=a=>{const u=me();return !!u&&PERM[a].includes(u.role)};
@@ -522,7 +522,7 @@ function renderDone(b,fromBooking){
 function renderPayment(b,fromBooking){
   const s=PUB.settings;
   if(b.status==='paid'||(b.status==='pending'&&b.slip&&!(VB&&VB.reslip)))return renderDone(b,fromBooking);
-  const head=b.status==='paid'?`<div class="badge b-ok" style="font-size:14px">✓ ชำระเงินแล้ว — การจองได้รับการยืนยัน</div>`:isExp(b)?`<div class="badge b-gray" style="font-size:15px">⏰ หมดเวลาชำระเงิน</div><p class="sm mut" style="margin:10px 0 0">ไม่ได้ชำระเงินภายใน ${s.payDeadlineMin} นาที ระบบจึงยกเลิกการจองนี้ และคืนรอบ ${fmtDate(b.date)} เวลา ${b.time} น. ให้ว่างแล้ว<br>หากยังต้องการเดินป่า กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)</p><div style="margin-top:12px"><button class="btn" data-act="gobook">จองรอบใหม่</button></div>`:b.status==='cancelled'?`<div class="badge b-red" style="font-size:14px">การจองนี้ถูกยกเลิก${b.cancelReason?' — '+esc(b.cancelReason):''}</div>`:
+  const head=b.status==='paid'?`<div class="badge b-ok" style="font-size:14px">✓ ชำระเงินแล้ว — การจองได้รับการยืนยัน</div>`:isExp(b)?`<div class="badge b-gray" style="font-size:15px">⏰ หมดเวลาชำระเงิน</div><p class="sm mut" style="margin:10px 0 0">ไม่ได้ชำระเงินภายใน ${s.payDeadlineMin} นาที ระบบจึงยกเลิกการจองนี้ และคืนรอบ ${fmtDate(b.date)} เวลา ${b.time} น. ให้ว่างแล้ว<br>หากยังต้องการเดินป่า กรุณาจองใหม่ (หากโอนเงินไปแล้ว กรุณาติดต่อเจ้าหน้าที่)</p><div style="margin-top:12px"><button class="btn" data-act="gobook">จองรอบใหม่</button></div>`:b.status==='cancelled'?`<div class="badge b-red" style="font-size:14px">การจองนี้ถูกยกเลิก${b.cancelReason?' — '+esc(b.cancelReason):''}</div>${b.refund?`<p style="margin:10px 0 0">${b.refund.st==='paid'?`✅ โอนคืนเงิน <b>${baht(b.refund.amt)}</b> แล้ว${b.refund.date?' เมื่อ '+fmtDate(b.refund.date):''}`:`⏳ อยู่ระหว่างโอนคืนเงิน <b>${baht(b.refund.amt)}</b> — เจ้าหน้าที่จะแจ้งทางอีเมลเมื่อโอนเรียบร้อย`}</p>`:''}`:
    `<h2 style="margin:0">${fromBooking?'จองสำเร็จ! ':''}กรุณาโอนเงินเพื่อยืนยันการจอง</h2><p class="mut sm" style="margin:4px 0 0">เลือกช่องทางที่สะดวก แล้วแนบหลักฐานการชำระ</p>
    ${b.slip?'':`<div class="badge b-warn" style="font-size:14px;margin-top:8px">⏱ โอนภายใน ${new Date(b.expiresAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น. · เหลือ <span data-countdown="${b.expiresAt}">--:--</span></div>`}`;
   return `<div class="card paybox">${head}
@@ -654,11 +654,11 @@ function renderAdmin(sub){
   const u=me();if(!u)return renderLogin();
   const pages=ROLES[u.role].pages;if(sub&&pages.includes(sub))page=sub;if(!pages.includes(page))page=pages[0];
   /* เมนูรวมกลุ่ม: แสดงรายการเดียวในเมนูซ้าย + แท็บย่อยด้านบนหน้า */
-  const GROUPS=[{label:'💰 บัญชี',pages:['fin','accounting','journal','payouts','park','expense','payments','village']},{label:'⚙️ ตั้งค่า',pages:['settings','content']}]
+  const GROUPS=[{label:'💰 บัญชี',pages:['fin','accounting','journal','payouts','park','refund','expense','close','payments','village']},{label:'⚙️ ตั้งค่า',pages:['settings','content']}]
     .map(g=>({...g,inn:g.pages.filter(p=>pages.includes(p))})).filter(g=>g.inn.length>1);
   const grpOf=p=>GROUPS.find(g=>g.inn.includes(p)),cur=grpOf(page);
   const accBar=cur?`<div class="tabs" style="margin-bottom:14px;display:inline-flex;max-width:100%;overflow-x:auto">${cur.inn.map(p=>`<a href="#admin-${p}" class="${p===page?'on':''}" style="text-decoration:none;padding:7px 14px">${PAGES[p]}</a>`).join('')}</div>`:'';
-  const body=accBar+{village:pVillage,inbox:pInbox,today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,fin:pFin,journal:pJournal,park:pPark,expense:pExpense,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
+  const body=accBar+{village:pVillage,inbox:pInbox,today:pToday,earn:pEarn,me:pMe,dashboard:pDashboard,bookings:pBookings,guides:pGuides,mytrips:pMyTrips,accounting:pAccounting,payouts:pPayouts,fin:pFin,journal:pJournal,park:pPark,expense:pExpense,refund:pRefund,close:pClose,notifications:pNotifications,users:pUsers,settings:pSettings,audit:pAudit,payments:pPayments,calendar:pCalendar,content:pContent}[page]();
   return `<div class="admin"><aside class="side"><div class="who"><b>${esc(u.name)}</b><span class="mut sm">${ROLES[u.role].label}</span></div>
    ${pages.filter(p=>{const g=grpOf(p);return !g||p===g.inn[0]}).map(p=>{const g=grpOf(p);return g?`<a href="#admin-${g.inn[0]}" class="${g===cur?'on':''}">${g.label}</a>`:`<a href="#admin-${p}" class="${p===page?'on':''}">${PAGES[p]}</a>`}).join('')}
    <a href="#admin" data-act="reloaddata">🔄 โหลดข้อมูลล่าสุด</a><a href="#admin" data-act="chpw">🔑 เปลี่ยนรหัสผ่าน</a><a href="#admin" data-act="logout" style="color:var(--red)">ออกจากระบบ</a></aside><section>${body}</section></div>
@@ -745,7 +745,7 @@ function pBookings(){
      ${b.status==='paid'?`<div class="sm mut">${b.paidConfirmedBy==='ระบบอัตโนมัติ'?'⚡ ':''}โดย ${esc(b.paidConfirmedBy||'-')}</div><button class="btn ghost sm" style="margin-top:4px" data-act="receipt" data-id="${b.id}">🧾 ใบเสร็จ</button>`:''}</td>
    <td>${b.status==='pending'?'<span class="sm mut">มอบหมายหลังชำระเงิน</span>':b.status!=='cancelled'&&can('assign')&&!isLocked({...b,manual:false})?[1,...(needG(b)>1?[2]:[])].map(sl=>{const cur=sl===2?b.guide2Id:b.guideId;return `${needG(b)>1?`<div class="sm mut" style="margin:${sl===2?'6px':'0'} 0 2px">${sl===2?'ไกด์คนที่ 2':'👥 ไกด์หลัก'}</div>`:''}<select data-chg="reassign" data-id="${b.id}" data-slot="${sl}" style="min-width:140px"><option value="">— อัตโนมัติตามคิว —</option>${ag.map(g=>`<option value="${g.id}" ${g.id===cur?'selected':''}>${g.priority}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}${rg.length?`<optgroup label="ไกด์สำรอง">${rg.map(g=>`<option value="${g.id}" ${g.id===cur?'selected':''}>${sTag(g)}. ${esc(g.firstName)} ${esc(g.lastName)}</option>`).join('')}</optgroup>`:''}</select>${!cur&&b.status==='paid'?`<div class="sm" style="color:var(--red)">ยังไม่มีไกด์${pendReq(b).length?` · รอไกด์สำรองตอบ (${esc(pendReq(b).map(r=>gName(DB,r.gid)).join(', '))})`:''}</div>`:''}`}).join(''):esc(gNames(DB,b))+(needG(b)>1?' <span class="badge b-blue">👥 2 ไกด์</span>':'')}</td>
    <td>${trB(b)}${photoLink(b)}<div style="margin-top:4px">${tripButtons(b,false)}</div>${(b.declined||[]).map(d=>`<div class="sm" style="color:var(--red)">✕ ${esc(gName(DB,d.guideId))} ไม่ว่าง: ${esc(d.reason)}</div>`).join('')}</td>
-   <td>${b.status==='pending'&&can('cancel')?`<button class="btn ghost sm" data-act="cancelbk" data-id="${b.id}">ยกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('cancel')?`<button class="btn ghost sm" data-act="reschedule" data-id="${b.id}">เลื่อนวัน</button> <button class="btn ghost sm" data-act="paidcancel" data-id="${b.id}">ลูกค้ายกเลิก</button>`:''}${b.cancelReason?`<div class="sm mut">${esc(b.cancelReason)}</div>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่พบรายการ</td></tr>`}
+   <td>${b.status==='pending'&&can('cancel')?`<button class="btn ghost sm" data-act="cancelbk" data-id="${b.id}">ยกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('cancel')?`<button class="btn ghost sm" data-act="reschedule" data-id="${b.id}">เลื่อนวัน</button> <button class="btn ghost sm" data-act="paidcancel" data-id="${b.id}">ลูกค้ายกเลิก</button>`:''}${b.status==='paid'&&!isLocked({...b,manual:false})&&can('refundApprove')?` <button class="btn ghost sm" data-act="rfapprove" data-id="${b.id}">ยกเลิกและคืนเงิน</button>`:''}${b.cancelReason?`<div class="sm mut">${esc(b.cancelReason)}</div>`:''}${b.refund?`<div class="sm">${b.refund.st==='paid'?'✓ คืนเงินแล้ว':'⏳ รอโอนคืน'} ${baht(b.refund.amt)}</div>`:''}</td></tr>`).join('')||`<tr><td colspan="9" class="empty">ไม่พบรายการ</td></tr>`}
   </table></div></div>`;
 }
 
@@ -909,8 +909,9 @@ function pAccounting(){
 }
 
 /* ส่วนกลางหมู่บ้าน: ยอดรอโอน (รวมเป็นแถวเดียว) / ที่โอนแล้ว (แยกตามครั้งที่โอน) */
-function vilRows(tab){const done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid'&&+b.split?.village>0).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const mk=(L,x)=>({L,n:L.length,amt:L.reduce((a,b)=>a+ +b.split.village,0),from:L[0].date,to:L[L.length-1].date,codes:L.map(b=>b.code),...(x||{})});
+const vilDueC=b=>b.refund?(b.refund.keep==='vil'?+b.refund.keepAmt||0:0):(b.status==='paid'&&isDone(b)?+b.split?.village||0:0); // ส่วนกลางหมู่บ้านที่ต้องโอน (รวมส่วนที่ไม่คืนจากการคืนเงิน)
+function vilRows(tab){const done=DB.bookings.filter(b=>vilDueC(b)>0).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const mk=(L,x)=>({L,n:L.length,amt:L.reduce((a,b)=>a+vilDueC(b),0),from:L[0].date,to:L[L.length-1].date,codes:L.map(b=>b.code),...(x||{})});
   if(tab==='unpaid'){const L=done.filter(b=>!b.vpay?.paid);return L.length?[mk(L,{paid:false})]:[]}
   const by={};done.filter(b=>b.vpay?.paid).forEach(b=>(by[b.vpay.batch]=by[b.vpay.batch]||[]).push(b));
   return Object.values(by).map(L=>mk(L,{paid:true,...L[0].vpay})).sort((a,b)=>b.paidAt.localeCompare(a.paidAt))}
@@ -953,10 +954,10 @@ function pPayouts(){
 }
 
 /* ========== บัญชี: สมุดรายวัน — ภาพรวมการเงิน · สมุดรายวัน · นำส่งอุทยาน · รายจ่าย/รายรับอื่น ========== */
-const WALS=[['bank','🏦','เงินในบัญชีธนาคาร','ธนาคาร','เงินที่ควรอยู่ในบัญชีรับชำระตอนนี้'],['dep','⏳','เงินรับล่วงหน้า','รับล่วงหน้า','ลูกค้าจ่ายแล้ว ยังไม่ถึงวันเดิน'],['gd','🧭','ค้างจ่ายไกด์','ค้างจ่ายไกด์','ค่าไกด์ของงานที่จบแล้ว'],['vil','🏘️','ค้างโอนหมู่บ้าน','ค้างโอนหมู่บ้าน','ส่วนกลางหมู่บ้านที่ยังไม่โอน'],['park','🌲','ค้างนำส่งอุทยาน','ค้างนำส่งอุทยาน','ส่วนอุทยาน + ค่าเข้า + ค่ารถ ที่ยังไม่ส่ง'],['ref','↩️','ค้างคืนลูกค้า','ค้างคืนลูกค้า','อนุมัติคืนแล้ว ยังไม่ได้โอน (ใช้ในระยะที่ 2)'],['fund','💼','กองทุนดำเนินงาน','กองทุน','เงินของกลุ่ม ไว้จ่ายค่าใช้จ่ายส่วนกลาง']];
+const WALS=[['bank','🏦','เงินในบัญชีธนาคาร','ธนาคาร','เงินที่ควรอยู่ในบัญชีรับชำระตอนนี้'],['dep','⏳','เงินรับล่วงหน้า','รับล่วงหน้า','ลูกค้าจ่ายแล้ว ยังไม่ถึงวันเดิน'],['gd','🧭','ค้างจ่ายไกด์','ค้างจ่ายไกด์','ค่าไกด์ของงานที่จบแล้ว'],['vil','🏘️','ค้างโอนหมู่บ้าน','ค้างโอนหมู่บ้าน','ส่วนกลางหมู่บ้านที่ยังไม่โอน'],['park','🌲','ค้างนำส่งอุทยาน','ค้างนำส่งอุทยาน','ส่วนอุทยาน + ค่าเข้า + ค่ารถ ที่ยังไม่ส่ง'],['ref','↩️','ค้างคืนลูกค้า','ค้างคืนลูกค้า','อนุมัติคืนแล้ว ยังไม่ได้โอนคืน'],['fund','💼','กองทุนดำเนินงาน','กองทุน','เงินของกลุ่ม ไว้จ่ายค่าใช้จ่ายส่วนกลาง']];
 const WSH=Object.fromEntries(WALS.map(w=>[w[0],w[3]]));
-const LTYPE={open:'ยอดยกมา',pay:'รับชำระ',done:'จบงาน/แบ่งเงิน',gpay:'จ่ายไกด์',vpay:'โอนหมู่บ้าน',ppay:'นำส่งอุทยาน',hold:'ค่าอุทยาน → กองทุน',exp:'รายจ่ายอื่น',inc:'รายรับอื่น',rev:'กลับรายการ'};
-const LCLS={open:'b-blue',pay:'b-ok',done:'b-gray',gpay:'b-warn',vpay:'b-warn',ppay:'b-warn',hold:'b-gray',exp:'b-red',inc:'b-ok',rev:'b-gray'};
+const LTYPE={open:'ยอดยกมา',pay:'รับชำระ',done:'จบงาน/แบ่งเงิน',gpay:'จ่ายไกด์',vpay:'โอนหมู่บ้าน',ppay:'นำส่งอุทยาน',hold:'ค่าอุทยาน → กองทุน',exp:'รายจ่ายอื่น',inc:'รายรับอื่น',rfa:'อนุมัติคืนเงิน',rfp:'โอนคืนเงิน',rev:'กลับรายการ'};
+const LCLS={open:'b-blue',pay:'b-ok',done:'b-gray',gpay:'b-warn',vpay:'b-warn',ppay:'b-warn',hold:'b-gray',exp:'b-red',inc:'b-ok',rfa:'b-gray',rfp:'b-red',rev:'b-gray'};
 const r2c=x=>Math.round((+x||0)*100)/100;
 const bt=n=>{n=r2c(n);return (n<0?'−':'')+'฿'+Math.abs(n).toLocaleString('th-TH',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})};
 const acS=()=>({start:'2026-12-01',bankLabel:'',cats:['ค่าธรรมเนียมธนาคาร','ค่าตรวจสลิป EasySlip','ค่าเว็บไซต์/ระบบ','อุปกรณ์/ปฐมพยาบาล','อบรมไกด์','อื่นๆ'],icats:['เงินบริจาค','ดอกเบี้ยธนาคาร','อื่นๆ'],signers:['ผู้จัดทำ','ผู้ตรวจสอบ','ประธาน'].map(role=>({role,name:'',pos:''})),...(DB.settings.acct||{})});
@@ -979,7 +980,7 @@ const walletGuide=()=>`<div class="card"><h3>กระเป๋าเงิน 7
 function finCheck(A){const B=A.bal||{},done=DB.bookings.filter(b=>b.status==='paid'&&isDone(b));
   const exp={dep:DB.bookings.filter(b=>b.status==='paid'&&!isDone(b)).reduce((s,b)=>s+(+b.total||0),0),
     gd:done.reduce((s,b)=>s+gSlots(b).filter(x=>x.gid&&!x.po.paid).reduce((a,x)=>a+x.amt,0),0),
-    vil:done.reduce((s,b)=>s+(b.vpay?.paid?0:+b.split?.village||0),0),
+    vil:DB.bookings.reduce((s,b)=>s+(b.vpay?.paid?0:vilDueC(b)),0),ref:DB.bookings.reduce((s,b)=>s+(b.refund?.st==='pending'?+b.refund.amt||0:0),0),
     park:DB.bookings.filter(parkOpenC).reduce((s,b)=>s+parkDueC(b),0)+(+A.openPark||0)};
   return Object.entries(exp).filter(([k,v])=>Math.abs(r2c(v)-r2c(B[k]))>=.01).map(([k,v])=>({k,sys:B[k]||0,exp:r2c(v)}))}
 const lrow=e=>{const rv=e.revBy,canRev=can('acctRev')&&!e.auto&&!rv&&['exp','inc','ppay'].includes(e.type);
@@ -1010,14 +1011,16 @@ function pFin(){const A=DB.acct||{on:false},S=acS(),t=today();
   const po=DB.bookings.filter(parkOpenC),wait=po.filter(parkWaitC),pReady=r2c(po.filter(b=>!parkWaitC(b)).reduce((s,b)=>s+parkDueC(b),0)+(+A.openPark||0));
   const mr=monthRange(t),M=lgFetch('m|'+mr[0],{from:mr[0],to:mr[1]}),RC=lgFetch('recent',{limit:8}),fl=M?bankFlow(M.rows):null;
   const todo=[gU.length?[`🧭 จ่ายค่าไกด์ ${gU.length} รายการ`,gU.reduce((s,i)=>s+i._amt,0),'payouts']:null,vU?[`🏘️ โอนส่วนกลางหมู่บ้าน ${vU.n} กลุ่ม`,vU.amt,'payouts']:null,
-    pReady>0?['🌲 นำส่งเงินให้อุทยาน',pReady,'park']:null,wait.length?[`❓ รอถามอุทยาน ${wait.length} กลุ่ม (ลูกค้าไม่มา/ยกเลิก)`,wait.reduce((s,b)=>s+holdAmtC(b),0),'park']:null].filter(Boolean);
+    pReady>0?['🌲 นำส่งเงินให้อุทยาน',pReady,'park']:null,wait.length?[`❓ รอถามอุทยาน ${wait.length} กลุ่ม (ลูกค้าไม่มา/ยกเลิก)`,wait.reduce((s,b)=>s+holdAmtC(b),0),'park']:null,
+    ...(()=>{const R=DB.bookings.filter(b=>b.refund?.st==='pending');return R.length?[[`↩️ โอนคืนลูกค้า ${R.length} รายการ`,R.reduce((s,b)=>s+b.refund.amt,0),'refund']]:[]})(),
+    ...(()=>{const o=[],now=t.slice(0,7);for(let m=A.start.slice(0,7);m<now;m=ymAdd(m,1))if(!(A.per||{})[m]?.closed)o.push([`🔒 ปิดงวด ${thMonth(m)}`,null,'close']);return o})()].filter(Boolean);
   const wc=([k,i,l,,d])=>`<div class="stat wal"><div class="k">${i} ${l}</div><div class="v"${+B[k]<0?' style="color:var(--red)"':''}>${bt(B[k])}</div><div class="s">${d}</div></div>`;
   return `<div class="hd"><h2>ภาพรวมการเงิน</h2><div class="row" style="gap:6px">${can('acctPost')?'<a class="btn ghost sm" href="#admin-expense">🧾 รายจ่าย/รายรับอื่น</a>':''}${setBtn}</div></div>
   <div class="walbank">${wc(WALS[0])}<div class="rule ${okRule?'ok':'bad'}"><div><b>${okRule?'✓ สมดุล':'⚠️ ไม่สมดุล'}</b><div class="sm">เงินในธนาคาร = ผลรวมกระเป๋า 2–7 (${bt(sumO)})</div>${chk.length?'':'<div class="sm">ยอดค้างตรงกับหน้าเบิกจ่ายและรายการจอง</div>'}</div></div></div>
   ${chk.length?`<div class="rwarn" style="margin-bottom:12px">⚠️ ยอดในสมุดไม่ตรงกับรายการจอง: ${chk.map(c=>`${WSH[c.k]} ในสมุด ${bt(c.sys)} · ตามรายการจอง ${bt(c.exp)}`).join(' — ')}</div>`:''}
   <div class="wals">${WALS.slice(1).map(wc).join('')}</div>
   <div class="grid2" style="margin-bottom:16px;align-items:start">
-   <div class="card" style="margin:0"><h3>สิ่งที่ต้องทำ</h3>${todo.length?`<div class="todo">${todo.map(([l,a,p])=>`<a href="#admin-${p}"><span>${l}</span><b>${bt(a)} →</b></a>`).join('')}</div>`:'<div class="empty">ไม่มียอดค้าง 🎉</div>'}</div>
+   <div class="card" style="margin:0"><h3>สิ่งที่ต้องทำ</h3>${todo.length?`<div class="todo">${todo.map(([l,a,p])=>`<a href="#admin-${p}"><span>${l}</span><b>${a==null?'':bt(a)} →</b></a>`).join('')}</div>`:'<div class="empty">ไม่มียอดค้าง 🎉</div>'}</div>
    <div class="card" style="margin:0"><h3>เดือนนี้ (${thMonth(t.slice(0,7))})</h3>${fl?`<div class="grid2"><div><div class="sm mut">เงินเข้าบัญชี</div><div style="font-size:20px;font-weight:700;color:#1d6b3a">${bt(fl.i)}</div></div><div><div class="sm mut">เงินออกจากบัญชี</div><div style="font-size:20px;font-weight:700;color:#a3362a">${bt(fl.o)}</div></div></div><div class="sm mut" style="margin-top:6px">${M.rows.length} รายการในสมุดรายวัน · สุทธิ ${bt(fl.i-fl.o)}</div>`:'<div class="empty">กำลังโหลด…</div>'}</div></div>
   <div class="card"><div class="hd"><h3>รายการล่าสุด</h3><a class="btn ghost sm" href="#admin-journal">เปิดสมุดรายวัน →</a></div>${RC?ltable(RC.rows):'<div class="empty">กำลังโหลด…</div>'}</div>
   <p class="sm mut">เปิดใช้สมุดบัญชีเมื่อ ${fmtDT(A.openAt)} · ยอดยกมา ${esc(A.openNo||'')}${A.openPark>0?` · ค่าอุทยานยกมาที่ยังไม่นำส่ง ${bt(A.openPark)}`:''}${can('acctRev')?` · <a href="#admin-fin" data-act="freset" style="color:var(--red)">ล้างสมุดบัญชี (ช่วงทดลอง)</a>`:''}</p>`}
@@ -1122,8 +1125,8 @@ document.addEventListener('change',async e=>{const el=e.target;if(el.dataset?.ac
   try{const d=await shrinkTo(f,1600,.8),blob=d&&await (await fetch(d)).blob(),r=blob?await api('/api/admin/acct-photo',{method:'POST',body:blob,headers:{'content-type':'image/jpeg'}}):{error:'อ่านรูปไม่ได้'};
     if(r.ok){h.value=r.url;st.innerHTML=`<img src="${esc(r.url)}" style="max-width:140px;border-radius:8px;border:1px solid var(--line);vertical-align:middle"> ✅ แนบแล้ว`}else st.innerHTML=`<span style="color:var(--red)">❌ ${esc(r.error||'อัปโหลดไม่สำเร็จ')} — เลือกรูปใหม่อีกครั้ง</span>`}
   finally{if(btn)btn.disabled=false}});
-function printDoc(title,body,land){const w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
-  w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+function printDoc(title,body,land,w0){const w=w0||window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');
+  w.document.open();w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>@page{size:A4 ${land?'landscape':'portrait'};margin:12mm}body{font-family:'IBM Plex Sans Thai',sans-serif;color:#1f2937;font-size:12px;margin:0}h1{font-size:18px;margin:0;color:#1f5c40}.sub{color:#6b7280;margin:2px 0 12px}
 table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}th{background:#eef4f0;font-weight:600}.n{text-align:right}tfoot td{font-weight:700;border-top:2px solid #1f5c40;background:#f6f8f6}
 .info{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin:0 0 12px}.sig{display:grid;grid-template-columns:repeat(var(--c,2),1fr);gap:28px;margin-top:46px;text-align:center}.sig div{border-top:1px dotted #555;padding-top:6px}.rv{text-decoration:line-through;color:#9ca3af}
@@ -1162,6 +1165,89 @@ const ACCT_ACT={
   pholdundo:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการตัดสินใจ?',`${esc(b.code)} จะกลับไปสถานะ “รอถามอุทยาน”`,'ยืนยัน'))return;call('parkHoldUndo',{id:b.id})},
   exadd:el=>openModal(entryForm(el.dataset.k)),
   exm:el=>{const d=new Date(ex.m+'-01T00:00:00');d.setMonth(d.getMonth()+ +el.dataset.d);ex.m=ymd(d).slice(0,7);render()},
+};
+/* ===== ระยะ 2: คืนเงินลูกค้า · กระทบยอดธนาคาร · ปิดงวด · รายงานรับ-จ่ายรายเดือน ===== */
+const ymAdd=(ym,n)=>{const d=new Date(ym+'-01T00:00:00');d.setMonth(d.getMonth()+n);return ymd(d).slice(0,7)};
+const walEndC=(A,ym)=>{const o=Object.fromEntries(WALS.map(([k])=>[k,0]));Object.entries(A?.mon||{}).forEach(([m,d])=>{if(m<=ym)WALS.forEach(([k])=>o[k]=r2c(o[k]+(+d[k]||0)))});return o};
+function pRefund(){const L=DB.bookings.filter(b=>b.refund),P=L.filter(b=>b.refund.st==='pending').sort((a,b)=>a.refund.at.localeCompare(b.refund.at)),D=L.filter(b=>b.refund.st==='paid').sort((a,b)=>(b.refund.paidAt||'').localeCompare(a.refund.paidAt||''));
+  const row=b=>{const r=b.refund,K=r2c(b.total-r.amt);return `<tr><td>${esc(b.code)}<div class="sm mut">เดิน ${fmtDateS(b.date)} ${b.time}</div></td><td><b>${esc(b.name)}</b><div class="sm">${esc(b.phone)}</div></td>
+   <td class="sm">${esc(r.to)}${r.st==='pending'?`<div><button class="btn ghost sm" data-act="copy" data-v="${esc(r.to)}">คัดลอก</button></div>`:''}</td>
+   <td class="num"><b>${bt(r.amt)}</b><div class="sm mut">จากยอด ${bt(b.total)}${K?`<br>ไม่คืน ${bt(K)} → ${r.keep==='vil'?'หมู่บ้าน':'กองทุน'}`:''}</div></td>
+   <td class="sm">${esc(r.reason)}<div class="mut">อนุมัติโดย ${esc(r.byName)}<br>${fmtDT(r.at)}</div></td>
+   <td class="lact">${r.st==='pending'?(can('refundPay')?`<button class="btn sm" data-act="rfpay" data-id="${b.id}">โอนคืนแล้ว</button>`:badge(['รอโอนคืน','b-warn'])):`${badge(['คืนเงินแล้ว','b-ok'])}<div class="sm mut">${r.date?fmtDate(r.date):''}${r.ref?'<br>อ้างอิง '+esc(r.ref):''}<br>โดย ${esc(r.paidByName||'')}</div>${r.proof?`<a class="btn ghost sm" href="${esc(r.proof)}" target="_blank" rel="noopener">📎 สลิป</a>`:''}${can('acctRev')?`<button class="btn ghost sm" data-act="rfundo" data-id="${b.id}">ยกเลิกการยืนยัน</button>`:''}`}</td></tr>`};
+  const head='<tr><th>รหัสจอง</th><th>ลูกค้า</th><th>โอนคืนเข้า</th><th class="num">ยอดคืน</th><th>เหตุผล</th><th></th></tr>';
+  return `<h2>คืนเงินลูกค้า</h2>
+  <div class="card"><p class="sm mut" style="margin:0">ขั้นตอน: ผู้ดูแลระบบกด <b>“ยกเลิกและคืนเงิน”</b> ที่หน้า 📋 รายการจอง แล้วกำหนดยอดคืนเอง (เต็มหรือบางส่วน) → รายการมารอที่นี่ → เจ้าหน้าที่การเงินโอนคืนแล้วแนบสลิป → ระบบส่งอีเมลแจ้งลูกค้า${DB.acct?.on?' และลงสมุดรายวันให้เอง':''}</p></div>
+  <div class="card"><div class="hd"><h3>รอโอนคืน ${P.length?`<span class="badge b-warn">${P.length}</span>`:''}</h3><b>${bt(P.reduce((s,b)=>s+b.refund.amt,0))}</b></div><div class="tbl-wrap"><table>${head}${P.map(row).join('')||'<tr><td colspan="6" class="empty">ไม่มีรายการรอโอนคืน</td></tr>'}</table></div></div>
+  <div class="card"><h3>คืนเงินแล้ว</h3><div class="tbl-wrap"><table>${head}${D.map(row).join('')||'<tr><td colspan="6" class="empty">ยังไม่มี</td></tr>'}</table></div></div>`}
+function pClose(){const A=DB.acct||{};if(!A.on)return notOn('ปิดงวด / รายงานรายเดือน');
+  const now=today().slice(0,7),st=A.start.slice(0,7),M=[];for(let m=now;m>=st;m=ymAdd(m,-1))M.push(m);
+  const per=A.per||{},last=Object.keys(per).filter(m=>per[m].closed).sort().pop();
+  const row=m=>{const P=per[m]||{},sys=walEndC(A,m).bank,cur=m===now,dd=P.stmt!=null?r2c(P.stmt-sys):null,prevOk=m===st||per[ymAdd(m,-1)]?.closed;
+    return `<tr><td><b>${thMonth(m)}</b>${cur?'<div class="sm mut">เดือนปัจจุบัน</div>':''}</td><td class="num">${bt(sys)}<div class="sm mut">${cur?'ณ ตอนนี้':'ณ สิ้นเดือน'}</div></td>
+     <td class="num">${P.stmt!=null?bt(P.stmt):'<span class="mut">-</span>'}${P.proof?` <a href="${esc(P.proof)}" target="_blank" rel="noopener" class="sm">📎</a>`:''}${P.recAt?`<div class="sm mut">${esc(P.recBy||'')} · ${fmtDT(P.recAt)}</div>`:''}</td>
+     <td class="num">${dd==null?'<span class="mut">-</span>':Math.abs(dd)<.005?'<span style="color:#1d6b3a;font-weight:700">ตรง ✓</span>':`<b style="color:var(--red)">${bt(dd)}</b>`}${P.closed&&P.note?`<div class="sm mut">${esc(P.note)}</div>`:''}</td>
+     <td>${P.closed?`${badge(['🔒 ปิดแล้ว','b-ok'])}<div class="sm mut">${esc(P.closedBy||'')} · ${fmtDT(P.closedAt)}</div>`:cur?badge(['ยังไม่สิ้นเดือน','b-gray']):badge(['ยังไม่ปิด','b-warn'])}${(P.reopen||[]).length?`<div class="sm mut">เคยเปิดกลับ ${P.reopen.length} ครั้ง</div>`:''}</td>
+     <td class="lact"><button class="btn ghost sm" data-act="mreport" data-m="${m}">📄 รายงาน</button>${!P.closed&&can('acctClose')?`<button class="btn ghost sm" data-act="recon" data-m="${m}">กระทบยอด</button>`:''}${!P.closed&&!cur&&can('acctClose')?`<button class="btn sm" data-act="aclose" data-m="${m}"${P.stmt!=null&&prevOk?'':' disabled title="กระทบยอดก่อน และปิดเดือนก่อนหน้าให้ครบ"'}>ปิดงวด</button>`:''}${P.closed&&m===last&&can('acctRev')?`<button class="btn ghost sm" data-act="areopen" data-m="${m}">เปิดงวดกลับ</button>`:''}</td></tr>`};
+  return `<h2>ปิดงวด / รายงานรายเดือน</h2>
+  <div class="card"><h3>ทุกสิ้นเดือน</h3><ol class="sm" style="margin:0;padding-left:20px;line-height:1.8"><li>กด <b>กระทบยอด</b> แล้วกรอกยอดคงเหลือตาม statement ธนาคาร (แนบรูปได้)</li><li>ถ้ายอดไม่ตรง บันทึกรายการที่ขาด เช่น สลิปที่ยังไม่กดยืนยัน · ค่าธรรมเนียมธนาคาร · การโอนที่ยังไม่กดยืนยันจ่าย</li><li>ยอดตรงแล้วกด <b>ปิดงวด</b> → รายการของเดือนนั้นแก้ไม่ได้อีก และรายงานรับ-จ่ายถูกล็อกตัวเลข</li><li>กด <b>📄 รายงาน</b> เพื่อพิมพ์/บันทึก PDF พร้อมช่องลงชื่อ เสนอที่ประชุมหมู่บ้าน</li></ol>
+   <p class="sm mut" style="margin:8px 0 0">พบข้อผิดหลังปิดงวด → บันทึกรายการปรับปรุงในเดือนถัดไป · เปิดงวดกลับได้เฉพาะผู้ดูแลระบบสูงสุด (ใส่เหตุผล)</p></div>
+  <div class="card"><div class="tbl-wrap"><table><tr><th>เดือน</th><th class="num">ธนาคารตามระบบ</th><th class="num">ตาม statement</th><th class="num">ผลต่าง</th><th>สถานะ</th><th></th></tr>${M.map(row).join('')}</table></div></div>`}
+function reconHints(){const pend=DB.bookings.filter(b=>b.status==='pending'&&b.slip).length,done=DB.bookings.filter(b=>isDone(b)&&b.status==='paid'),gU=payItems(done,'unpaid').length,vU=vilRows('unpaid')[0],rf=DB.bookings.filter(b=>b.refund?.st==='pending').length;
+  return `<div class="sm" style="background:#fafbf9;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><b>ถ้ายอดไม่ตรง ลองตรวจ:</b><ul style="margin:4px 0 0;padding-left:18px">
+   <li>สลิปที่ลูกค้าส่งแล้วแต่ยังไม่กดยืนยันรับเงิน${pend?` <b>(${pend} รายการ)</b>`:''}</li><li>โอนให้ไกด์/หมู่บ้านแล้วแต่ยังไม่กดยืนยันจ่าย${gU||vU?` <b>(รอจ่ายไกด์ ${gU} · หมู่บ้าน ${vU?vU.n+' กลุ่ม':'-'})</b>`:''}</li>
+   <li>โอนคืนลูกค้าแล้วแต่ยังไม่กดยืนยัน${rf?` <b>(${rf} รายการ)</b>`:''}</li><li>ค่าธรรมเนียม/ดอกเบี้ยธนาคารที่ยังไม่บันทึก → บันทึกที่ 🧾 รายจ่าย/รายรับอื่น</li></ul></div>`}
+function reconPv(){const f=document.querySelector('form[data-form=recon]'),el=document.getElementById('reconpv');if(!f||!el)return;const v=+String(f.stmt.value||'').replace(/,/g,''),sys=+f.dataset.sys;
+  if(f.stmt.value===''||!Number.isFinite(v)){el.innerHTML='';return}const d=r2c(v-sys);el.innerHTML=Math.abs(d)<.005?'<b style="color:#1d6b3a">✓ ยอดตรงกัน</b>':`ผลต่าง <b style="color:var(--red)">${bt(d)}</b> (${d>0?'ธนาคารมีมากกว่าระบบ':'ธนาคารมีน้อยกว่าระบบ'})`}
+document.addEventListener('input',e=>{if(e.target.closest?.('form[data-form=recon]'))reconPv();if(e.target.dataset?.rfa!==undefined){const T=+e.target.dataset.total,v=+String(e.target.value||'').replace(/,/g,''),K=r2c(T-v),box=document.getElementById('rfkeep');if(box){box.style.display=v>0&&K>0?'':'none';document.getElementById('rfkeepamt').textContent=bt(K)}}});
+async function monthReport(m){const w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต pop-up');w.document.write('<p style="font-family:sans-serif;padding:20px">กำลังเตรียมรายงาน…</p>');
+  const A=DB.acct,[from,to]=monthRange(m+'-01'),r=await post('/api/admin/ledger',{from,to});if(!r.ok){w.close();return toast(r.error||'โหลดข้อมูลไม่สำเร็จ')}
+  const S=acS(),P=(A.per||{})[m]||{},end=walEndC(A,m),prev=walEndC(A,ymAdd(m,-1)),rec={},pay={},cnt={};let start=prev.bank,adj=0;
+  const CAT={pay:['r','รับชำระค่าบริการเดินป่า'],inc:['r','รายรับอื่น'],gpay:['p','จ่ายค่าไกด์'],vpay:['p','โอนส่วนกลางหมู่บ้าน'],ppay:['p','นำส่งเงินอุทยาน (ส่วนอุทยาน + ค่าเข้า + ค่ารถ)'],rfp:['p','คืนเงินลูกค้า'],exp:['p','รายจ่ายอื่น']};
+  r.rows.slice().reverse().forEach(e=>{const v=+e.lines?.bank||0;if(!v)return;if(e.type==='open'){start=r2c(start+v);return}
+    const t=e.type==='rev'?e.of:e.type,c=CAT[t];if(!c){adj=r2c(adj+v);return}
+    const nm=(t==='inc'||t==='exp')&&e.cat?`${c[1]}: ${e.cat}`:c[1],B=c[0]==='r'?rec:pay;B[nm]=r2c((B[nm]||0)+(c[0]==='r'?v:-v));if(e.type!=='rev')cnt[nm]=(cnt[nm]||0)+1});
+  if(Math.abs(adj)>.004)rec['ปรับปรุง/กลับรายการ (สุทธิ)']=adj;
+  const sm=o=>r2c(Object.values(o).reduce((a,x)=>a+x,0)),tR=sm(rec),tP=sm(pay),calc=r2c(start+tR-tP);
+  const L=(o)=>Object.entries(o).map(([k,v])=>`<tr><td style="padding-left:20px">${esc(k)}${cnt[k]?` <span style="color:#6b7280">(${cnt[k]} รายการ)</span>`:''}</td><td class="n">${bt(v)}</td></tr>`).join('')||'<tr><td style="padding-left:20px;color:#9ca3af">ไม่มี</td><td></td></tr>';
+  const sg=S.signers.map(x=>`<div>ลงชื่อ ..........................................<br>(${esc(x.name||'..........................................')})<br>${esc(x.role)}${x.pos?' · '+esc(x.pos):''}</div>`).join('');
+  printDoc(`รายงานรับ-จ่าย ${thMonth(m)} ผาแง่ม`,`<h1>รายงานรับ-จ่ายประจำเดือน ${thMonth(m)}</h1><div class="sub">ผาแง่ม Trail · บัญชีรับชำระ: ${esc(S.bankLabel||defBankLabel()||'-')} · ${P.closed?`ปิดงวดแล้วเมื่อ ${fmtDT(P.closedAt)}`:'<b style="color:#b45309">ยังไม่ปิดงวด — ตัวเลขอาจเปลี่ยนแปลง</b>'}</div>
+  <table style="max-width:720px"><tr><th>รายการ</th><th class="n">จำนวนเงิน</th></tr>
+   <tr><td><b>ยอดเงินในบัญชียกมา (ต้นเดือน)</b></td><td class="n"><b>${bt(start)}</b></td></tr>
+   <tr><td><b>รายรับ</b></td><td></td></tr>${L(rec)}<tr><td style="padding-left:20px"><b>รวมรายรับ</b></td><td class="n"><b>${bt(tR)}</b></td></tr>
+   <tr><td><b>รายจ่าย</b></td><td></td></tr>${L(pay)}<tr><td style="padding-left:20px"><b>รวมรายจ่าย</b></td><td class="n"><b>${bt(tP)}</b></td></tr>
+   <tfoot><tr><td>คงเหลือปลายเดือน (ตามระบบ) = ยกมา + รับ − จ่าย</td><td class="n">${bt(end.bank)}</td></tr></tfoot></table>
+  ${Math.abs(calc-end.bank)>.004?`<p style="color:#b91c1c">หมายเหตุ: ยอดคำนวณ ${bt(calc)} ไม่ตรงกับยอดตามระบบ ${bt(end.bank)} — กรุณาตรวจสอบ</p>`:''}
+  <table style="max-width:720px;margin-top:10px"><tr><td>ยอดคงเหลือตาม statement ธนาคาร</td><td class="n">${P.stmt!=null?bt(P.stmt):'ยังไม่ได้กระทบยอด'}</td></tr>${P.stmt!=null?`<tr><td>ผลต่าง (statement − ระบบ)</td><td class="n">${bt(r2c(P.stmt-end.bank))}</td></tr>`:''}${P.note?`<tr><td colspan="2">คำอธิบายผลต่าง: ${esc(P.note)}</td></tr>`:''}</table>
+  <h3 style="margin:16px 0 6px;font-size:14px">เงินคงเหลือในบัญชีเป็นของใคร (ณ สิ้นเดือน)</h3>
+  <table style="max-width:720px">${WALS.slice(1).map(([k,i,l,,d])=>`<tr><td>${l}<div style="color:#6b7280;font-size:11px">${d}</div></td><td class="n">${bt(end[k])}</td></tr>`).join('')}<tfoot><tr><td>รวม (= เงินในบัญชีตามระบบ)</td><td class="n">${bt(WALS.slice(1).reduce((s,[k])=>s+end[k],0))}</td></tr></tfoot></table>
+  <div class="sig" style="--c:3">${sg}</div>`,false,w)}
+const P2_ACT={
+  rfapprove:el=>{const b=byId(el.dataset.id);openModal(`<h3>ยกเลิกและคืนเงิน ${esc(b.code)}</h3><p class="sm" style="margin-top:0">${esc(b.name)} · ${fmtDate(b.date)} ${b.time} · ชำระแล้ว <b>${baht(b.total)}</b>${gIds(b).length?`<br><span class="mut">ไกด์ ${esc(gNames(DB,b))} จะได้รับแจ้งยกเลิกงาน (ไม่ได้ค่าไกด์) และระบบจัดคิวใหม่</span>`:''}</p>
+   <form data-form="rfa" data-id="${b.id}"><div class="field"><label>ยอดคืนลูกค้า (บาท) *</label><input name="amt" inputmode="decimal" value="${b.total}" required data-rfa data-total="${b.total}"></div>
+   <div class="field" id="rfkeep" style="display:none"><label>ส่วนที่ไม่คืน <b id="rfkeepamt"></b> เข้ากระเป๋า</label><div class="gtype"><label><input type="radio" name="keep" value="fund" checked><span><b>💼 กองทุนดำเนินงาน</b></span></label><label><input type="radio" name="keep" value="vil"><span><b>🏘️ ส่วนกลางหมู่บ้าน</b><br><span class="sm mut">รวมในยอดโอนให้หมู่บ้านรอบถัดไป</span></span></label></div></div>
+   <div class="field"><label>โอนคืนเข้าบัญชี / พร้อมเพย์ของลูกค้า *</label><input name="to" required placeholder="เช่น กสิกร 123-4-56789-0 นายสมชาย"></div>
+   <div class="field"><label>เหตุผล *</label><input name="reason" required placeholder="เช่น อุทยานปิดเส้นทางเพราะฝนตกหนัก"></div>
+   <p class="sm mut">การจองถูกยกเลิกทันที ลูกค้าได้รับอีเมลแจ้ง · เจ้าหน้าที่การเงินโอนคืนที่ 💰 บัญชี → ↩️ คืนเงิน</p>
+   <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ปิด</button><button class="btn red" type="submit">ยกเลิกการจองและคืนเงิน</button></div></form>`)},
+  rfpay:el=>{const b=byId(el.dataset.id),r=b.refund;openModal(`<h3>โอนคืนเงิน ${esc(b.code)}</h3><div class="price" style="text-align:left;margin:0 0 10px"><b style="font-size:20px">${bt(r.amt)}</b><div class="sm">โอนเข้า: ${esc(r.to)}</div></div>
+   <form data-form="rfp" data-id="${b.id}"><div class="grid2"><div class="field"><label>วันที่โอน *</label><input type="date" name="date" value="${today()}" max="${today()}" required></div><div class="field"><label>เลขอ้างอิงการโอน</label><input name="ref"></div></div>
+   <div class="field"><label>สลิปการโอนคืน *</label><input type="file" accept="image/*" data-acctup><input type="hidden" name="proof" value=""><div class="sm mut" id="acctupst">ถ่ายรูปหรือเลือกรูปสลิปจากเครื่อง</div></div>
+   <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">ยืนยันโอนคืนแล้ว</button></div></form>`)},
+  rfundo:async el=>{const b=byId(el.dataset.id);if(!await confirmBox('ยกเลิกการยืนยันโอนคืน?',`${esc(b.code)} ${bt(b.refund.amt)} จะกลับไปเป็น “รอโอนคืน”`,'ยืนยัน','red'))return;call('refundPayUndo',{id:b.id})},
+  recon:el=>{const m=el.dataset.m,A=DB.acct,P=(A.per||{})[m]||{},sys=walEndC(A,m).bank;openModal(`<h3>กระทบยอดธนาคาร ${thMonth(m)}</h3>
+   <form data-form="recon" data-m="${m}" data-sys="${sys}"><div class="price" style="text-align:left;margin:0 0 10px">ยอดเงินในบัญชีตามระบบ ${m===today().slice(0,7)?'ณ ตอนนี้':'ณ สิ้นเดือน'} <b style="font-size:20px">${bt(sys)}</b></div>
+   <div class="field"><label>ยอดคงเหลือตาม statement ธนาคาร ${m===today().slice(0,7)?'(ตอนนี้)':'(ณ วันสิ้นเดือน)'} *</label><input name="stmt" inputmode="decimal" required value="${P.stmt??''}"><div id="reconpv" class="sm" style="margin-top:4px"></div></div>
+   <div class="field"><label>รูป statement</label><input type="file" accept="image/*" data-acctup><input type="hidden" name="proof" value=""><div class="sm mut" id="acctupst">${P.proof?'แนบไว้แล้ว — เลือกใหม่เพื่อเปลี่ยน':'ไม่บังคับ'}</div></div>
+   ${reconHints()}<div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">บันทึก</button></div></form>`);reconPv()},
+  aclose:el=>{const m=el.dataset.m,A=DB.acct,P=(A.per||{})[m]||{},sys=walEndC(A,m).bank,d=r2c((P.stmt??0)-sys),ok=Math.abs(d)<.005;openModal(`<h3>🔒 ปิดงวด ${thMonth(m)}</h3>
+   <form data-form="aclose" data-m="${m}"><p class="sm" style="margin-top:0">ธนาคารตามระบบ <b>${bt(sys)}</b> · statement <b>${bt(P.stmt)}</b> · ${ok?'<b style="color:#1d6b3a">ยอดตรงกัน ✓</b>':`ผลต่าง <b style="color:var(--red)">${bt(d)}</b>`}</p>
+   ${ok?'':`<div class="field"><label>อธิบายผลต่าง * (จะแสดงในรายงาน)</label><textarea name="note" rows="3" required placeholder="เช่น ค่าธรรมเนียมโอนต่างธนาคาร ธนาคารตัดวันที่ 1 ของเดือนถัดไป"></textarea></div>`}
+   <p class="sm mut">ปิดแล้ว: บันทึกรายการลงวันที่ในเดือนนี้ไม่ได้อีก · ตัวเลขรายงานถูกล็อก · ข้อผิดที่พบภายหลังให้บันทึกปรับปรุงในเดือนถัดไป</p>
+   <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn" type="submit">ปิดงวด</button></div></form>`)},
+  areopen:el=>{const m=el.dataset.m;openModal(`<h3>เปิดงวด ${thMonth(m)} กลับ</h3><form data-form="areopen" data-m="${m}"><div class="field"><label>เหตุผล *</label><input name="reason" required></div><p class="sm mut">บันทึกในบันทึกการใช้งาน · ต้องกระทบยอดและปิดงวดใหม่อีกครั้ง</p>
+   <div class="mact"><button type="button" class="btn ghost" data-act="mcancel">ยกเลิก</button><button class="btn red" type="submit">เปิดงวดกลับ</button></div></form>`)},
+  mreport:el=>monthReport(el.dataset.m),
 };
 function pNotifications(){
   const L=DB.notifications.filter(n=>ntF==='all'||n.channel===ntF).slice(0,80);
@@ -1274,7 +1360,7 @@ function pSettings(){setTimeout(updSplit,0);const s=DB.settings,sp=s.split,sumSp
     <td>${x.active?badge(['ปิดรับจอง','b-red']):badge(['ไม่ใช้งาน','b-gray'])}</td><td>${hit.length?`<span style="color:var(--warn)">${hit.length} รายการ</span><div class="sm mut">${hit.slice(0,4).map(b=>b.code).join(', ')}${hit.length>4?' …':''} — เลื่อนวันหรือติดต่อลูกค้า</div>`:'<span class="mut">-</span>'}</td>
     <td style="white-space:nowrap"><button class="btn ghost sm" data-act="seasontoggle" data-id="${x.id}">${x.active?'ปิดใช้':'เปิดใช้'}</button> <button class="btn ghost sm" data-act="seasonform" data-id="${x.id}">แก้ไข</button> <button class="btn ghost sm" data-act="seasondel" data-id="${x.id}">ลบ</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">ยังไม่มีช่วงปิด — เปิดรับจองตลอดปี</div>'}</div>`;
 }
-const AUL={acct:'บัญชี/สมุดรายวัน',login:'เข้าสู่ระบบ',content:'เนื้อหาเว็บไซต์',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก',reschedule:'เลื่อนวัน',decline:'ไกด์แจ้งไม่ว่าง',unavail:'แจ้งไกด์ไม่ว่าง',confirm_payment:'ยืนยันรับเงิน',assign:'มอบหมายไกด์',cancel:'ยกเลิกการจอง',trip_start:'เริ่มเดินทาง',trip_end:'สิ้นสุดเดินทาง',payout_confirm:'ยืนยันจ่ายไกด์',payout_village:'ยืนยันโอนหมู่บ้าน',payout_undo:'ยกเลิกยืนยันจ่าย',guide:'ข้อมูลไกด์',user:'ผู้ใช้',settings:'ตั้งค่า'};
+const AUL={acct:'บัญชี/สมุดรายวัน',refund:'คืนเงินลูกค้า',login:'เข้าสู่ระบบ',content:'เนื้อหาเว็บไซต์',noshow:'ลูกค้าไม่มา',paidcancel:'ลูกค้ายกเลิก',reschedule:'เลื่อนวัน',decline:'ไกด์แจ้งไม่ว่าง',unavail:'แจ้งไกด์ไม่ว่าง',confirm_payment:'ยืนยันรับเงิน',assign:'มอบหมายไกด์',cancel:'ยกเลิกการจอง',trip_start:'เริ่มเดินทาง',trip_end:'สิ้นสุดเดินทาง',payout_confirm:'ยืนยันจ่ายไกด์',payout_village:'ยืนยันโอนหมู่บ้าน',payout_undo:'ยกเลิกยืนยันจ่าย',guide:'ข้อมูลไกด์',user:'ผู้ใช้',settings:'ตั้งค่า'};
 const CH=[['promptpay','พร้อมเพย์','📱'],['bank','โอนเข้าบัญชีธนาคาร','🏦'],['paypal','PayPal','🅿️'],['alipay','Alipay','🅰️'],['truemoney','TrueMoney Wallet','🟠']];
 const chOn=()=>CH.filter(([k])=>PUB.settings.channels[k]?.on);
 let chImgDraft={};
@@ -1653,7 +1739,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:5px 6px;border-bottom:1p
   csv:()=>{const r=accRange(),L=DB.bookings.filter(b=>b.status==='paid'&&inR(b.date,r));const rows=[['date','code','guide','people','guide_fee','village','park','entry','cars','motorcycles','vehicle_fee','total'],...L.map(b=>[b.date,b.code,gNames(DB,b),b.people,gTotal(b),b.split.village,b.split.park,b.entryTotal,b.vehicles||0,b.motos||0,b.vehicleTotal||0,b.total])];
     navigator.clipboard?.writeText(rows.map(r=>r.join(',')).join('\n')).then(()=>toast('คัดลอก CSV แล้ว วางใน Excel/Sheets ได้เลย'),()=>toast('คัดลอกไม่ได้'))},
 };
-Object.assign(ACT,ACCT_ACT);
+Object.assign(ACT,ACCT_ACT,P2_ACT);
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();ACT[el.dataset.act]?.(el,e)});
 /* ปิดหน้าต่างเมื่อคลิกพื้นหลัง — เฉพาะหน้าต่างที่ไม่มีฟอร์ม และต้องกดเริ่ม+ปล่อยบนพื้นหลังจริง (กันหน้าต่างกรอกข้อมูลปิดเองระหว่างพิมพ์/ลากเลือกข้อความ) */
 let mdownBg=false;const MD=document.getElementById('modal');
@@ -1785,6 +1871,11 @@ document.addEventListener('submit',async e=>{
   if(kind==='fentry'){const amt=+String(fd.amt||'').replace(/,/g,'');if(!(amt>0))return toast('กรุณากรอกจำนวนเงินให้ถูกต้อง');
     if(await call('acctEntry',{kind:f.dataset.k,date:fd.date,amt,cat:fd.cat,party:fd.party,from:fd.from,note:fd.note,proof:fd.proof}))closeModal();return}
   if(kind==='pkpay'){if(await call('parkPay',{from:pk.from,to:pk.to,open:f.dataset.open==='1',total:+f.dataset.total,date:fd.date,ref:fd.ref,proof:fd.proof,note:fd.note}))closeModal();return}
+  if(kind==='rfa'){const amt=String(fd.amt||'').replace(/,/g,'').trim();if(!(+amt>0))return toast('กรุณากรอกยอดคืน');if(await call('refundApprove',{id:f.dataset.id,amt,keep:fd.keep,to:fd.to,reason:fd.reason}))closeModal();return}
+  if(kind==='rfp'){if(!fd.proof)return toast('กรุณาแนบสลิปการโอนคืน (รอให้อัปโหลดเสร็จ)');if(await call('refundPay',{id:f.dataset.id,date:fd.date,ref:fd.ref,proof:fd.proof}))closeModal();return}
+  if(kind==='recon'){if(await call('acctRecon',{ym:f.dataset.m,stmt:String(fd.stmt||'').replace(/,/g,''),proof:fd.proof}))closeModal();return}
+  if(kind==='aclose'){if(await call('acctClose',{ym:f.dataset.m,note:fd.note||''}))closeModal();return}
+  if(kind==='areopen'){if(await call('acctReopen',{ym:f.dataset.m,reason:fd.reason}))closeModal();return}
   if(kind==='lrev'){if(await call('acctReverse',{no:f.dataset.no,reason:fd.reason}))closeModal();return}
   if(kind==='village'){call('villageAcctSave',{bankName:fd.bankName,accountName:fd.accountName,accountNo:fd.accountNo});return}
   }finally{if(btn&&document.body.contains(btn))btn.disabled=false}
